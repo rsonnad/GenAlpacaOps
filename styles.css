@@ -629,6 +629,46 @@ tr:last-child td {
   object-fit: cover;
 }
 
+.detail-photo {
+  position: relative;
+}
+
+.photo-order-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: rgba(0,0,0,0.6);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.detail-photo:hover .photo-order-controls {
+  opacity: 1;
+}
+
+.photo-order-controls button {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: var(--bg-card);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.photo-order-controls button:hover {
+  background: var(--accent-light);
+}
+
 .detail-section {
   margin-bottom: 1.5rem;
 }

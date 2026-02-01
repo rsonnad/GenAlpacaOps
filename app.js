@@ -50,7 +50,7 @@ async function loadData() {
         *,
         parent:parent_id(name),
         space_amenities(amenity:amenity_id(name)),
-        photo_spaces(photo:photo_id(url, caption))
+        photo_spaces(photo:photo_id(id,url,caption),display_order)
       `)
       .order('name');
     
@@ -120,7 +120,10 @@ async function loadData() {
       space.availableUntil = nextAssignment?.start_date ? new Date(nextAssignment.start_date) : null;
       
       space.amenities = space.space_amenities?.map(sa => sa.amenity?.name).filter(Boolean) || [];
-      space.photos = space.photo_spaces?.map(ps => ps.photo).filter(Boolean) || [];
+      space.photos = (space.photo_spaces || [])
+        .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+        .map(ps => ({ ...ps.photo, display_order: ps.display_order }))
+        .filter(p => p && p.url);
       space.photoRequests = photoRequests.filter(pr => pr.space_id === space.id);
     });
     
@@ -517,15 +520,28 @@ function showSpaceDetail(spaceId) {
   
   let photosHtml = '';
   if (space.photos.length) {
+    const photoItems = space.photos.map((p, idx) => {
+      const orderControls = isAdminMode ? `
+        <div class="photo-order-controls">
+          <button onclick="event.stopPropagation(); movePhoto('${space.id}', '${p.id}', 'top')" title="Move to top">⇈</button>
+          <button onclick="event.stopPropagation(); movePhoto('${space.id}', '${p.id}', 'up')" title="Move up">↑</button>
+          <button onclick="event.stopPropagation(); movePhoto('${space.id}', '${p.id}', 'down')" title="Move down">↓</button>
+          <button onclick="event.stopPropagation(); movePhoto('${space.id}', '${p.id}', 'bottom')" title="Move to bottom">⇊</button>
+        </div>
+      ` : '';
+      return `
+        <div class="detail-photo">
+          <img src="${p.url}" alt="${p.caption || space.name}">
+          ${orderControls}
+        </div>
+      `;
+    }).join('');
+    
     photosHtml = `
       <div class="detail-section detail-photos">
         <h3>Photos</h3>
         <div class="detail-photos-grid">
-          ${space.photos.map(p => `
-            <div class="detail-photo">
-              <img src="${p.url}" alt="${p.caption || space.name}">
-            </div>
-          `).join('')}
+          ${photoItems}
         </div>
       </div>
     `;
@@ -650,6 +666,61 @@ async function handlePhotoRequestSubmit() {
 window.showSpaceDetail = showSpaceDetail;
 window.openPhotoRequest = openPhotoRequest;
 window.openPhotoUpload = openPhotoUpload;
+window.movePhoto = movePhoto;
+
+// Photo ordering
+async function movePhoto(spaceId, photoId, direction) {
+  const space = spaces.find(s => s.id === spaceId);
+  if (!space) return;
+  
+  const photos = [...space.photos];
+  const idx = photos.findIndex(p => p.id === photoId);
+  if (idx === -1) return;
+  
+  let newIdx;
+  switch (direction) {
+    case 'top':
+      newIdx = 0;
+      break;
+    case 'up':
+      newIdx = Math.max(0, idx - 1);
+      break;
+    case 'down':
+      newIdx = Math.min(photos.length - 1, idx + 1);
+      break;
+    case 'bottom':
+      newIdx = photos.length - 1;
+      break;
+    default:
+      return;
+  }
+  
+  if (newIdx === idx) return;
+  
+  // Reorder array
+  const [photo] = photos.splice(idx, 1);
+  photos.splice(newIdx, 0, photo);
+  
+  // Update display_order for all photos
+  try {
+    for (let i = 0; i < photos.length; i++) {
+      await db
+        .from('photo_spaces')
+        .update({ display_order: i })
+        .eq('space_id', spaceId)
+        .eq('photo_id', photos[i].id);
+    }
+    
+    // Reload and re-render
+    await loadData();
+    render();
+    showSpaceDetail(spaceId);
+    
+  } catch (error) {
+    console.error('Error reordering photos:', error);
+    alert('Failed to reorder photos.');
+  }
+}
 
 // Photo upload handling
 let currentUploadSpaceId = null;
