@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GenAlpaca Spaces</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <h1>&#129433; GenAlpaca Spaces</h1>
+    </div>
+    <div class="header-controls">
+      <div class="view-toggle">
+        <button id="cardViewBtn" class="active" title="Card view">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+          </svg>
+        </button>
+        <button id="tableViewBtn" title="Table view">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <a href="/GenAlpacaOps/login/" class="staff-link">Staff Login</a>
+    </div>
+  </header>
+
+  <div class="filters">
+    <div class="filter-group">
+      <label for="searchInput">Search</label>
+      <input type="text" id="searchInput" placeholder="Search spaces...">
+    </div>
+    <div class="filter-group">
+      <label for="priceFilter">Price</label>
+      <select id="priceFilter">
+        <option value="">All prices</option>
+        <option value="0-400">Under $400</option>
+        <option value="400-700">$400 - $700</option>
+        <option value="700-1000">$700 - $1000</option>
+        <option value="1000+">$1000+</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="bathFilter">Bathroom</label>
+      <select id="bathFilter">
+        <option value="">Any bathroom</option>
+        <option value="private">Private</option>
+        <option value="shared">Shared</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="availFilter">Availability</label>
+      <select id="availFilter">
+        <option value="">All</option>
+        <option value="available">Available Now</option>
+        <option value="occupied">Currently Occupied</option>
+      </select>
+    </div>
+    <button id="clearFilters" class="clear-btn">Clear all</button>
+  </div>
+
+  <main>
+    <!-- Card View -->
+    <div id="cardView" class="card-grid"></div>
+
+    <!-- Table View -->
+    <div id="tableView" class="table-container hidden">
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="name">Name</th>
+            <th data-sort="monthly_rate">Rate</th>
+            <th data-sort="sq_footage">Size</th>
+            <th>Beds</th>
+            <th data-sort="bath_privacy">Bath</th>
+            <th>Amenities</th>
+            <th data-sort="availability">Available</th>
+            <th>Until</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Space Detail Modal -->
+  <div id="spaceDetailModal" class="modal hidden">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h2 id="detailSpaceName">Space Name</h2>
+        <button class="modal-close" id="closeDetailModal">&times;</button>
+      </div>
+      <div class="modal-body" id="spaceDetailBody">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

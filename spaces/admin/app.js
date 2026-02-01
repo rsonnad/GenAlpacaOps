@@ -1,50 +1,130 @@
-// Supabase configuration
-const SUPABASE_URL = 'https://aphrrfprbixmhissnjfn.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwaHJyZnByYml4bWhpc3NuamZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5MzA0MjUsImV4cCI6MjA4NTUwNjQyNX0.yYkdQIq97GQgxK7yT2OQEPi5Tt-a7gM45aF8xjSD6wk';
-
-// Initialize Supabase client
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Admin view - Full access interface with authentication
+import { supabase } from '../../shared/supabase.js';
+import { initAuth, getAuthState, signOut, onAuthStateChange } from '../../shared/auth.js';
 
 // App state
 let spaces = [];
 let assignments = [];
 let photoRequests = [];
-let isAdminMode = false;
+let authState = null;
 let currentView = 'card';
 let currentSort = { column: 'availability', direction: 'asc' };
 
 // DOM elements
+const loadingOverlay = document.getElementById('loadingOverlay');
+const unauthorizedOverlay = document.getElementById('unauthorizedOverlay');
+const appContent = document.getElementById('appContent');
 const cardView = document.getElementById('cardView');
 const tableView = document.getElementById('tableView');
 const tableBody = document.getElementById('tableBody');
 const cardViewBtn = document.getElementById('cardViewBtn');
 const tableViewBtn = document.getElementById('tableViewBtn');
-const adminToggle = document.getElementById('adminToggle');
-const modeBadge = document.getElementById('modeBadge');
 const searchInput = document.getElementById('searchInput');
 const priceFilter = document.getElementById('priceFilter');
 const bathFilter = document.getElementById('bathFilter');
 const availFilter = document.getElementById('availFilter');
 const visibilityFilter = document.getElementById('visibilityFilter');
 const clearFilters = document.getElementById('clearFilters');
+const roleBadge = document.getElementById('roleBadge');
+const userInfo = document.getElementById('userInfo');
+const manageUsersLink = document.getElementById('manageUsersLink');
 
 // Modals
 const photoRequestModal = document.getElementById('photoRequestModal');
 const spaceDetailModal = document.getElementById('spaceDetailModal');
 const photoUploadModal = document.getElementById('photoUploadModal');
+const editSpaceModal = document.getElementById('editSpaceModal');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
-  await loadData();
-  setupEventListeners();
-  render();
+  await init();
 });
 
-// Load data from Supabase
+async function init() {
+  try {
+    // Initialize auth
+    await initAuth();
+    authState = getAuthState();
+
+    // Check authorization
+    if (!authState.isAuthenticated) {
+      // Not logged in - redirect to login
+      window.location.href = '/GenAlpacaOps/login/?redirect=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
+
+    if (!authState.isAuthorized) {
+      // Logged in but not authorized
+      loadingOverlay.classList.add('hidden');
+      unauthorizedOverlay.classList.remove('hidden');
+      setupUnauthorizedHandlers();
+      return;
+    }
+
+    // User is authorized - show the app
+    loadingOverlay.classList.add('hidden');
+    appContent.classList.remove('hidden');
+
+    // Update UI based on role
+    updateRoleUI();
+
+    // Listen for auth changes
+    onAuthStateChange((state) => {
+      authState = state;
+      if (!state.isAuthorized) {
+        window.location.href = '/GenAlpacaOps/spaces/';
+      }
+      updateRoleUI();
+    });
+
+    // Load data and setup
+    await loadData();
+    setupEventListeners();
+    render();
+  } catch (error) {
+    console.error('Init error:', error);
+    loadingOverlay.innerHTML = `
+      <div class="unauthorized-card">
+        <h2>Error</h2>
+        <p>${error.message}</p>
+        <a href="/GenAlpacaOps/login/" class="btn-secondary">Try Again</a>
+      </div>
+    `;
+  }
+}
+
+function setupUnauthorizedHandlers() {
+  document.getElementById('signOutBtn').addEventListener('click', async () => {
+    await signOut();
+    window.location.href = '/GenAlpacaOps/spaces/';
+  });
+}
+
+function updateRoleUI() {
+  if (!authState) return;
+
+  // Update role badge
+  roleBadge.textContent = authState.role;
+  roleBadge.className = 'role-badge ' + authState.role;
+
+  // Update user info
+  userInfo.textContent = authState.user?.displayName || authState.user?.email || '';
+
+  // Show/hide admin-only features
+  if (authState.isAdmin) {
+    document.body.classList.add('is-admin');
+    manageUsersLink.classList.remove('hidden');
+  } else {
+    document.body.classList.remove('is-admin');
+    manageUsersLink.classList.add('hidden');
+  }
+}
+
+// Load data from Supabase (staff/admin have access to all data via RLS)
 async function loadData() {
   try {
-    // Load spaces with parent info and amenities
-    const { data: spacesData, error: spacesError } = await db
+    // Load spaces with all related data
+    const { data: spacesData, error: spacesError } = await supabase
       .from('spaces')
       .select(`
         *,
@@ -53,11 +133,11 @@ async function loadData() {
         photo_spaces(photo:photo_id(id,url,caption),display_order)
       `)
       .order('name');
-    
+
     if (spacesError) throw spacesError;
-    
-    // Load active AND future assignments with people
-    const { data: assignmentsData, error: assignmentsError } = await db
+
+    // Load active assignments with people
+    const { data: assignmentsData, error: assignmentsError } = await supabase
       .from('assignments')
       .select(`
         *,
@@ -66,27 +146,26 @@ async function loadData() {
       `)
       .in('status', ['active', 'pending_contract', 'contract_sent'])
       .order('start_date');
-    
+
     if (assignmentsError) throw assignmentsError;
-    
+
     // Load photo requests
-    const { data: requestsData, error: requestsError } = await db
+    const { data: requestsData, error: requestsError } = await supabase
       .from('photo_requests')
       .select('*')
       .in('status', ['pending', 'submitted']);
-    
+
     if (requestsError) throw requestsError;
-    
+
     spaces = spacesData || [];
     assignments = assignmentsData || [];
     photoRequests = requestsData || [];
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     // Map assignments to spaces and compute availability windows
     spaces.forEach(space => {
-      // Get all assignments for this space, sorted by start date
       const spaceAssignments = assignments
         .filter(a => a.assignment_spaces?.some(as => as.space_id === space.id))
         .sort((a, b) => {
@@ -94,31 +173,29 @@ async function loadData() {
           const bStart = b.start_date ? new Date(b.start_date) : new Date(0);
           return aStart - bStart;
         });
-      
-      // Find current assignment (active and either no end date or end date >= today)
+
       const currentAssignment = spaceAssignments.find(a => {
         if (a.status !== 'active') return false;
         if (!a.end_date) return true;
         return new Date(a.end_date) >= today;
       });
-      
-      // Find next future assignment (starts after current ends, or after today if no current)
-      const availableFrom = currentAssignment?.end_date 
+
+      const availableFrom = currentAssignment?.end_date
         ? new Date(currentAssignment.end_date)
         : today;
-      
+
       const nextAssignment = spaceAssignments.find(a => {
         if (a === currentAssignment) return false;
         if (!a.start_date) return false;
         const startDate = new Date(a.start_date);
         return startDate > availableFrom;
       });
-      
+
       space.currentAssignment = currentAssignment || null;
       space.nextAssignment = nextAssignment || null;
       space.availableFrom = currentAssignment ? (currentAssignment.end_date ? new Date(currentAssignment.end_date) : null) : today;
       space.availableUntil = nextAssignment?.start_date ? new Date(nextAssignment.start_date) : null;
-      
+
       space.amenities = space.space_amenities?.map(sa => sa.amenity?.name).filter(Boolean) || [];
       space.photos = (space.photo_spaces || [])
         .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
@@ -126,7 +203,7 @@ async function loadData() {
         .filter(p => p && p.url);
       space.photoRequests = photoRequests.filter(pr => pr.space_id === space.id);
     });
-    
+
   } catch (error) {
     console.error('Error loading data:', error);
     alert('Failed to load data. Check console for details.');
@@ -138,10 +215,13 @@ function setupEventListeners() {
   // View toggle
   cardViewBtn.addEventListener('click', () => setView('card'));
   tableViewBtn.addEventListener('click', () => setView('table'));
-  
-  // Admin toggle
-  adminToggle.addEventListener('click', toggleAdminMode);
-  
+
+  // Sign out
+  document.getElementById('headerSignOutBtn').addEventListener('click', async () => {
+    await signOut();
+    window.location.href = '/GenAlpacaOps/spaces/';
+  });
+
   // Filters
   searchInput.addEventListener('input', render);
   priceFilter.addEventListener('change', render);
@@ -149,13 +229,13 @@ function setupEventListeners() {
   availFilter.addEventListener('change', render);
   visibilityFilter.addEventListener('change', render);
   clearFilters.addEventListener('click', resetFilters);
-  
+
   // Table sorting
   document.querySelectorAll('th[data-sort]').forEach(th => {
     th.addEventListener('click', () => handleSort(th.dataset.sort));
   });
-  
-  // Modal close handlers
+
+  // Modal handlers
   document.getElementById('closeModal').addEventListener('click', () => {
     photoRequestModal.classList.add('hidden');
   });
@@ -166,8 +246,7 @@ function setupEventListeners() {
     photoRequestModal.classList.add('hidden');
   });
   document.getElementById('submitPhotoRequest').addEventListener('click', handlePhotoRequestSubmit);
-  
-  // Close modals on backdrop click
+
   photoRequestModal.addEventListener('click', (e) => {
     if (e.target === photoRequestModal) photoRequestModal.classList.add('hidden');
   });
@@ -177,7 +256,7 @@ function setupEventListeners() {
   photoUploadModal.addEventListener('click', (e) => {
     if (e.target === photoUploadModal) photoUploadModal.classList.add('hidden');
   });
-  
+
   // Upload modal handlers
   document.getElementById('closeUploadModal').addEventListener('click', () => {
     photoUploadModal.classList.add('hidden');
@@ -187,6 +266,18 @@ function setupEventListeners() {
   });
   document.getElementById('submitPhotoUpload').addEventListener('click', handlePhotoUpload);
   document.getElementById('photoFile').addEventListener('change', handleFilePreview);
+
+  // Edit space modal handlers
+  document.getElementById('closeEditModal').addEventListener('click', () => {
+    editSpaceModal.classList.add('hidden');
+  });
+  document.getElementById('cancelEditSpace').addEventListener('click', () => {
+    editSpaceModal.classList.add('hidden');
+  });
+  document.getElementById('submitEditSpace').addEventListener('click', handleEditSpaceSubmit);
+  editSpaceModal.addEventListener('click', (e) => {
+    if (e.target === editSpaceModal) editSpaceModal.classList.add('hidden');
+  });
 }
 
 // View management
@@ -198,37 +289,22 @@ function setView(view) {
   tableView.classList.toggle('hidden', view !== 'table');
 }
 
-function toggleAdminMode() {
-  isAdminMode = !isAdminMode;
-  document.body.classList.toggle('admin-mode', isAdminMode);
-  adminToggle.classList.toggle('active', isAdminMode);
-  adminToggle.textContent = isAdminMode ? 'Exit Admin' : 'Enter Admin';
-  modeBadge.textContent = isAdminMode ? 'Admin' : 'Consumer';
-  modeBadge.classList.toggle('admin', isAdminMode);
-  render();
-}
-
 // Filtering
 function getFilteredSpaces() {
   let filtered = [...spaces];
-  
-  // Consumer mode: only show listed, non-secret dwelling spaces
-  if (!isAdminMode) {
-    filtered = filtered.filter(s => s.is_listed && !s.is_secret && s.can_be_dwelling);
-  } else {
-    // Admin can still filter by dwelling
-    filtered = filtered.filter(s => s.can_be_dwelling);
-  }
-  
+
+  // Only show dwelling spaces
+  filtered = filtered.filter(s => s.can_be_dwelling);
+
   // Search
   const search = searchInput.value.toLowerCase();
   if (search) {
-    filtered = filtered.filter(s => 
+    filtered = filtered.filter(s =>
       s.name.toLowerCase().includes(search) ||
       (s.description && s.description.toLowerCase().includes(search))
     );
   }
-  
+
   // Price filter
   const price = priceFilter.value;
   if (price) {
@@ -241,13 +317,13 @@ function getFilteredSpaces() {
       return true;
     });
   }
-  
+
   // Bath filter
   const bath = bathFilter.value;
   if (bath) {
     filtered = filtered.filter(s => s.bath_privacy === bath);
   }
-  
+
   // Availability filter
   const avail = availFilter.value;
   if (avail) {
@@ -257,69 +333,61 @@ function getFilteredSpaces() {
       filtered = filtered.filter(s => s.currentAssignment);
     }
   }
-  
-  // Visibility filter (admin only)
-  if (isAdminMode) {
-    const visibility = visibilityFilter.value;
-    if (visibility === 'listed') {
-      filtered = filtered.filter(s => s.is_listed && !s.is_secret);
-    } else if (visibility === 'unlisted') {
-      filtered = filtered.filter(s => !s.is_listed);
-    } else if (visibility === 'secret') {
-      filtered = filtered.filter(s => s.is_secret);
-    }
+
+  // Visibility filter
+  const visibility = visibilityFilter.value;
+  if (visibility === 'listed') {
+    filtered = filtered.filter(s => s.is_listed && !s.is_secret);
+  } else if (visibility === 'unlisted') {
+    filtered = filtered.filter(s => !s.is_listed);
+  } else if (visibility === 'secret') {
+    filtered = filtered.filter(s => s.is_secret);
   }
-  
+
   // Sort
   filtered.sort((a, b) => {
-    // Special handling for availability sort
     if (currentSort.column === 'availability') {
       const aEndDate = a.currentAssignment?.end_date ? new Date(a.currentAssignment.end_date) : null;
       const bEndDate = b.currentAssignment?.end_date ? new Date(b.currentAssignment.end_date) : null;
       const aOccupied = !!a.currentAssignment;
       const bOccupied = !!b.currentAssignment;
-      
-      // Available now comes first
+
       if (!aOccupied && bOccupied) return currentSort.direction === 'asc' ? -1 : 1;
       if (aOccupied && !bOccupied) return currentSort.direction === 'asc' ? 1 : -1;
-      
-      // Both available - sort by name
+
       if (!aOccupied && !bOccupied) return a.name.localeCompare(b.name);
-      
-      // Both occupied - sort by end date
+
       if (aEndDate && bEndDate) {
         if (aEndDate < bEndDate) return currentSort.direction === 'asc' ? -1 : 1;
         if (aEndDate > bEndDate) return currentSort.direction === 'asc' ? 1 : -1;
       }
-      // No end date goes to bottom
       if (aEndDate && !bEndDate) return -1;
       if (!aEndDate && bEndDate) return 1;
-      
+
       return a.name.localeCompare(b.name);
     }
-    
+
     let aVal = a[currentSort.column];
     let bVal = b[currentSort.column];
-    
-    // Handle occupant sorting
+
     if (currentSort.column === 'occupant') {
       aVal = a.currentAssignment?.person?.first_name || '';
       bVal = b.currentAssignment?.person?.first_name || '';
     }
-    
+
     if (aVal === null || aVal === undefined) aVal = '';
     if (bVal === null || bVal === undefined) bVal = '';
-    
+
     if (typeof aVal === 'string') {
       aVal = aVal.toLowerCase();
       bVal = bVal.toLowerCase();
     }
-    
+
     if (aVal < bVal) return currentSort.direction === 'asc' ? -1 : 1;
     if (aVal > bVal) return currentSort.direction === 'asc' ? 1 : -1;
     return 0;
   });
-  
+
   return filtered;
 }
 
@@ -339,15 +407,14 @@ function handleSort(column) {
     currentSort.column = column;
     currentSort.direction = 'asc';
   }
-  
-  // Update header classes
+
   document.querySelectorAll('th[data-sort]').forEach(th => {
     th.classList.remove('sort-asc', 'sort-desc');
     if (th.dataset.sort === column) {
       th.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
     }
   });
-  
+
   render();
 }
 
@@ -358,14 +425,14 @@ function render() {
   renderTable(filtered);
 }
 
-function renderCards(spaces) {
-  cardView.innerHTML = spaces.map(space => {
+function renderCards(spacesToRender) {
+  const isAdmin = authState?.isAdmin;
+
+  cardView.innerHTML = spacesToRender.map(space => {
     const occupant = space.currentAssignment?.person;
     const photo = space.photos[0];
-    
-    let badges = '';
     const isOccupied = !!space.currentAssignment;
-    
+
     // Format availability window
     const formatDate = (d) => d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
     const availFromStr = space.availableFrom && space.availableFrom > new Date()
@@ -375,20 +442,21 @@ function renderCards(spaces) {
 
     const fromBadgeClass = availFromStr === 'NOW' ? 'available' : 'occupied';
     const untilBadgeClass = availUntilStr === 'INDEFINITELY' ? 'available' : 'occupied';
-    badges += `<span class="badge ${fromBadgeClass}">Available: ${availFromStr}</span>`;
+
+    let badges = `<span class="badge ${fromBadgeClass}">Available: ${availFromStr}</span>`;
     badges += `<span class="badge ${untilBadgeClass} badge-right">Until: ${availUntilStr}</span>`;
-    if (isAdminMode) {
-      if (space.is_secret) badges += '<span class="badge secret">Secret</span>';
-      else if (!space.is_listed) badges += '<span class="badge unlisted">Unlisted</span>';
-    }
-    
+
+    // Visibility badges
+    if (space.is_secret) badges += '<span class="badge secret">Secret</span>';
+    else if (!space.is_listed) badges += '<span class="badge unlisted">Unlisted</span>';
+
     const beds = getBedSummary(space);
     const bathText = space.bath_privacy ? `${space.bath_privacy} bath` : '';
-    
+
     let occupantHtml = '';
-    if (isAdminMode && isOccupied) {
+    if (isOccupied && occupant) {
       const name = `${occupant.first_name} ${occupant.last_name || ''}`.trim();
-      const endDate = space.currentAssignment.end_date 
+      const endDate = space.currentAssignment.end_date
         ? new Date(space.currentAssignment.end_date).toLocaleDateString()
         : 'No end date';
       occupantHtml = `
@@ -398,13 +466,31 @@ function renderCards(spaces) {
         </div>
       `;
     }
-    
+
     const pendingRequests = space.photoRequests?.filter(r => r.status === 'pending').length || 0;
-    
+
+    // Admin actions
+    let actionsHtml = '';
+    if (isAdmin) {
+      actionsHtml = `
+        <div class="card-actions">
+          <button class="btn-edit" onclick="event.stopPropagation(); openEditSpace('${space.id}')">
+            Edit
+          </button>
+          <button class="btn-small" onclick="event.stopPropagation(); openPhotoUpload('${space.id}', '${space.name.replace(/'/g, "\\'")}')">
+            Upload
+          </button>
+          <button class="btn-small" onclick="event.stopPropagation(); openPhotoRequest('${space.id}', '${space.name.replace(/'/g, "\\'")}')">
+            Request ${pendingRequests ? `(${pendingRequests})` : ''}
+          </button>
+        </div>
+      `;
+    }
+
     return `
       <div class="space-card" onclick="showSpaceDetail('${space.id}')">
         <div class="card-image">
-          ${photo 
+          ${photo
             ? `<img src="${photo.url}" alt="${space.name}">`
             : `<div class="no-photo">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -434,50 +520,40 @@ function renderCards(spaces) {
             </div>
           ` : ''}
           ${occupantHtml}
-          <div class="card-actions">
-            <button class="btn-small" onclick="event.stopPropagation(); openPhotoUpload('${space.id}', '${space.name}')">
-              📤 Upload
-            </button>
-            <button class="btn-small" onclick="event.stopPropagation(); openPhotoRequest('${space.id}', '${space.name}')">
-              📷 Request ${pendingRequests ? `(${pendingRequests})` : ''}
-            </button>
-          </div>
+          ${actionsHtml}
         </div>
       </div>
     `;
   }).join('');
 }
 
-function renderTable(spaces) {
-  tableBody.innerHTML = spaces.map(space => {
+function renderTable(spacesToRender) {
+  tableBody.innerHTML = spacesToRender.map(space => {
     const isOccupied = !!space.currentAssignment;
     const occupant = space.currentAssignment?.person;
     const beds = getBedSummary(space);
-    
-    const occupantName = occupant 
+
+    const occupantName = occupant
       ? `${occupant.first_name} ${occupant.last_name || ''}`.trim()
       : '-';
-    
+
     const endDate = space.currentAssignment?.end_date
       ? new Date(space.currentAssignment.end_date).toLocaleDateString()
       : '-';
-    
-    // Format availability window
+
     const formatDate = (d) => d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
     const availFromStr = space.availableFrom && space.availableFrom > new Date()
       ? formatDate(space.availableFrom)
       : 'NOW';
     const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'INDEFINITELY';
-    
-    let statusBadge = isOccupied 
+
+    let statusBadge = isOccupied
       ? '<span class="badge occupied">Occupied</span>'
       : '<span class="badge available">Available</span>';
-    
-    if (isAdminMode) {
-      if (space.is_secret) statusBadge += ' <span class="badge secret">Secret</span>';
-      else if (!space.is_listed) statusBadge += ' <span class="badge unlisted">Unlisted</span>';
-    }
-    
+
+    if (space.is_secret) statusBadge += ' <span class="badge secret">Secret</span>';
+    else if (!space.is_listed) statusBadge += ' <span class="badge unlisted">Unlisted</span>';
+
     return `
       <tr onclick="showSpaceDetail('${space.id}')" style="cursor:pointer;">
         <td><strong>${space.name}</strong>${space.location ? `<br><small style="color:var(--text-muted)">in ${space.location}</small>` : (space.parent ? `<br><small style="color:var(--text-muted)">in ${space.parent.name}</small>` : '')}</td>
@@ -488,9 +564,9 @@ function renderTable(spaces) {
         <td>${space.amenities.slice(0, 3).join(', ') || '-'}</td>
         <td>${availFromStr}</td>
         <td>${availUntilStr}</td>
-        <td class="admin-only">${occupantName}</td>
-        <td class="admin-only">${endDate}</td>
-        <td class="admin-only">${statusBadge}</td>
+        <td>${occupantName}</td>
+        <td>${endDate}</td>
+        <td>${statusBadge}</td>
       </tr>
     `;
   }).join('');
@@ -512,16 +588,18 @@ function getBedSummary(space) {
 function showSpaceDetail(spaceId) {
   const space = spaces.find(s => s.id === spaceId);
   if (!space) return;
-  
+
+  const isAdmin = authState?.isAdmin;
+
   document.getElementById('detailSpaceName').textContent = space.name;
-  
+
   const isOccupied = !!space.currentAssignment;
   const occupant = space.currentAssignment?.person;
-  
+
   let photosHtml = '';
   if (space.photos.length) {
     const photoItems = space.photos.map((p, idx) => {
-      const orderControls = isAdminMode ? `
+      const orderControls = isAdmin ? `
         <div class="photo-order-controls">
           <button onclick="event.stopPropagation(); movePhoto('${space.id}', '${p.id}', 'top')" title="Move to top">⇈</button>
           <button onclick="event.stopPropagation(); movePhoto('${space.id}', '${p.id}', 'up')" title="Move up">↑</button>
@@ -536,7 +614,7 @@ function showSpaceDetail(spaceId) {
         </div>
       `;
     }).join('');
-    
+
     photosHtml = `
       <div class="detail-section detail-photos">
         <h3>Photos</h3>
@@ -546,9 +624,9 @@ function showSpaceDetail(spaceId) {
       </div>
     `;
   }
-  
+
   let occupantHtml = '';
-  if (isAdminMode && isOccupied) {
+  if (isOccupied && occupant) {
     const a = space.currentAssignment;
     occupantHtml = `
       <div class="detail-section">
@@ -562,9 +640,9 @@ function showSpaceDetail(spaceId) {
       </div>
     `;
   }
-  
+
   let photoRequestsHtml = '';
-  if (isAdminMode && space.photoRequests?.length) {
+  if (space.photoRequests?.length) {
     photoRequestsHtml = `
       <div class="detail-section photo-requests">
         <h3>Photo Requests</h3>
@@ -579,7 +657,7 @@ function showSpaceDetail(spaceId) {
       </div>
     `;
   }
-  
+
   document.getElementById('spaceDetailBody').innerHTML = `
     ${photosHtml}
     <div class="detail-grid">
@@ -594,7 +672,7 @@ function showSpaceDetail(spaceId) {
       </div>
       <div class="detail-section">
         <h3>Amenities</h3>
-        ${space.amenities.length 
+        ${space.amenities.length
           ? `<p>${space.amenities.join(', ')}</p>`
           : '<p>No amenities listed</p>'
         }
@@ -608,15 +686,18 @@ function showSpaceDetail(spaceId) {
       </div>
     ` : ''}
     ${photoRequestsHtml}
-    ${isAdminMode ? `
-      <div style="margin-top:1rem;">
-        <button class="btn-primary" onclick="openPhotoRequest('${space.id}', '${space.name}')">
-          📷 Request Photo
+    ${isAdmin ? `
+      <div style="margin-top:1rem; display: flex; gap: 0.75rem;">
+        <button class="btn-primary" onclick="openEditSpace('${space.id}'); spaceDetailModal.classList.add('hidden');">
+          Edit Space
+        </button>
+        <button class="btn-secondary" onclick="openPhotoRequest('${space.id}', '${space.name.replace(/'/g, "\\'")}')">
+          Request Photo
         </button>
       </div>
     ` : ''}
   `;
-  
+
   spaceDetailModal.classList.remove('hidden');
 }
 
@@ -624,6 +705,10 @@ function showSpaceDetail(spaceId) {
 let currentPhotoRequestSpaceId = null;
 
 function openPhotoRequest(spaceId, spaceName) {
+  if (!authState?.isAdmin) {
+    alert('Only admins can request photos');
+    return;
+  }
   currentPhotoRequestSpaceId = spaceId;
   document.getElementById('modalSpaceName').textContent = spaceName;
   document.getElementById('photoDescription').value = '';
@@ -636,47 +721,45 @@ async function handlePhotoRequestSubmit() {
     alert('Please describe the photo needed.');
     return;
   }
-  
+
   try {
-    const { error } = await db
+    const { error } = await supabase
       .from('photo_requests')
       .insert({
         space_id: currentPhotoRequestSpaceId,
         description: description,
         status: 'pending',
-        requested_by: 'admin' // Could be a real user ID later
+        requested_by: authState.appUser?.id || 'admin'
       });
-    
+
     if (error) throw error;
-    
+
     alert('Photo request submitted!');
     photoRequestModal.classList.add('hidden');
-    
-    // Reload data to reflect new request
+
     await loadData();
     render();
-    
+
   } catch (error) {
     console.error('Error submitting photo request:', error);
     alert('Failed to submit request. Check console for details.');
   }
 }
 
-// Make functions globally accessible
-window.showSpaceDetail = showSpaceDetail;
-window.openPhotoRequest = openPhotoRequest;
-window.openPhotoUpload = openPhotoUpload;
-window.movePhoto = movePhoto;
-
 // Photo ordering
 async function movePhoto(spaceId, photoId, direction) {
+  if (!authState?.isAdmin) {
+    alert('Only admins can reorder photos');
+    return;
+  }
+
   const space = spaces.find(s => s.id === spaceId);
   if (!space) return;
-  
+
   const photos = [...space.photos];
   const idx = photos.findIndex(p => p.id === photoId);
   if (idx === -1) return;
-  
+
   let newIdx;
   switch (direction) {
     case 'top':
@@ -694,28 +777,25 @@ async function movePhoto(spaceId, photoId, direction) {
     default:
       return;
   }
-  
+
   if (newIdx === idx) return;
-  
-  // Reorder array
+
   const [photo] = photos.splice(idx, 1);
   photos.splice(newIdx, 0, photo);
-  
-  // Update display_order for all photos
+
   try {
     for (let i = 0; i < photos.length; i++) {
-      await db
+      await supabase
         .from('photo_spaces')
         .update({ display_order: i })
         .eq('space_id', spaceId)
         .eq('photo_id', photos[i].id);
     }
-    
-    // Reload and re-render
+
     await loadData();
     render();
     showSpaceDetail(spaceId);
-    
+
   } catch (error) {
     console.error('Error reordering photos:', error);
     alert('Failed to reorder photos.');
@@ -726,6 +806,10 @@ async function movePhoto(spaceId, photoId, direction) {
 let currentUploadSpaceId = null;
 
 function openPhotoUpload(spaceId, spaceName) {
+  if (!authState?.isAdmin) {
+    alert('Only admins can upload photos');
+    return;
+  }
   currentUploadSpaceId = spaceId;
   document.getElementById('uploadModalSpaceName').textContent = spaceName;
   document.getElementById('photoFile').value = '';
@@ -737,7 +821,7 @@ function openPhotoUpload(spaceId, spaceName) {
 function handleFilePreview(e) {
   const file = e.target.files[0];
   if (!file) return;
-  
+
   const reader = new FileReader();
   reader.onload = (e) => {
     document.getElementById('uploadPreview').innerHTML = `
@@ -748,67 +832,66 @@ function handleFilePreview(e) {
 }
 
 async function handlePhotoUpload() {
+  if (!authState?.isAdmin) {
+    alert('Only admins can upload photos');
+    return;
+  }
+
   const file = document.getElementById('photoFile').files[0];
   const caption = document.getElementById('photoCaption').value.trim();
-  
+
   if (!file) {
     alert('Please select an image.');
     return;
   }
-  
+
   const submitBtn = document.getElementById('submitPhotoUpload');
   submitBtn.disabled = true;
   submitBtn.textContent = 'Uploading...';
-  
+
   try {
-    // Generate unique filename
     const ext = file.name.split('.').pop();
     const filename = `${currentUploadSpaceId}/${Date.now()}.${ext}`;
-    
-    // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await db.storage
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
       .from('housephotos')
       .upload(filename, file);
-    
+
     if (uploadError) throw uploadError;
-    
-    // Get public URL
-    const { data: urlData } = db.storage
+
+    const { data: urlData } = supabase.storage
       .from('housephotos')
       .getPublicUrl(filename);
-    
+
     const publicUrl = urlData.publicUrl;
-    
-    // Create photo record
-    const { data: photoData, error: photoError } = await db
+
+    const { data: photoData, error: photoError } = await supabase
       .from('photos')
       .insert({
         url: publicUrl,
         caption: caption || null,
-        uploaded_by: 'admin'
+        uploaded_by: authState.appUser?.id || 'admin'
       })
       .select()
       .single();
-    
+
     if (photoError) throw photoError;
-    
-    // Link to space
-    const { error: linkError } = await db
+
+    const { error: linkError } = await supabase
       .from('photo_spaces')
       .insert({
         photo_id: photoData.id,
         space_id: currentUploadSpaceId
       });
-    
+
     if (linkError) throw linkError;
-    
+
     alert('Photo uploaded successfully!');
     photoUploadModal.classList.add('hidden');
-    
-    // Reload data to show new photo
+
     await loadData();
     render();
-    
+
   } catch (error) {
     console.error('Error uploading photo:', error);
     alert('Failed to upload: ' + error.message);
@@ -817,3 +900,120 @@ async function handlePhotoUpload() {
     submitBtn.textContent = 'Upload';
   }
 }
+
+// Edit space functionality
+let currentEditSpaceId = null;
+
+function openEditSpace(spaceId) {
+  if (!authState?.isAdmin) {
+    alert('Only admins can edit spaces');
+    return;
+  }
+
+  const space = spaces.find(s => s.id === spaceId);
+  if (!space) {
+    alert('Space not found');
+    return;
+  }
+
+  currentEditSpaceId = spaceId;
+  document.getElementById('editSpaceName').textContent = space.name;
+  document.getElementById('editSpaceId').value = spaceId;
+
+  // Populate form fields
+  document.getElementById('editName').value = space.name || '';
+  document.getElementById('editLocation').value = space.location || '';
+  document.getElementById('editDescription').value = space.description || '';
+  document.getElementById('editMonthlyRate').value = space.monthly_rate || '';
+  document.getElementById('editWeeklyRate').value = space.weekly_rate || '';
+  document.getElementById('editNightlyRate').value = space.nightly_rate || '';
+  document.getElementById('editSqFootage').value = space.sq_footage || '';
+  document.getElementById('editMinResidents').value = space.min_residents || 1;
+  document.getElementById('editMaxResidents').value = space.max_residents || '';
+  document.getElementById('editBathPrivacy').value = space.bath_privacy || '';
+  document.getElementById('editBathFixture').value = space.bath_fixture || '';
+  document.getElementById('editGenderRestriction').value = space.gender_restriction || 'none';
+  document.getElementById('editBedsKing').value = space.beds_king || 0;
+  document.getElementById('editBedsQueen').value = space.beds_queen || 0;
+  document.getElementById('editBedsDouble').value = space.beds_double || 0;
+  document.getElementById('editBedsTwin').value = space.beds_twin || 0;
+  document.getElementById('editBedsFolding').value = space.beds_folding || 0;
+  document.getElementById('editBedsTrifold').value = space.beds_trifold || 0;
+  document.getElementById('editIsListed').checked = space.is_listed || false;
+  document.getElementById('editIsSecret').checked = space.is_secret || false;
+  document.getElementById('editCanBeDwelling').checked = space.can_be_dwelling !== false;
+
+  editSpaceModal.classList.remove('hidden');
+}
+
+async function handleEditSpaceSubmit() {
+  if (!authState?.isAdmin) {
+    alert('Only admins can edit spaces');
+    return;
+  }
+
+  const spaceId = document.getElementById('editSpaceId').value;
+  const name = document.getElementById('editName').value.trim();
+
+  if (!name) {
+    alert('Name is required');
+    return;
+  }
+
+  const submitBtn = document.getElementById('submitEditSpace');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Saving...';
+
+  try {
+    const updates = {
+      name: name,
+      location: document.getElementById('editLocation').value.trim() || null,
+      description: document.getElementById('editDescription').value.trim() || null,
+      monthly_rate: parseInt(document.getElementById('editMonthlyRate').value) || null,
+      weekly_rate: parseInt(document.getElementById('editWeeklyRate').value) || null,
+      nightly_rate: parseInt(document.getElementById('editNightlyRate').value) || null,
+      sq_footage: parseInt(document.getElementById('editSqFootage').value) || null,
+      min_residents: parseInt(document.getElementById('editMinResidents').value) || 1,
+      max_residents: parseInt(document.getElementById('editMaxResidents').value) || null,
+      bath_privacy: document.getElementById('editBathPrivacy').value || null,
+      bath_fixture: document.getElementById('editBathFixture').value || null,
+      gender_restriction: document.getElementById('editGenderRestriction').value || 'none',
+      beds_king: parseInt(document.getElementById('editBedsKing').value) || 0,
+      beds_queen: parseInt(document.getElementById('editBedsQueen').value) || 0,
+      beds_double: parseInt(document.getElementById('editBedsDouble').value) || 0,
+      beds_twin: parseInt(document.getElementById('editBedsTwin').value) || 0,
+      beds_folding: parseInt(document.getElementById('editBedsFolding').value) || 0,
+      beds_trifold: parseInt(document.getElementById('editBedsTrifold').value) || 0,
+      is_listed: document.getElementById('editIsListed').checked,
+      is_secret: document.getElementById('editIsSecret').checked,
+      can_be_dwelling: document.getElementById('editCanBeDwelling').checked,
+    };
+
+    const { error } = await supabase
+      .from('spaces')
+      .update(updates)
+      .eq('id', spaceId);
+
+    if (error) throw error;
+
+    alert('Space updated successfully!');
+    editSpaceModal.classList.add('hidden');
+
+    await loadData();
+    render();
+
+  } catch (error) {
+    console.error('Error updating space:', error);
+    alert('Failed to update space: ' + error.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Save Changes';
+  }
+}
+
+// Make functions globally accessible for onclick handlers
+window.showSpaceDetail = showSpaceDetail;
+window.openPhotoRequest = openPhotoRequest;
+window.openPhotoUpload = openPhotoUpload;
+window.movePhoto = movePhoto;
+window.openEditSpace = openEditSpace;

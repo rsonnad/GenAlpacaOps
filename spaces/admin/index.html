@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GenAlpaca Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Loading overlay shown while checking auth -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <!-- Unauthorized message -->
+  <div id="unauthorizedOverlay" class="loading-overlay hidden">
+    <div class="unauthorized-card">
+      <h2>Access Denied</h2>
+      <p>Your account is not authorized to access admin features.</p>
+      <p>Please contact an administrator to request access.</p>
+      <div class="unauthorized-actions">
+        <a href="/GenAlpacaOps/spaces/" class="btn-secondary">View Public Spaces</a>
+        <button id="signOutBtn" class="btn-secondary">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main app content (hidden until auth confirmed) -->
+  <div id="appContent" class="hidden">
+    <header>
+      <div class="header-left">
+        <h1>&#129433; GenAlpaca Admin</h1>
+        <span id="roleBadge" class="role-badge">Staff</span>
+      </div>
+      <div class="header-controls">
+        <div class="view-toggle">
+          <button id="cardViewBtn" class="active" title="Card view">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </button>
+          <button id="tableViewBtn" title="Table view">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <span id="userInfo" class="user-info"></span>
+        <a href="/GenAlpacaOps/spaces/admin/users.html" id="manageUsersLink" class="btn-small hidden">Manage Users</a>
+        <button id="headerSignOutBtn" class="btn-secondary">Sign Out</button>
+      </div>
+    </header>
+
+    <div class="filters">
+      <div class="filter-group">
+        <label for="searchInput">Search</label>
+        <input type="text" id="searchInput" placeholder="Search spaces...">
+      </div>
+      <div class="filter-group">
+        <label for="priceFilter">Price</label>
+        <select id="priceFilter">
+          <option value="">All prices</option>
+          <option value="0-400">Under $400</option>
+          <option value="400-700">$400 - $700</option>
+          <option value="700-1000">$700 - $1000</option>
+          <option value="1000+">$1000+</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="bathFilter">Bathroom</label>
+        <select id="bathFilter">
+          <option value="">Any bathroom</option>
+          <option value="private">Private</option>
+          <option value="shared">Shared</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="availFilter">Availability</label>
+        <select id="availFilter">
+          <option value="">All</option>
+          <option value="available">Available Now</option>
+          <option value="occupied">Currently Occupied</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="visibilityFilter">Visibility</label>
+        <select id="visibilityFilter">
+          <option value="">All visibility</option>
+          <option value="listed">Listed</option>
+          <option value="unlisted">Unlisted</option>
+          <option value="secret">Secret</option>
+        </select>
+      </div>
+      <button id="clearFilters" class="clear-btn">Clear all</button>
+    </div>
+
+    <main>
+      <!-- Card View -->
+      <div id="cardView" class="card-grid"></div>
+
+      <!-- Table View -->
+      <div id="tableView" class="table-container hidden">
+        <table>
+          <thead>
+            <tr>
+              <th data-sort="name">Name</th>
+              <th data-sort="monthly_rate">Rate</th>
+              <th data-sort="sq_footage">Size</th>
+              <th>Beds</th>
+              <th data-sort="bath_privacy">Bath</th>
+              <th>Amenities</th>
+              <th data-sort="availability">Available</th>
+              <th>Until</th>
+              <th>Occupant</th>
+              <th>Lease End</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- Photo Request Modal -->
+  <div id="photoRequestModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Request Photo for <span id="modalSpaceName"></span></h2>
+        <button class="modal-close" id="closeModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label for="photoDescription">Describe the photo needed:</label>
+        <textarea id="photoDescription" rows="4" placeholder="e.g., Wide angle shot of the bedroom from the doorway..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelPhotoRequest" class="btn-secondary">Cancel</button>
+        <button id="submitPhotoRequest" class="btn-primary">Submit Request</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Space Detail Modal -->
+  <div id="spaceDetailModal" class="modal hidden">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h2 id="detailSpaceName">Space Name</h2>
+        <button class="modal-close" id="closeDetailModal">&times;</button>
+      </div>
+      <div class="modal-body" id="spaceDetailBody">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Photo Upload Modal -->
+  <div id="photoUploadModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Upload Photo for <span id="uploadModalSpaceName"></span></h2>
+        <button class="modal-close" id="closeUploadModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label for="photoFile">Select image:</label>
+        <input type="file" id="photoFile" accept="image/*">
+        <div id="uploadPreview" style="margin-top: 1rem;"></div>
+        <label for="photoCaption">Caption (optional):</label>
+        <input type="text" id="photoCaption" placeholder="e.g., View from the window">
+      </div>
+      <div class="modal-footer">
+        <button id="cancelPhotoUpload" class="btn-secondary">Cancel</button>
+        <button id="submitPhotoUpload" class="btn-primary">Upload</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Space Modal (Admin Only) -->
+  <div id="editSpaceModal" class="modal hidden">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h2>Edit Space: <span id="editSpaceName"></span></h2>
+        <button class="modal-close" id="closeEditModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="editSpaceForm">
+          <input type="hidden" id="editSpaceId">
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="editName">Name *</label>
+              <input type="text" id="editName" required>
+            </div>
+            <div class="form-group">
+              <label for="editLocation">Location</label>
+              <input type="text" id="editLocation" placeholder="e.g., Main House, Garden Cottage">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="editDescription">Description</label>
+            <textarea id="editDescription" rows="3"></textarea>
+          </div>
+
+          <div class="form-grid form-grid-3">
+            <div class="form-group">
+              <label for="editMonthlyRate">Monthly Rate ($)</label>
+              <input type="number" id="editMonthlyRate" min="0" step="1">
+            </div>
+            <div class="form-group">
+              <label for="editWeeklyRate">Weekly Rate ($)</label>
+              <input type="number" id="editWeeklyRate" min="0" step="1">
+            </div>
+            <div class="form-group">
+              <label for="editNightlyRate">Nightly Rate ($)</label>
+              <input type="number" id="editNightlyRate" min="0" step="1">
+            </div>
+          </div>
+
+          <div class="form-grid form-grid-3">
+            <div class="form-group">
+              <label for="editSqFootage">Square Footage</label>
+              <input type="number" id="editSqFootage" min="0">
+            </div>
+            <div class="form-group">
+              <label for="editMinResidents">Min Residents</label>
+              <input type="number" id="editMinResidents" min="1" value="1">
+            </div>
+            <div class="form-group">
+              <label for="editMaxResidents">Max Residents</label>
+              <input type="number" id="editMaxResidents" min="1">
+            </div>
+          </div>
+
+          <div class="form-grid form-grid-3">
+            <div class="form-group">
+              <label for="editBathPrivacy">Bathroom Privacy</label>
+              <select id="editBathPrivacy">
+                <option value="">Not specified</option>
+                <option value="private">Private</option>
+                <option value="shared">Shared</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editBathFixture">Bathroom Fixture</label>
+              <select id="editBathFixture">
+                <option value="">Not specified</option>
+                <option value="full">Full (tub/shower)</option>
+                <option value="shower">Shower only</option>
+                <option value="half">Half bath</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editGenderRestriction">Gender Restriction</label>
+              <select id="editGenderRestriction">
+                <option value="none">None</option>
+                <option value="female">Female only</option>
+                <option value="male">Male only</option>
+              </select>
+            </div>
+          </div>
+
+          <fieldset class="form-fieldset">
+            <legend>Beds</legend>
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <label for="editBedsKing">King</label>
+                <input type="number" id="editBedsKing" min="0" value="0">
+              </div>
+              <div class="form-group">
+                <label for="editBedsQueen">Queen</label>
+                <input type="number" id="editBedsQueen" min="0" value="0">
+              </div>
+              <div class="form-group">
+                <label for="editBedsDouble">Double</label>
+                <input type="number" id="editBedsDouble" min="0" value="0">
+              </div>
+              <div class="form-group">
+                <label for="editBedsTwin">Twin</label>
+                <input type="number" id="editBedsTwin" min="0" value="0">
+              </div>
+              <div class="form-group">
+                <label for="editBedsFolding">Folding</label>
+                <input type="number" id="editBedsFolding" min="0" value="0">
+              </div>
+              <div class="form-group">
+                <label for="editBedsTrifold">Trifold</label>
+                <input type="number" id="editBedsTrifold" min="0" value="0">
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="form-fieldset">
+            <legend>Visibility</legend>
+            <div class="form-grid form-grid-3">
+              <div class="form-group checkbox-group">
+                <label>
+                  <input type="checkbox" id="editIsListed">
+                  Listed (visible in public search)
+                </label>
+              </div>
+              <div class="form-group checkbox-group">
+                <label>
+                  <input type="checkbox" id="editIsSecret">
+                  Secret (only via direct link)
+                </label>
+              </div>
+              <div class="form-group checkbox-group">
+                <label>
+                  <input type="checkbox" id="editCanBeDwelling">
+                  Can be dwelling
+                </label>
+              </div>
+            </div>
+          </fieldset>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelEditSpace" class="btn-secondary">Cancel</button>
+        <button id="submitEditSpace" class="btn-primary">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
