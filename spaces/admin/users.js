@@ -200,8 +200,6 @@ function closeInviteModal() {
 }
 
 async function revokeInvitation(invitationId) {
-  if (!confirm('Revoke this invitation?')) return;
-
   try {
     const { error } = await supabase
       .from('user_invitations')

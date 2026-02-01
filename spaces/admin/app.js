@@ -964,7 +964,7 @@ function renderEditPhotos(space) {
       <div class="photo-controls">
         <button onclick="event.stopPropagation(); movePhotoInEdit('${space.id}', '${photo.id}', 'up')" ${idx === 0 ? 'disabled' : ''}>↑ Up</button>
         <button onclick="event.stopPropagation(); movePhotoInEdit('${space.id}', '${photo.id}', 'down')" ${idx === space.photos.length - 1 ? 'disabled' : ''}>↓ Down</button>
-        <button class="btn-delete" onclick="event.stopPropagation(); deletePhoto('${space.id}', '${photo.id}')">× Delete</button>
+        <button class="btn-delete" onclick="event.stopPropagation(); removePhotoFromSpace('${space.id}', '${photo.id}')">× Remove</button>
       </div>
     </div>
   `).join('');
@@ -1043,19 +1043,15 @@ async function movePhotoInEdit(spaceId, photoId, direction) {
   if (space) renderEditPhotos(space);
 }
 
-// Delete photo
-async function deletePhoto(spaceId, photoId) {
+// Remove photo from space (unlinks, doesn't delete the actual photo)
+async function removePhotoFromSpace(spaceId, photoId) {
   if (!authState?.isAdmin) {
-    alert('Only admins can delete photos');
-    return;
-  }
-
-  if (!confirm('Are you sure you want to delete this photo? This cannot be undone.')) {
+    alert('Only admins can remove photos');
     return;
   }
 
   try {
-    // Remove the photo_spaces link
+    // Remove the photo_spaces link (photo still exists in photos table)
     const { error: unlinkError } = await supabase
       .from('photo_spaces')
       .delete()
@@ -1064,25 +1060,16 @@ async function deletePhoto(spaceId, photoId) {
 
     if (unlinkError) throw unlinkError;
 
-    // Optionally delete the photo record itself
-    // For now, we'll keep the photo record in case it's used elsewhere
-    // const { error: deleteError } = await supabase
-    //   .from('photos')
-    //   .delete()
-    //   .eq('id', photoId);
-
-    alert('Photo removed!');
-
-    await loadData();
-    render();
-
-    // Refresh the edit modal photos
+    // Update local data without full reload (keeps modal open)
     const space = spaces.find(s => s.id === spaceId);
-    if (space) renderEditPhotos(space);
+    if (space) {
+      space.photos = space.photos.filter(p => p.id !== photoId);
+      renderEditPhotos(space);
+    }
 
   } catch (error) {
-    console.error('Error deleting photo:', error);
-    alert('Failed to delete photo: ' + error.message);
+    console.error('Error removing photo:', error);
+    alert('Failed to remove photo: ' + error.message);
   }
 }
 
@@ -1092,5 +1079,5 @@ window.openPhotoRequest = openPhotoRequest;
 window.openPhotoUpload = openPhotoUpload;
 window.movePhoto = movePhoto;
 window.movePhotoInEdit = movePhotoInEdit;
-window.deletePhoto = deletePhoto;
+window.removePhotoFromSpace = removePhotoFromSpace;
 window.openEditSpace = openEditSpace;
