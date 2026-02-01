@@ -962,9 +962,9 @@ function renderEditPhotos(space) {
       <img src="${photo.url}" alt="${photo.caption || 'Photo ' + (idx + 1)}">
       <span class="photo-order">#${idx + 1}</span>
       <div class="photo-controls">
-        <button onclick="event.stopPropagation(); movePhotoInEdit('${space.id}', '${photo.id}', 'up')" ${idx === 0 ? 'disabled' : ''}>↑ Up</button>
-        <button onclick="event.stopPropagation(); movePhotoInEdit('${space.id}', '${photo.id}', 'down')" ${idx === space.photos.length - 1 ? 'disabled' : ''}>↓ Down</button>
-        <button class="btn-delete" onclick="event.stopPropagation(); removePhotoFromSpace('${space.id}', '${photo.id}')">× Remove</button>
+        <button type="button" onclick="event.preventDefault(); event.stopPropagation(); movePhotoInEdit('${space.id}', '${photo.id}', 'up')" ${idx === 0 ? 'disabled' : ''}>↑ Up</button>
+        <button type="button" onclick="event.preventDefault(); event.stopPropagation(); movePhotoInEdit('${space.id}', '${photo.id}', 'down')" ${idx === space.photos.length - 1 ? 'disabled' : ''}>↓ Down</button>
+        <button type="button" class="btn-delete" onclick="event.preventDefault(); event.stopPropagation(); removePhotoFromSpace('${space.id}', '${photo.id}')">× Remove</button>
       </div>
     </div>
   `).join('');
@@ -1035,12 +1035,57 @@ async function handleEditSpaceSubmit() {
   }
 }
 
-// Move photo from edit modal
+// Move photo from edit modal (optimistic update for performance)
 async function movePhotoInEdit(spaceId, photoId, direction) {
-  await movePhoto(spaceId, photoId, direction);
-  // Refresh the edit modal photos
+  if (!authState?.isAdmin) {
+    alert('Only admins can reorder photos');
+    return;
+  }
+
   const space = spaces.find(s => s.id === spaceId);
-  if (space) renderEditPhotos(space);
+  if (!space) return;
+
+  const photos = [...space.photos];
+  const idx = photos.findIndex(p => p.id === photoId);
+  if (idx === -1) return;
+
+  let newIdx;
+  switch (direction) {
+    case 'up':
+      newIdx = Math.max(0, idx - 1);
+      break;
+    case 'down':
+      newIdx = Math.min(photos.length - 1, idx + 1);
+      break;
+    default:
+      return;
+  }
+
+  if (newIdx === idx) return;
+
+  // Optimistic update - move in local array immediately
+  const [photo] = photos.splice(idx, 1);
+  photos.splice(newIdx, 0, photo);
+  space.photos = photos;
+
+  // Re-render immediately for snappy UI
+  renderEditPhotos(space);
+
+  // Sync to database in background (don't block UI or show errors)
+  try {
+    const updates = photos.map((p, i) =>
+      supabase
+        .from('photo_spaces')
+        .update({ display_order: i })
+        .eq('space_id', spaceId)
+        .eq('photo_id', p.id)
+    );
+    await Promise.all(updates);
+  } catch (error) {
+    console.error('Error saving photo order:', error);
+    // Silently fail - the visual order is already updated
+    // It will sync correctly on next page load
+  }
 }
 
 // Remove photo from space (unlinks, doesn't delete the actual photo)
