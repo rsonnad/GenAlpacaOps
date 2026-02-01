@@ -245,6 +245,26 @@
     </div>
   </div>
 
+  <!-- Invitation Text Modal -->
+  <div id="inviteTextModal" class="modal hidden">
+    <div class="modal-content" style="max-width: 550px;">
+      <div class="modal-header">
+        <h2>Invitation Ready</h2>
+        <button class="modal-close" onclick="closeInviteModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 1rem; color: var(--text-muted);">
+          The invitation has been created. Copy the text below and send it via email or message:
+        </p>
+        <textarea id="inviteTextContent" readonly style="width: 100%; height: 250px; padding: 1rem; font-family: inherit; font-size: 0.875rem; border: 1px solid var(--border); border-radius: var(--radius); resize: none; background: var(--bg);"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeInviteModal()">Close</button>
+        <button class="btn-primary" onclick="copyInviteText()">Copy to Clipboard</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script type="module" src="users.js"></script>
 </body>

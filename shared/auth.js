@@ -76,10 +76,53 @@ async function handleAuthChange(session) {
       .update({ last_login_at: new Date().toISOString() })
       .eq('auth_user_id', session.user.id);
   } else {
-    // User authenticated with Google but not in app_users - unauthorized
-    currentAppUser = null;
-    currentRole = 'unauthorized';
-    currentUser.displayName = currentUser.user_metadata?.full_name || currentUser.email;
+    // User not in app_users - check for pending invitation
+    const userEmail = session.user.email?.toLowerCase();
+    const { data: invitation, error: invError } = await supabase
+      .from('user_invitations')
+      .select('*')
+      .eq('email', userEmail)
+      .eq('status', 'pending')
+      .single();
+
+    if (invitation && !invError) {
+      // Found a pending invitation - automatically create app_users record
+      const displayName = session.user.user_metadata?.full_name || userEmail.split('@')[0];
+
+      const { data: newAppUser, error: createError } = await supabase
+        .from('app_users')
+        .insert({
+          auth_user_id: session.user.id,
+          email: userEmail,
+          display_name: displayName,
+          role: invitation.role,
+          invited_by: invitation.invited_by,
+        })
+        .select()
+        .single();
+
+      if (!createError && newAppUser) {
+        // Mark invitation as accepted
+        await supabase
+          .from('user_invitations')
+          .update({ status: 'accepted' })
+          .eq('id', invitation.id);
+
+        currentAppUser = newAppUser;
+        currentRole = newAppUser.role;
+        currentUser.displayName = displayName;
+      } else {
+        console.error('Error creating app_user from invitation:', createError);
+        currentAppUser = null;
+        currentRole = 'unauthorized';
+        currentUser.displayName = session.user.user_metadata?.full_name || session.user.email;
+      }
+    } else {
+      // No invitation - unauthorized
+      currentAppUser = null;
+      currentRole = 'unauthorized';
+      currentUser.displayName = session.user.user_metadata?.full_name || session.user.email;
+    }
   }
 
   notifyListeners();

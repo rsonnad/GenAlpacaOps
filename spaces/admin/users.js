@@ -149,16 +149,54 @@ async function inviteUser(email, role) {
 
     if (error) throw error;
 
-    alert(`Invitation sent to ${email}`);
     document.getElementById('inviteEmail').value = '';
 
     await loadInvitations();
     render();
 
+    // Show invitation text modal
+    showInvitationModal(email, role);
+
   } catch (error) {
     console.error('Error inviting user:', error);
     alert('Failed to send invitation: ' + error.message);
   }
+}
+
+function showInvitationModal(email, role) {
+  const roleDescription = role === 'admin'
+    ? 'full admin access (view all spaces, occupant details, edit spaces, manage photos, and invite users)'
+    : 'staff access (view all spaces and occupant details)';
+
+  const inviteText = `Hi,
+
+You've been invited to access GenAlpaca Spaces as ${role === 'admin' ? 'an admin' : 'a staff member'}.
+
+You will have ${roleDescription}.
+
+To get started:
+1. Go to: https://rsonnad.github.io/GenAlpacaOps/login/
+2. Click "Sign in with Google" using this email address (${email})
+
+Your access has already been pre-approved, so you'll have immediate access once you sign in.
+
+Let me know if you have any questions!`;
+
+  // Show modal
+  const modal = document.getElementById('inviteTextModal');
+  document.getElementById('inviteTextContent').value = inviteText;
+  modal.classList.remove('hidden');
+}
+
+function copyInviteText() {
+  const textarea = document.getElementById('inviteTextContent');
+  textarea.select();
+  document.execCommand('copy');
+  alert('Invitation text copied to clipboard!');
+}
+
+function closeInviteModal() {
+  document.getElementById('inviteTextModal').classList.add('hidden');
 }
 
 async function revokeInvitation(invitationId) {
@@ -329,3 +367,6 @@ function renderUsers() {
 window.revokeInvitation = revokeInvitation;
 window.updateUserRole = updateUserRole;
 window.removeUser = removeUser;
+window.copyInviteText = copyInviteText;
+window.closeInviteModal = closeInviteModal;
+window.showInvitationModal = showInvitationModal;
