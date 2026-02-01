@@ -219,6 +219,10 @@ function renderCards(spacesToRender) {
     const beds = getBedSummary(space);
     const bathText = space.bath_privacy ? `${space.bath_privacy} bath` : '';
 
+    // For public view, all listed spaces are available (no assignment data)
+    const availFromStr = 'NOW';
+    const availUntilStr = 'INDEFINITELY';
+
     return `
       <div class="space-card" onclick="showSpaceDetail('${space.id}')">
         <div class="card-image">
@@ -233,7 +237,8 @@ function renderCards(spacesToRender) {
               </div>`
           }
           <div class="card-badges">
-            <span class="badge available">Available</span>
+            <span class="badge available">Available: ${availFromStr}</span>
+            <span class="badge available badge-right">Until: ${availUntilStr}</span>
           </div>
         </div>
         <div class="card-body">
@@ -271,8 +276,8 @@ function renderTable(spacesToRender) {
         <td>${beds || '-'}</td>
         <td>${space.bath_privacy || '-'}</td>
         <td>${space.amenities.slice(0, 3).join(', ') || '-'}</td>
-        <td><span class="badge available">Available</span></td>
-        <td>Contact us</td>
+        <td><span class="badge available">Available: NOW</span></td>
+        <td>Until: INDEFINITELY</td>
       </tr>
     `;
   }).join('');
