@@ -1,9 +1,9 @@
-// Supabase configuration - UPDATE THESE
+// Supabase configuration
 const SUPABASE_URL = 'https://aphrrfprbixmhissnjfn.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwaHJyZnByYml4bWhpc3NuamZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5MzA0MjUsImV4cCI6MjA4NTUwNjQyNX0.yYkdQIq97GQgxK7yT2OQEPi5Tt-a7gM45aF8xjSD6wk'; // Get from Supabase Dashboard > Settings > API
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwaHJyZnByYml4bWhpc3NuamZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5MzA0MjUsImV4cCI6MjA4NTUwNjQyNX0.yYkdQIq97GQgxK7yT2OQEPi5Tt-a7gM45aF8xjSD6wk';
 
 // Initialize Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // App state
 let spaces = [];
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadData() {
   try {
     // Load spaces with parent info and amenities
-    const { data: spacesData, error: spacesError } = await supabase
+    const { data: spacesData, error: spacesError } = await db
       .from('spaces')
       .select(`
         *,
@@ -56,7 +56,7 @@ async function loadData() {
     if (spacesError) throw spacesError;
     
     // Load active assignments with people
-    const { data: assignmentsData, error: assignmentsError } = await supabase
+    const { data: assignmentsData, error: assignmentsError } = await db
       .from('assignments')
       .select(`
         *,
@@ -68,7 +68,7 @@ async function loadData() {
     if (assignmentsError) throw assignmentsError;
     
     // Load photo requests
-    const { data: requestsData, error: requestsError } = await supabase
+    const { data: requestsData, error: requestsError } = await db
       .from('photo_requests')
       .select('*')
       .in('status', ['pending', 'submitted']);
@@ -530,7 +530,7 @@ async function handlePhotoRequestSubmit() {
   }
   
   try {
-    const { error } = await supabase
+    const { error } = await db
       .from('photo_requests')
       .insert({
         space_id: currentPhotoRequestSpaceId,
