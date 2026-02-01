@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GenAlpaca Spaces</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <h1>🦙 GenAlpaca</h1>
+      <span class="mode-badge" id="modeBadge">Consumer</span>
+    </div>
+    <div class="header-controls">
+      <div class="view-toggle">
+        <button id="cardViewBtn" class="active" title="Card View">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+          </svg>
+        </button>
+        <button id="tableViewBtn" title="Table View">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <button id="adminToggle" class="admin-toggle">Enter Admin</button>
+    </div>
+  </header>
+
+  <div class="filters">
+    <div class="filter-group">
+      <label>Search</label>
+      <input type="text" id="searchInput" placeholder="Name, description...">
+    </div>
+    <div class="filter-group">
+      <label>Price Range</label>
+      <select id="priceFilter">
+        <option value="">All Prices</option>
+        <option value="0-400">Under $400/mo</option>
+        <option value="400-700">$400 - $700/mo</option>
+        <option value="700-1000">$700 - $1000/mo</option>
+        <option value="1000+">$1000+/mo</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Bathroom</label>
+      <select id="bathFilter">
+        <option value="">Any</option>
+        <option value="private">Private</option>
+        <option value="shared">Shared</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Availability</label>
+      <select id="availFilter">
+        <option value="">All</option>
+        <option value="available">Available</option>
+        <option value="occupied">Occupied</option>
+      </select>
+    </div>
+    <div class="filter-group admin-only">
+      <label>Visibility</label>
+      <select id="visibilityFilter">
+        <option value="">All</option>
+        <option value="listed">Listed</option>
+        <option value="unlisted">Unlisted</option>
+        <option value="secret">Secret</option>
+      </select>
+    </div>
+    <button id="clearFilters" class="clear-btn">Clear</button>
+  </div>
+
+  <main>
+    <div id="cardView" class="card-grid"></div>
+    <div id="tableView" class="table-container hidden">
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="name">Name</th>
+            <th data-sort="monthly_rate">Rate</th>
+            <th data-sort="sq_footage">Sq Ft</th>
+            <th>Beds</th>
+            <th data-sort="bath_privacy">Bath</th>
+            <th>Amenities</th>
+            <th class="admin-only" data-sort="occupant">Occupant</th>
+            <th class="admin-only">End Date</th>
+            <th class="admin-only">Status</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Photo Request Modal (Admin Only) -->
+  <div id="photoRequestModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Request Photo</h2>
+        <button class="modal-close" id="closeModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Space: <strong id="modalSpaceName"></strong></p>
+        <label for="photoDescription">Describe the photo needed:</label>
+        <textarea id="photoDescription" rows="3" placeholder="e.g., Photo of outdoor bathroom, view from bed, closet space..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelPhotoRequest" class="btn-secondary">Cancel</button>
+        <button id="submitPhotoRequest" class="btn-primary">Submit Request</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Space Detail Modal -->
+  <div id="spaceDetailModal" class="modal hidden">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h2 id="detailSpaceName"></h2>
+        <button class="modal-close" id="closeDetailModal">&times;</button>
+      </div>
+      <div class="modal-body" id="spaceDetailBody">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>
