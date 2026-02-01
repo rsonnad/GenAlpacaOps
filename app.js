@@ -11,7 +11,7 @@ let assignments = [];
 let photoRequests = [];
 let isAdminMode = false;
 let currentView = 'card';
-let currentSort = { column: 'name', direction: 'asc' };
+let currentSort = { column: 'availability', direction: 'asc' };
 
 // DOM elements
 const cardView = document.getElementById('cardView');
@@ -55,7 +55,7 @@ async function loadData() {
     
     if (spacesError) throw spacesError;
     
-    // Load active assignments with people
+    // Load active AND future assignments with people
     const { data: assignmentsData, error: assignmentsError } = await db
       .from('assignments')
       .select(`
@@ -63,7 +63,8 @@ async function loadData() {
         person:person_id(first_name, last_name, type, email, phone),
         assignment_spaces(space_id)
       `)
-      .eq('status', 'active');
+      .in('status', ['active', 'pending_contract', 'contract_sent'])
+      .order('start_date');
     
     if (assignmentsError) throw assignmentsError;
     
@@ -79,12 +80,44 @@ async function loadData() {
     assignments = assignmentsData || [];
     photoRequests = requestsData || [];
     
-    // Map assignments to spaces
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Map assignments to spaces and compute availability windows
     spaces.forEach(space => {
-      const assignment = assignments.find(a => 
-        a.assignment_spaces?.some(as => as.space_id === space.id)
-      );
-      space.currentAssignment = assignment || null;
+      // Get all assignments for this space, sorted by start date
+      const spaceAssignments = assignments
+        .filter(a => a.assignment_spaces?.some(as => as.space_id === space.id))
+        .sort((a, b) => {
+          const aStart = a.start_date ? new Date(a.start_date) : new Date(0);
+          const bStart = b.start_date ? new Date(b.start_date) : new Date(0);
+          return aStart - bStart;
+        });
+      
+      // Find current assignment (active and either no end date or end date >= today)
+      const currentAssignment = spaceAssignments.find(a => {
+        if (a.status !== 'active') return false;
+        if (!a.end_date) return true;
+        return new Date(a.end_date) >= today;
+      });
+      
+      // Find next future assignment (starts after current ends, or after today if no current)
+      const availableFrom = currentAssignment?.end_date 
+        ? new Date(currentAssignment.end_date)
+        : today;
+      
+      const nextAssignment = spaceAssignments.find(a => {
+        if (a === currentAssignment) return false;
+        if (!a.start_date) return false;
+        const startDate = new Date(a.start_date);
+        return startDate > availableFrom;
+      });
+      
+      space.currentAssignment = currentAssignment || null;
+      space.nextAssignment = nextAssignment || null;
+      space.availableFrom = currentAssignment ? (currentAssignment.end_date ? new Date(currentAssignment.end_date) : null) : today;
+      space.availableUntil = nextAssignment?.start_date ? new Date(nextAssignment.start_date) : null;
+      
       space.amenities = space.space_amenities?.map(sa => sa.amenity?.name).filter(Boolean) || [];
       space.photos = space.photo_spaces?.map(ps => ps.photo).filter(Boolean) || [];
       space.photoRequests = photoRequests.filter(pr => pr.space_id === space.id);
@@ -222,6 +255,32 @@ function getFilteredSpaces() {
   
   // Sort
   filtered.sort((a, b) => {
+    // Special handling for availability sort
+    if (currentSort.column === 'availability') {
+      const aEndDate = a.currentAssignment?.end_date ? new Date(a.currentAssignment.end_date) : null;
+      const bEndDate = b.currentAssignment?.end_date ? new Date(b.currentAssignment.end_date) : null;
+      const aOccupied = !!a.currentAssignment;
+      const bOccupied = !!b.currentAssignment;
+      
+      // Available now comes first
+      if (!aOccupied && bOccupied) return currentSort.direction === 'asc' ? -1 : 1;
+      if (aOccupied && !bOccupied) return currentSort.direction === 'asc' ? 1 : -1;
+      
+      // Both available - sort by name
+      if (!aOccupied && !bOccupied) return a.name.localeCompare(b.name);
+      
+      // Both occupied - sort by end date
+      if (aEndDate && bEndDate) {
+        if (aEndDate < bEndDate) return currentSort.direction === 'asc' ? -1 : 1;
+        if (aEndDate > bEndDate) return currentSort.direction === 'asc' ? 1 : -1;
+      }
+      // No end date goes to bottom
+      if (aEndDate && !bEndDate) return -1;
+      if (!aEndDate && bEndDate) return 1;
+      
+      return a.name.localeCompare(b.name);
+    }
+    
     let aVal = a[currentSort.column];
     let bVal = b[currentSort.column];
     
@@ -284,15 +343,27 @@ function render() {
 
 function renderCards(spaces) {
   cardView.innerHTML = spaces.map(space => {
-    const isOccupied = !!space.currentAssignment;
     const occupant = space.currentAssignment?.person;
     const photo = space.photos[0];
     
     let badges = '';
-    if (isOccupied) {
-      badges += '<span class="badge occupied">Occupied</span>';
+    const isOccupied = !!space.currentAssignment;
+    
+    // Format availability window
+    const formatDate = (d) => d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
+    const availFromStr = space.availableFrom && space.availableFrom > new Date() 
+      ? formatDate(space.availableFrom) 
+      : 'Now';
+    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : null;
+    
+    if (availFromStr === 'Now' && !availUntilStr) {
+      badges += '<span class="badge available">Available Now</span>';
+    } else if (availFromStr === 'Now' && availUntilStr) {
+      badges += `<span class="badge available">Available until ${availUntilStr}</span>`;
+    } else if (availUntilStr) {
+      badges += `<span class="badge occupied">${availFromStr} – ${availUntilStr}</span>`;
     } else {
-      badges += '<span class="badge available">Available</span>';
+      badges += `<span class="badge occupied">From ${availFromStr}</span>`;
     }
     if (isAdminMode) {
       if (space.is_secret) badges += '<span class="badge secret">Secret</span>';
@@ -335,7 +406,7 @@ function renderCards(spaces) {
         </div>
         <div class="card-body">
           <div class="card-title">${space.name}</div>
-          ${space.parent ? `<div class="card-parent">in ${space.parent.name}</div>` : ''}
+          ${space.location ? `<div class="card-parent">in ${space.location}</div>` : (space.parent ? `<div class="card-parent">in ${space.parent.name}</div>` : '')}
           <div class="card-details">
             ${space.sq_footage ? `<span>${space.sq_footage} sq ft</span>` : ''}
             ${beds ? `<span>${beds}</span>` : ''}
@@ -376,6 +447,16 @@ function renderTable(spaces) {
       ? new Date(space.currentAssignment.end_date).toLocaleDateString()
       : '-';
     
+    // Format availability window
+    const formatDate = (d) => d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
+    const availFromStr = space.availableFrom && space.availableFrom > new Date() 
+      ? formatDate(space.availableFrom) 
+      : 'Now';
+    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'Open';
+    const availableWindow = availFromStr === 'Now' && availUntilStr === 'Open' 
+      ? 'Now' 
+      : `${availFromStr} – ${availUntilStr}`;
+    
     let statusBadge = isOccupied 
       ? '<span class="badge occupied">Occupied</span>'
       : '<span class="badge available">Available</span>';
@@ -387,12 +468,13 @@ function renderTable(spaces) {
     
     return `
       <tr onclick="showSpaceDetail('${space.id}')" style="cursor:pointer;">
-        <td><strong>${space.name}</strong>${space.parent ? `<br><small style="color:var(--text-muted)">in ${space.parent.name}</small>` : ''}</td>
+        <td><strong>${space.name}</strong>${space.location ? `<br><small style="color:var(--text-muted)">in ${space.location}</small>` : (space.parent ? `<br><small style="color:var(--text-muted)">in ${space.parent.name}</small>` : '')}</td>
         <td>${space.monthly_rate ? `$${space.monthly_rate}/mo` : '-'}</td>
         <td>${space.sq_footage || '-'}</td>
         <td>${beds || '-'}</td>
         <td>${space.bath_privacy || '-'}</td>
         <td>${space.amenities.slice(0, 3).join(', ') || '-'}</td>
+        <td>${availableWindow}</td>
         <td class="admin-only">${occupantName}</td>
         <td class="admin-only">${endDate}</td>
         <td class="admin-only">${statusBadge}</td>
