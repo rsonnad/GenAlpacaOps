@@ -254,8 +254,9 @@ main {
   position: absolute;
   top: 0.75rem;
   left: 0.75rem;
+  right: 0.75rem;
   display: flex;
-  gap: 0.5rem;
+  justify-content: space-between;
 }
 
 .badge {
@@ -285,6 +286,10 @@ main {
 .badge.unlisted {
   background: var(--unlisted-light);
   color: var(--unlisted);
+}
+
+.badge-right {
+  text-align: right;
 }
 
 .card-body {

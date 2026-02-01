@@ -370,9 +370,10 @@ function renderCards(spaces) {
       : 'Now';
     const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'Indefinitely';
     
-    const badgeClass = availFromStr === 'Now' ? 'available' : 'occupied';
-    badges += `<span class="badge ${badgeClass}">${availFromStr}</span>`;
-    badges += `<span class="badge ${availUntilStr === 'Indefinitely' ? 'available' : 'occupied'}">${availUntilStr}</span>`;
+    const fromBadgeClass = availFromStr === 'Now' ? 'available' : 'occupied';
+    const untilBadgeClass = availUntilStr === 'Indefinitely' ? 'available' : 'occupied';
+    badges += `<span class="badge ${fromBadgeClass}">Available: ${availFromStr}</span>`;
+    badges += `<span class="badge ${untilBadgeClass} badge-right">Until: ${availUntilStr}</span>`;
     if (isAdminMode) {
       if (space.is_secret) badges += '<span class="badge secret">Secret</span>';
       else if (!space.is_listed) badges += '<span class="badge unlisted">Unlisted</span>';
