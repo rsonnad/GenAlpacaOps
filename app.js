@@ -31,6 +31,7 @@ const clearFilters = document.getElementById('clearFilters');
 // Modals
 const photoRequestModal = document.getElementById('photoRequestModal');
 const spaceDetailModal = document.getElementById('spaceDetailModal');
+const photoUploadModal = document.getElementById('photoUploadModal');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -170,6 +171,19 @@ function setupEventListeners() {
   spaceDetailModal.addEventListener('click', (e) => {
     if (e.target === spaceDetailModal) spaceDetailModal.classList.add('hidden');
   });
+  photoUploadModal.addEventListener('click', (e) => {
+    if (e.target === photoUploadModal) photoUploadModal.classList.add('hidden');
+  });
+  
+  // Upload modal handlers
+  document.getElementById('closeUploadModal').addEventListener('click', () => {
+    photoUploadModal.classList.add('hidden');
+  });
+  document.getElementById('cancelPhotoUpload').addEventListener('click', () => {
+    photoUploadModal.classList.add('hidden');
+  });
+  document.getElementById('submitPhotoUpload').addEventListener('click', handlePhotoUpload);
+  document.getElementById('photoFile').addEventListener('change', handleFilePreview);
 }
 
 // View management
@@ -354,17 +368,11 @@ function renderCards(spaces) {
     const availFromStr = space.availableFrom && space.availableFrom > new Date() 
       ? formatDate(space.availableFrom) 
       : 'Now';
-    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : null;
+    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'Indefinitely';
     
-    if (availFromStr === 'Now' && !availUntilStr) {
-      badges += '<span class="badge available">Available Now</span>';
-    } else if (availFromStr === 'Now' && availUntilStr) {
-      badges += `<span class="badge available">Available until ${availUntilStr}</span>`;
-    } else if (availUntilStr) {
-      badges += `<span class="badge occupied">${availFromStr} – ${availUntilStr}</span>`;
-    } else {
-      badges += `<span class="badge occupied">From ${availFromStr}</span>`;
-    }
+    const badgeClass = availFromStr === 'Now' ? 'available' : 'occupied';
+    badges += `<span class="badge ${badgeClass}">${availFromStr}</span>`;
+    badges += `<span class="badge ${availUntilStr === 'Indefinitely' ? 'available' : 'occupied'}">${availUntilStr}</span>`;
     if (isAdminMode) {
       if (space.is_secret) badges += '<span class="badge secret">Secret</span>';
       else if (!space.is_listed) badges += '<span class="badge unlisted">Unlisted</span>';
@@ -423,8 +431,11 @@ function renderCards(spaces) {
           ` : ''}
           ${occupantHtml}
           <div class="card-actions">
+            <button class="btn-small" onclick="event.stopPropagation(); openPhotoUpload('${space.id}', '${space.name}')">
+              📤 Upload
+            </button>
             <button class="btn-small" onclick="event.stopPropagation(); openPhotoRequest('${space.id}', '${space.name}')">
-              📷 Request Photo ${pendingRequests ? `(${pendingRequests})` : ''}
+              📷 Request ${pendingRequests ? `(${pendingRequests})` : ''}
             </button>
           </div>
         </div>
@@ -452,10 +463,7 @@ function renderTable(spaces) {
     const availFromStr = space.availableFrom && space.availableFrom > new Date() 
       ? formatDate(space.availableFrom) 
       : 'Now';
-    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'Open';
-    const availableWindow = availFromStr === 'Now' && availUntilStr === 'Open' 
-      ? 'Now' 
-      : `${availFromStr} – ${availUntilStr}`;
+    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'Indefinitely';
     
     let statusBadge = isOccupied 
       ? '<span class="badge occupied">Occupied</span>'
@@ -474,7 +482,8 @@ function renderTable(spaces) {
         <td>${beds || '-'}</td>
         <td>${space.bath_privacy || '-'}</td>
         <td>${space.amenities.slice(0, 3).join(', ') || '-'}</td>
-        <td>${availableWindow}</td>
+        <td>${availFromStr}</td>
+        <td>${availUntilStr}</td>
         <td class="admin-only">${occupantName}</td>
         <td class="admin-only">${endDate}</td>
         <td class="admin-only">${statusBadge}</td>
@@ -639,3 +648,100 @@ async function handlePhotoRequestSubmit() {
 // Make functions globally accessible
 window.showSpaceDetail = showSpaceDetail;
 window.openPhotoRequest = openPhotoRequest;
+window.openPhotoUpload = openPhotoUpload;
+
+// Photo upload handling
+let currentUploadSpaceId = null;
+
+function openPhotoUpload(spaceId, spaceName) {
+  currentUploadSpaceId = spaceId;
+  document.getElementById('uploadModalSpaceName').textContent = spaceName;
+  document.getElementById('photoFile').value = '';
+  document.getElementById('photoCaption').value = '';
+  document.getElementById('uploadPreview').innerHTML = '';
+  photoUploadModal.classList.remove('hidden');
+}
+
+function handleFilePreview(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('uploadPreview').innerHTML = `
+      <img src="${e.target.result}" style="max-width:100%; max-height:200px; border-radius:var(--radius);">
+    `;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function handlePhotoUpload() {
+  const file = document.getElementById('photoFile').files[0];
+  const caption = document.getElementById('photoCaption').value.trim();
+  
+  if (!file) {
+    alert('Please select an image.');
+    return;
+  }
+  
+  const submitBtn = document.getElementById('submitPhotoUpload');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Uploading...';
+  
+  try {
+    // Generate unique filename
+    const ext = file.name.split('.').pop();
+    const filename = `${currentUploadSpaceId}/${Date.now()}.${ext}`;
+    
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await db.storage
+      .from('housephotos')
+      .upload(filename, file);
+    
+    if (uploadError) throw uploadError;
+    
+    // Get public URL
+    const { data: urlData } = db.storage
+      .from('housephotos')
+      .getPublicUrl(filename);
+    
+    const publicUrl = urlData.publicUrl;
+    
+    // Create photo record
+    const { data: photoData, error: photoError } = await db
+      .from('photos')
+      .insert({
+        url: publicUrl,
+        caption: caption || null,
+        uploaded_by: 'admin'
+      })
+      .select()
+      .single();
+    
+    if (photoError) throw photoError;
+    
+    // Link to space
+    const { error: linkError } = await db
+      .from('photo_spaces')
+      .insert({
+        photo_id: photoData.id,
+        space_id: currentUploadSpaceId
+      });
+    
+    if (linkError) throw linkError;
+    
+    alert('Photo uploaded successfully!');
+    photoUploadModal.classList.add('hidden');
+    
+    // Reload data to show new photo
+    await loadData();
+    render();
+    
+  } catch (error) {
+    console.error('Error uploading photo:', error);
+    alert('Failed to upload: ' + error.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Upload';
+  }
+}

@@ -88,7 +88,8 @@
             <th>Beds</th>
             <th data-sort="bath_privacy">Bath</th>
             <th>Amenities</th>
-            <th data-sort="availability">Available</th>
+            <th data-sort="availability">From</th>
+            <th>Until</th>
             <th class="admin-only" data-sort="occupant">Occupant</th>
             <th class="admin-only">End Date</th>
             <th class="admin-only">Status</th>
@@ -98,6 +99,28 @@
       </table>
     </div>
   </main>
+
+  <!-- Photo Upload Modal (Admin Only) -->
+  <div id="photoUploadModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Upload Photo</h2>
+        <button class="modal-close" id="closeUploadModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Space: <strong id="uploadModalSpaceName"></strong></p>
+        <label for="photoFile">Select image:</label>
+        <input type="file" id="photoFile" accept="image/*">
+        <label for="photoCaption">Caption (optional):</label>
+        <input type="text" id="photoCaption" placeholder="e.g., View from bed, Bathroom, etc.">
+        <div id="uploadPreview" style="margin-top:1rem;"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelPhotoUpload" class="btn-secondary">Cancel</button>
+        <button id="submitPhotoUpload" class="btn-primary">Upload</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Photo Request Modal (Admin Only) -->
   <div id="photoRequestModal" class="modal hidden">
