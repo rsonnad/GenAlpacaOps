@@ -1,22 +1,22 @@
 :root {
-  --bg: #f8f7f4;
+  --bg: #faf9f7;
   --bg-card: #ffffff;
-  --text: #1a1a1a;
-  --text-muted: #6b6b6b;
-  --border: #e5e3de;
-  --accent: #2d5a27;
-  --accent-light: #e8f0e7;
-  --occupied: #c9553d;
-  --occupied-light: #fbeae7;
-  --available: #2d5a27;
-  --available-light: #e8f0e7;
-  --secret: #7c5cbf;
-  --secret-light: #f0ebfa;
-  --unlisted: #8b8178;
-  --unlisted-light: #f2f0ed;
+  --text: #2d3142;
+  --text-muted: #7a7d8c;
+  --border: #e8e9ed;
+  --accent: #3d8b7a;
+  --accent-light: #e5f4f1;
+  --occupied: #e07a5f;
+  --occupied-light: #fdf0ec;
+  --available: #5a9e8f;
+  --available-light: #e8f5f2;
+  --secret: #8b6fc0;
+  --secret-light: #f3effc;
+  --unlisted: #9598a4;
+  --unlisted-light: #f4f4f6;
   --radius: 8px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.08);
-  --shadow-lg: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.06);
+  --shadow: 0 1px 3px rgba(45,49,66,0.06), 0 1px 2px rgba(45,49,66,0.08);
+  --shadow-lg: 0 4px 12px rgba(45,49,66,0.08), 0 2px 4px rgba(45,49,66,0.06);
 }
 
 * {
@@ -579,7 +579,7 @@ tr:last-child td {
 }
 
 .btn-primary:hover {
-  background: #234a1f;
+  background: #327568;
 }
 
 .btn-secondary {
