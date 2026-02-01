@@ -1,6 +1,6 @@
 // Supabase configuration - UPDATE THESE
 const SUPABASE_URL = 'https://aphrrfprbixmhissnjfn.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_HLlDPlIFASwZ2b8RmqpGng_zDvmJGYF';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwaHJyZnByYml4bWhpc3NuamZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5MzA0MjUsImV4cCI6MjA4NTUwNjQyNX0.yYkdQIq97GQgxK7yT2OQEPi5Tt-a7gM45aF8xjSD6wk'; // Get from Supabase Dashboard > Settings > API
 
 // Initialize Supabase client
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
