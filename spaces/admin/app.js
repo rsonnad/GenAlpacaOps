@@ -943,7 +943,31 @@ function openEditSpace(spaceId) {
   document.getElementById('editIsSecret').checked = space.is_secret || false;
   document.getElementById('editCanBeDwelling').checked = space.can_be_dwelling !== false;
 
+  // Populate photos
+  renderEditPhotos(space);
+
   editSpaceModal.classList.remove('hidden');
+}
+
+function renderEditPhotos(space) {
+  const container = document.getElementById('editPhotosContainer');
+
+  if (!space.photos || space.photos.length === 0) {
+    container.innerHTML = '<div class="no-photos-message">No photos yet. Use the Upload button to add photos.</div>';
+    return;
+  }
+
+  container.innerHTML = space.photos.map((photo, idx) => `
+    <div class="edit-photo-item" data-photo-id="${photo.id}">
+      <img src="${photo.url}" alt="${photo.caption || 'Photo ' + (idx + 1)}">
+      <span class="photo-order">#${idx + 1}</span>
+      <div class="photo-controls">
+        <button onclick="event.stopPropagation(); movePhotoInEdit('${space.id}', '${photo.id}', 'up')" ${idx === 0 ? 'disabled' : ''}>↑ Up</button>
+        <button onclick="event.stopPropagation(); movePhotoInEdit('${space.id}', '${photo.id}', 'down')" ${idx === space.photos.length - 1 ? 'disabled' : ''}>↓ Down</button>
+        <button class="btn-delete" onclick="event.stopPropagation(); deletePhoto('${space.id}', '${photo.id}')">× Delete</button>
+      </div>
+    </div>
+  `).join('');
 }
 
 async function handleEditSpaceSubmit() {
@@ -1011,9 +1035,62 @@ async function handleEditSpaceSubmit() {
   }
 }
 
+// Move photo from edit modal
+async function movePhotoInEdit(spaceId, photoId, direction) {
+  await movePhoto(spaceId, photoId, direction);
+  // Refresh the edit modal photos
+  const space = spaces.find(s => s.id === spaceId);
+  if (space) renderEditPhotos(space);
+}
+
+// Delete photo
+async function deletePhoto(spaceId, photoId) {
+  if (!authState?.isAdmin) {
+    alert('Only admins can delete photos');
+    return;
+  }
+
+  if (!confirm('Are you sure you want to delete this photo? This cannot be undone.')) {
+    return;
+  }
+
+  try {
+    // Remove the photo_spaces link
+    const { error: unlinkError } = await supabase
+      .from('photo_spaces')
+      .delete()
+      .eq('space_id', spaceId)
+      .eq('photo_id', photoId);
+
+    if (unlinkError) throw unlinkError;
+
+    // Optionally delete the photo record itself
+    // For now, we'll keep the photo record in case it's used elsewhere
+    // const { error: deleteError } = await supabase
+    //   .from('photos')
+    //   .delete()
+    //   .eq('id', photoId);
+
+    alert('Photo removed!');
+
+    await loadData();
+    render();
+
+    // Refresh the edit modal photos
+    const space = spaces.find(s => s.id === spaceId);
+    if (space) renderEditPhotos(space);
+
+  } catch (error) {
+    console.error('Error deleting photo:', error);
+    alert('Failed to delete photo: ' + error.message);
+  }
+}
+
 // Make functions globally accessible for onclick handlers
 window.showSpaceDetail = showSpaceDetail;
 window.openPhotoRequest = openPhotoRequest;
 window.openPhotoUpload = openPhotoUpload;
 window.movePhoto = movePhoto;
+window.movePhotoInEdit = movePhotoInEdit;
+window.deletePhoto = deletePhoto;
 window.openEditSpace = openEditSpace;
