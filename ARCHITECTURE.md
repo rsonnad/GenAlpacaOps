@@ -49,8 +49,10 @@ GenAlpaca manages rental spaces at GenAlpaca Residency (160 Still Forest Drive, 
 | Source Code | GitHub | https://github.com/rsonnad/GenAlpacaOps |
 | Database | Supabase | https://aphrrfprbixmhissnjfn.supabase.co |
 | Photo Storage | Supabase Storage | bucket: `housephotos` |
+| Lease Documents | Supabase Storage | bucket: `lease-documents` |
 | OpenClaw Bot | DigitalOcean | Droplet (separate system) |
-| Rental Agreements | Google Drive | Folder ID: 1IdMGhprT0LskK7g6zN9xw1O8ECtrS0eQ |
+| E-Signatures | SignWell | API: signwell.com/api |
+| Rental Agreements | Google Drive | Folder ID: 1IdMGhprT0LskK7g6zN9xw1O8ECtrS0eQ (legacy) |
 
 ## Repository Structure
 
@@ -64,7 +66,16 @@ GenAlpacaOps/
 ├── shared/                 # Shared modules
 │   ├── supabase.js         # Supabase client singleton
 │   ├── auth.js             # Authentication module
-│   └── media-service.js    # Media upload/management service
+│   ├── media-service.js    # Media upload/management service
+│   ├── rental-service.js   # Rental application workflow
+│   ├── lease-template-service.js  # Lease template parsing
+│   ├── pdf-service.js      # PDF generation (jsPDF)
+│   └── signwell-service.js # SignWell e-signature API
+│
+├── supabase/               # Supabase Edge Functions
+│   └── functions/
+│       └── signwell-webhook/  # E-signature completion webhook
+│           └── index.ts
 │
 ├── login/                  # Login page
 │   ├── index.html
@@ -164,6 +175,27 @@ The system has migrated from the legacy `photos` table to a unified `media` syst
 - `submitted_photo_url`, `submitted_by`, `submitted_at`
 - `reviewed_at`, `rejection_reason`
 - `fulfilled_by_photo_id` (FK → photos)
+
+### Lease Agreement System
+
+**lease_templates** - Markdown templates with placeholders
+- `id` (uuid, PK)
+- `name` - Template name
+- `content` - Markdown with `{{placeholder}}` syntax
+- `version` - Version number (auto-incremented)
+- `is_active` - Only one template active at a time
+- `created_at`, `updated_at`, `created_by`
+
+**signwell_config** - SignWell API configuration (single row)
+- `id` (integer, always 1)
+- `api_key` - SignWell API key
+- `webhook_secret` - For webhook verification
+- `test_mode` - Boolean for test vs production
+
+**rental_applications** additions:
+- `generated_pdf_url` - Supabase storage URL of generated lease
+- `signwell_document_id` - SignWell document tracking ID
+- `signed_pdf_url` - URL of signed lease after e-signature
 
 ### Supporting Tables
 
@@ -293,10 +325,31 @@ values ('New Space', 500, true, true, ...);
 
 ## External Integrations
 
-### Google Drive
-- Rental agreements stored in Drive
+### SignWell (E-Signatures)
+- API: `https://www.signwell.com/api/v1`
+- Account: wingsiebird@gmail.com
+- API key stored in `signwell_config` table
+- Webhook: Supabase Edge Function at `/functions/v1/signwell-webhook`
+
+**Lease Generation Workflow:**
+1. Admin opens rental application → Documents tab
+2. Click "Preview Agreement" to see populated template
+3. Click "Generate PDF" → jsPDF creates PDF → uploads to `lease-documents` bucket
+4. Click "Send for Signature" → SignWell API creates document, emails tenant
+5. Tenant signs in SignWell
+6. SignWell webhook → downloads signed PDF → stores in Supabase → updates status
+
+**Template Placeholders:**
+- `{{tenant_name}}`, `{{tenant_email}}`, `{{tenant_phone}}`
+- `{{signing_date}}`, `{{lease_start_date}}`, `{{lease_end_date}}`
+- `{{dwelling_description}}`, `{{dwelling_location}}`
+- `{{rate_display}}`, `{{security_deposit}}`, `{{move_in_deposit}}`
+- `{{notice_period_display}}`, `{{additional_terms}}`
+
+### Google Drive (Legacy)
+- Rental agreements previously stored in Drive
 - Folder: `1IdMGhprT0LskK7g6zN9xw1O8ECtrS0eQ`
-- Used for reference, not programmatic access
+- Now superseded by Supabase storage + SignWell
 
 ### OpenClaw (Discord Bot)
 - Separate system on DigitalOcean
@@ -334,8 +387,24 @@ Located at `/spaces/admin/manage.html` with tabs for:
   - Filters: Search text, Parent Area dropdown, Dwelling/Non-dwelling checkboxes
   - Shows thumbnails, type badge, and Edit button for each space
   - Edit button links to main admin page with `?edit=<id>` to auto-open modal
+- **Rentals**: Kanban-style rental application pipeline
+  - Stages: Applications → Approved → Contract → Deposit → Ready
+  - Click card to open detail modal with tabs: Applicant, Terms, Documents, Deposits, Rent, History
+  - Documents tab: Preview/Generate lease PDF, send for signature, track signing status
 - **Media**: Full media library with tagging and filtering
 - **Users**: User management (future)
+- **Settings**: System configuration
+  - Lease Template Editor: Markdown with {{placeholders}}, validation, version history
+  - SignWell Configuration: API key, test mode toggle
+
+### Lease Agreement System
+Database-driven lease generation replacing manual Claude Skill workflow:
+1. Templates stored in `lease_templates` table (Markdown with `{{placeholders}}`)
+2. Active template loaded when viewing application Documents tab
+3. Client-side PDF generation using jsPDF
+4. PDFs stored in `lease-documents` Supabase storage bucket
+5. SignWell integration for e-signatures (API + webhook)
+6. Signed PDFs stored back in Supabase, linked to application
 
 ### Early Exit Feature
 When a tenant wants to leave before their assignment ends:

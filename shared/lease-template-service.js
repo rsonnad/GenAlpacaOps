@@ -208,7 +208,23 @@ function parseTemplate(templateContent, agreementData) {
 
   // Replace all placeholders
   let parsed = templateContent;
+
+  // Special handling for additional_terms - add conditional intro text
+  const additionalTerms = agreementData.additionalTerms?.trim();
+  if (additionalTerms) {
+    // Replace {{additional_terms}} with intro text + the actual terms
+    parsed = parsed.replace(
+      /\{\{additional_terms\}\}/g,
+      `Additionally, the following terms will apply to this rental agreement:\n\n${additionalTerms}`
+    );
+  } else {
+    // Remove the placeholder and any surrounding whitespace/newlines
+    parsed = parsed.replace(/\{\{additional_terms\}\}/g, 'None.');
+  }
+
+  // Replace all other placeholders
   for (const [placeholder, value] of Object.entries(dataMap)) {
+    if (placeholder === 'additional_terms') continue; // Already handled above
     const regex = new RegExp(`\\{\\{${placeholder}\\}\\}`, 'g');
     parsed = parsed.replace(regex, value ?? '');
   }

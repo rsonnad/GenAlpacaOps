@@ -55,6 +55,9 @@ let currentFilters = {
 let currentMediaId = null;
 let authState = null;
 
+// Upload state
+let selectedUploadFiles = [];
+
 // =============================================
 // INITIALIZATION
 // =============================================
@@ -657,10 +660,416 @@ function closeBulkTagModal() {
 }
 
 // =============================================
+// UPLOAD FUNCTIONALITY
+// =============================================
+
+function renderUploadTags() {
+  const container = document.getElementById('uploadTagsContainer');
+  if (!container) return;
+
+  // Group tags by tag_group and sort by priority
+  const grouped = {};
+  allTags.forEach(tag => {
+    const group = tag.tag_group || 'other';
+    if (!grouped[group]) grouped[group] = [];
+    grouped[group].push(tag);
+  });
+  const sortedGroups = mediaService.sortTagGroups(grouped);
+
+  // Render with inline add tag at top
+  container.innerHTML = `
+    <div class="inline-add-tag">
+      <input type="text" data-quick-input placeholder="Add new tag..." class="quick-tag-input">
+      <select data-quick-group class="quick-tag-select">
+        <option value="">Category</option>
+        ${[...new Set(allTags.map(t => t.tag_group).filter(Boolean))].sort().map(g =>
+          `<option value="${g}">${g}</option>`
+        ).join('')}
+        <option value="__new__">+ New...</option>
+      </select>
+      <input type="text" data-quick-custom placeholder="New category" class="quick-tag-input hidden">
+    </div>
+    ${Object.entries(sortedGroups).map(([group, tags]) => `
+      <div class="tag-row">
+        <div class="tag-group-label">${group}</div>
+        <div class="tag-checkboxes">
+          ${tags.map(tag => `
+            <label class="tag-checkbox" style="--tag-color: ${tag.color || '#666'}">
+              <input type="checkbox" value="${tag.name}">
+              <span class="tag-chip">${tag.name}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    `).join('')}
+  `;
+
+  // Setup inline add tag handlers
+  setupQuickAddTag();
+}
+
+function setupQuickAddTag() {
+  const container = document.getElementById('uploadTagsContainer');
+  if (!container) return;
+
+  const input = container.querySelector('[data-quick-input]');
+  const groupSelect = container.querySelector('[data-quick-group]');
+  const customGroupInput = container.querySelector('[data-quick-custom]');
+
+  if (!input) return;
+
+  // Show/hide custom group input
+  groupSelect?.addEventListener('change', (e) => {
+    if (e.target.value === '__new__') {
+      customGroupInput?.classList.remove('hidden');
+      customGroupInput?.focus();
+    } else {
+      customGroupInput?.classList.add('hidden');
+    }
+  });
+
+  // Create tag on Enter
+  input.addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      await quickCreateTag();
+    }
+  });
+}
+
+async function quickCreateTag() {
+  const container = document.getElementById('uploadTagsContainer');
+  if (!container) return;
+
+  const input = container.querySelector('[data-quick-input]');
+  const groupSelect = container.querySelector('[data-quick-group]');
+  const customGroupInput = container.querySelector('[data-quick-custom]');
+
+  const name = input?.value.trim();
+  if (!name) return;
+
+  let group = groupSelect?.value;
+  if (group === '__new__') {
+    group = customGroupInput?.value.trim().toLowerCase();
+  }
+  if (group === '') group = null;
+
+  try {
+    const result = await mediaService.createTag(name, group);
+
+    if (!result.success) {
+      if (result.duplicate) {
+        showToast('Tag already exists', 'warning');
+      } else {
+        showToast('Failed to create tag: ' + result.error, 'error');
+      }
+      return;
+    }
+
+    // Add to local tags array
+    allTags.push(result.tag);
+
+    // Re-render tags and auto-select the new tag
+    renderUploadTags();
+
+    // Find and check the new tag
+    const newCheckbox = container.querySelector(`input[value="${result.tag.name}"]`);
+    if (newCheckbox) newCheckbox.checked = true;
+
+    showToast('Tag created', 'success');
+
+  } catch (error) {
+    console.error('Error creating tag:', error);
+    showToast('Failed to create tag', 'error');
+  }
+}
+
+function handleFileSelect(e) {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+
+  // Limit to 10 files at once
+  const filesToAdd = files.slice(0, 10);
+  if (files.length > 10) {
+    showToast('Limited to 10 files at once. First 10 selected.', 'warning');
+  }
+
+  selectedUploadFiles = filesToAdd.map((file, idx) => ({
+    file,
+    id: `file-${Date.now()}-${idx}`,
+    caption: '',
+    preview: null
+  }));
+
+  // Load previews for each file
+  selectedUploadFiles.forEach((item) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      item.preview = e.target.result;
+      renderUploadPreviews();
+    };
+    reader.readAsDataURL(item.file);
+  });
+
+  showUploadPreview();
+  renderUploadTags();
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  document.getElementById('uploadArea').classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  document.getElementById('uploadArea').classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  document.getElementById('uploadArea').classList.remove('drag-over');
+
+  const files = Array.from(e.dataTransfer.files).filter(f =>
+    ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(f.type)
+  );
+
+  if (!files.length) {
+    showToast('Please drop image files (JPEG, PNG, WebP, GIF)', 'warning');
+    return;
+  }
+
+  // Limit to 10 files at once
+  const filesToAdd = files.slice(0, 10);
+  if (files.length > 10) {
+    showToast('Limited to 10 files at once. First 10 selected.', 'warning');
+  }
+
+  selectedUploadFiles = filesToAdd.map((file, idx) => ({
+    file,
+    id: `file-${Date.now()}-${idx}`,
+    caption: '',
+    preview: null
+  }));
+
+  // Load previews for each file
+  selectedUploadFiles.forEach((item) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      item.preview = e.target.result;
+      renderUploadPreviews();
+    };
+    reader.readAsDataURL(item.file);
+  });
+
+  showUploadPreview();
+  renderUploadTags();
+}
+
+function showUploadPreview() {
+  document.getElementById('uploadArea').classList.add('hidden');
+  document.getElementById('uploadPreviewSection').classList.remove('hidden');
+  renderUploadPreviews();
+}
+
+function hideUploadPreview() {
+  document.getElementById('uploadArea').classList.remove('hidden');
+  document.getElementById('uploadPreviewSection').classList.add('hidden');
+  selectedUploadFiles = [];
+  document.getElementById('mediaFileInput').value = '';
+  document.getElementById('uploadBulkCaption').value = '';
+  document.getElementById('uploadCategory').value = 'mktg';
+  // Clear tag selections
+  document.querySelectorAll('#uploadTagsContainer input[type="checkbox"]').forEach(cb => {
+    cb.checked = false;
+  });
+}
+
+function renderUploadPreviews() {
+  const grid = document.getElementById('uploadPreviewGrid');
+  const fileCountEl = document.getElementById('uploadFileCount');
+  const submitBtn = document.getElementById('submitUploadBtn');
+
+  if (!grid) return;
+
+  const count = selectedUploadFiles.length;
+  if (fileCountEl) fileCountEl.textContent = count;
+  if (submitBtn) submitBtn.textContent = count > 1 ? `Upload All (${count})` : 'Upload';
+
+  if (count === 0) {
+    hideUploadPreview();
+    return;
+  }
+
+  grid.innerHTML = selectedUploadFiles.map((item, idx) => `
+    <div class="upload-preview-item" data-file-id="${item.id}">
+      ${item.preview
+        ? `<img src="${item.preview}" alt="Preview ${idx + 1}">`
+        : `<div class="preview-loading">Loading...</div>`
+      }
+      <span class="preview-index">${idx + 1}</span>
+      <button type="button" class="preview-remove" data-remove-id="${item.id}" title="Remove">&times;</button>
+      <div class="preview-caption">
+        <input type="text"
+          placeholder="Caption..."
+          value="${item.caption}"
+          data-caption-id="${item.id}">
+      </div>
+    </div>
+  `).join('');
+
+  // Add event listeners for remove buttons
+  grid.querySelectorAll('.preview-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeUploadFile(btn.dataset.removeId);
+    });
+  });
+
+  // Add event listeners for caption inputs
+  grid.querySelectorAll('.preview-caption input').forEach(input => {
+    input.addEventListener('change', (e) => {
+      updateFileCaption(input.dataset.captionId, e.target.value);
+    });
+    input.addEventListener('click', (e) => e.stopPropagation());
+  });
+}
+
+function removeUploadFile(fileId) {
+  selectedUploadFiles = selectedUploadFiles.filter(f => f.id !== fileId);
+  renderUploadPreviews();
+}
+
+function updateFileCaption(fileId, caption) {
+  const item = selectedUploadFiles.find(f => f.id === fileId);
+  if (item) item.caption = caption;
+}
+
+async function handleUpload() {
+  if (!authState?.isAdmin && !authState?.isStaff) {
+    showToast('You do not have permission to upload', 'warning');
+    return;
+  }
+
+  if (selectedUploadFiles.length === 0) {
+    showToast('Please select at least one image.', 'warning');
+    return;
+  }
+
+  const bulkCaption = document.getElementById('uploadBulkCaption')?.value.trim() || '';
+  const category = document.getElementById('uploadCategory')?.value || 'mktg';
+
+  // Get selected tags
+  const selectedTags = [];
+  document.querySelectorAll('#uploadTagsContainer input[type="checkbox"]:checked').forEach(cb => {
+    selectedTags.push(cb.value);
+  });
+
+  const submitBtn = document.getElementById('submitUploadBtn');
+  const progressContainer = document.getElementById('uploadProgress');
+  const progressFill = document.getElementById('uploadProgressFill');
+  const progressText = document.getElementById('uploadProgressText');
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Uploading...';
+
+  // Show progress for multiple files
+  if (selectedUploadFiles.length > 1 && progressContainer) {
+    progressContainer.classList.remove('hidden');
+  }
+
+  let successCount = 0;
+  let failCount = 0;
+  const totalFiles = selectedUploadFiles.length;
+
+  try {
+    for (let i = 0; i < selectedUploadFiles.length; i++) {
+      const item = selectedUploadFiles[i];
+
+      // Update progress
+      if (progressFill) progressFill.style.width = `${((i) / totalFiles) * 100}%`;
+      if (progressText) progressText.textContent = `Uploading ${i + 1} of ${totalFiles}...`;
+
+      // Use per-file caption if set, otherwise bulk caption
+      const caption = item.caption || bulkCaption;
+
+      try {
+        const result = await mediaService.upload(item.file, {
+          category,
+          caption,
+          tags: selectedTags,
+        });
+
+        if (result.success) {
+          successCount++;
+        } else {
+          console.error(`Failed to upload ${item.file.name}:`, result.error);
+          failCount++;
+        }
+      } catch (err) {
+        console.error(`Error uploading ${item.file.name}:`, err);
+        failCount++;
+      }
+    }
+
+    // Final progress
+    if (progressFill) progressFill.style.width = '100%';
+    if (progressText) progressText.textContent = 'Complete!';
+
+    // Show results
+    if (failCount === 0) {
+      if (successCount === 1) {
+        showToast('Photo uploaded successfully!', 'success');
+      } else {
+        showToast(`${successCount} photos uploaded successfully!`, 'success');
+      }
+    } else {
+      showToast(`Uploaded ${successCount} of ${totalFiles} photos. ${failCount} failed.`, 'warning');
+    }
+
+    // Refresh data
+    await Promise.all([
+      loadStorageUsage(),
+      loadMedia(),
+    ]);
+
+    // Reset upload UI
+    hideUploadPreview();
+
+  } catch (error) {
+    console.error('Error during upload:', error);
+    showToast('Upload failed: ' + error.message, 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = selectedUploadFiles.length > 1 ? `Upload All (${selectedUploadFiles.length})` : 'Upload';
+    if (progressContainer) progressContainer.classList.add('hidden');
+  }
+}
+
+// =============================================
 // EVENT LISTENERS
 // =============================================
 
 function setupEventListeners() {
+  // Upload area - file input and drag/drop
+  const uploadArea = document.getElementById('uploadArea');
+  const fileInput = document.getElementById('mediaFileInput');
+  const browseBtn = document.getElementById('browseFilesBtn');
+
+  browseBtn?.addEventListener('click', () => fileInput?.click());
+  fileInput?.addEventListener('change', handleFileSelect);
+
+  uploadArea?.addEventListener('dragover', handleDragOver);
+  uploadArea?.addEventListener('dragleave', handleDragLeave);
+  uploadArea?.addEventListener('drop', handleDrop);
+
+  // Upload controls
+  document.getElementById('clearUploadBtn')?.addEventListener('click', hideUploadPreview);
+  document.getElementById('cancelUploadBtn')?.addEventListener('click', hideUploadPreview);
+  document.getElementById('submitUploadBtn')?.addEventListener('click', handleUpload);
+
   // Category filter
   document.getElementById('categoryFilter').addEventListener('change', (e) => {
     currentFilters.category = e.target.value;

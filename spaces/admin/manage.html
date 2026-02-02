@@ -934,7 +934,7 @@
               <p id="agreementStatusDisplay" class="status-badge">Pending</p>
             </div>
 
-            <!-- Generate Section (shown when no PDF yet) -->
+            <!-- Generate Section (always shown) -->
             <div id="generateSection" class="generate-section">
               <h4>Generate Lease Agreement</h4>
               <p class="text-muted" style="margin-bottom: 1rem;">Preview the lease agreement and generate a PDF for signing.</p>
@@ -952,7 +952,7 @@
 
             <!-- Generated PDF Section (shown after PDF is generated) -->
             <div id="pdfSection" class="pdf-section" style="display: none;">
-              <h4>Generated Document</h4>
+              <h4>Current Document</h4>
               <div class="pdf-info">
                 <a id="pdfDownloadLink" href="#" target="_blank" class="pdf-link">
                   <span class="pdf-icon">📄</span>
@@ -961,7 +961,6 @@
                 <span id="pdfGeneratedAt" class="text-muted"></span>
               </div>
               <div class="pdf-actions" style="margin-top: 1rem;">
-                <button type="button" id="regeneratePdfBtn" class="btn-small">Regenerate</button>
                 <button type="button" id="sendForSignatureBtn" class="btn-small btn-primary">Send for Signature</button>
               </div>
             </div>
@@ -3206,8 +3205,8 @@
           document.getElementById('pdfDownloadLink').href = app.generated_pdf_url;
         }
       } else if ((status === 'generated' || app.generated_pdf_url) && app.generated_pdf_url) {
-        // Show generated PDF
-        generateSection.style.display = 'none';
+        // Show generated PDF alongside generate section (so user can regenerate with new terms)
+        generateSection.style.display = 'block';
         pdfSection.style.display = 'block';
         document.getElementById('pdfDownloadLink').href = app.generated_pdf_url;
         document.getElementById('pdfFilename').textContent = 'lease-agreement.pdf';
@@ -3223,12 +3222,16 @@
       const leasePreviewContainer = document.getElementById('leasePreviewContainer');
       const leasePreview = document.getElementById('leasePreview');
 
-      if (!currentLeaseTemplate || !currentAgreementData) {
-        showToast('No template or data available. Make sure Terms are filled in.', 'warning');
-        return;
-      }
-
       try {
+        // Always refresh template and data to get latest terms
+        currentLeaseTemplate = await leaseTemplateService.getActiveTemplate();
+        currentAgreementData = await rentalService.getAgreementData(currentApplicationId);
+
+        if (!currentLeaseTemplate || !currentAgreementData) {
+          showToast('No template or data available. Make sure Terms are filled in.', 'warning');
+          return;
+        }
+
         const parsedContent = leaseTemplateService.parseTemplate(
           currentLeaseTemplate.content,
           currentAgreementData
@@ -3236,7 +3239,7 @@
         // Convert markdown to simple HTML for preview
         leasePreview.innerHTML = markdownToHtml(parsedContent);
         leasePreviewContainer.style.display = 'block';
-        showToast('Preview loaded', 'success');
+        showToast('Preview loaded with current terms', 'success');
       } catch (e) {
         console.error('Error previewing lease:', e);
         showToast('Error generating preview: ' + e.message, 'error');
@@ -3261,17 +3264,21 @@
     }
 
     async function generateLeasePdf() {
-      if (!currentLeaseTemplate || !currentAgreementData) {
-        showToast('No template or data available', 'warning');
-        return;
-      }
-
       const btn = document.getElementById('generatePdfBtn');
       const originalText = btn.textContent;
       btn.textContent = 'Generating...';
       btn.disabled = true;
 
       try {
+        // Always refresh template and data to get latest terms
+        currentLeaseTemplate = await leaseTemplateService.getActiveTemplate();
+        currentAgreementData = await rentalService.getAgreementData(currentApplicationId);
+
+        if (!currentLeaseTemplate || !currentAgreementData) {
+          showToast('No template or data available', 'warning');
+          return;
+        }
+
         // Parse template with application data
         const parsedContent = leaseTemplateService.parseTemplate(
           currentLeaseTemplate.content,
@@ -3301,11 +3308,6 @@
       }
     }
 
-    async function regeneratePdf() {
-      if (confirm('This will replace the existing PDF. Continue?')) {
-        await generateLeasePdf();
-      }
-    }
 
     async function sendForSignature() {
       showToast('SignWell integration coming soon. For now, send the PDF manually.', 'info');
@@ -3555,7 +3557,6 @@
       // New lease agreement actions
       document.getElementById('previewLeaseBtn')?.addEventListener('click', previewLease);
       document.getElementById('generatePdfBtn')?.addEventListener('click', generateLeasePdf);
-      document.getElementById('regeneratePdfBtn')?.addEventListener('click', regeneratePdf);
       document.getElementById('sendForSignatureBtn')?.addEventListener('click', sendForSignature);
       document.getElementById('checkSignatureStatusBtn')?.addEventListener('click', () => {
         showToast('Checking signature status...', 'info');

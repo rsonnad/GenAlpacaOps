@@ -7,9 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../styles.css?v=4">
-  <link rel="stylesheet" href="styles.css?v=4">
-  <link rel="stylesheet" href="media.css?v=4">
+  <link rel="stylesheet" href="../styles.css?v=5">
+  <link rel="stylesheet" href="styles.css?v=5">
+  <link rel="stylesheet" href="media.css?v=5">
 </head>
 <body>
   <!-- Toast Container -->
@@ -50,6 +50,69 @@
     <!-- Storage indicator -->
     <div class="storage-banner">
       <div id="storageIndicator" class="storage-indicator-inline"></div>
+    </div>
+
+    <!-- Upload Section -->
+    <div class="upload-section">
+      <div class="upload-area" id="uploadArea">
+        <input type="file" id="mediaFileInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
+        <div class="upload-prompt">
+          <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <span>Drop images here or <button type="button" class="btn-link" id="browseFilesBtn">browse</button></span>
+          <span class="upload-hint">JPEG, PNG, WebP, GIF • Max 10 files at once</span>
+        </div>
+      </div>
+
+      <!-- Upload preview and options (shown when files selected) -->
+      <div id="uploadPreviewSection" class="upload-preview-section hidden">
+        <div class="upload-preview-header">
+          <span><strong id="uploadFileCount">0</strong> files selected</span>
+          <button type="button" class="btn-small" id="clearUploadBtn">Clear All</button>
+        </div>
+
+        <div id="uploadPreviewGrid" class="upload-preview-grid"></div>
+
+        <div class="upload-options">
+          <div class="upload-options-row">
+            <div class="form-group">
+              <label for="uploadBulkCaption">Caption for all (optional):</label>
+              <input type="text" id="uploadBulkCaption" placeholder="Leave empty to set per-image">
+            </div>
+            <div class="form-group">
+              <label for="uploadCategory">Category:</label>
+              <select id="uploadCategory">
+                <option value="mktg">Marketing</option>
+                <option value="projects">Projects</option>
+                <option value="archive">Archive</option>
+              </select>
+            </div>
+          </div>
+
+          <fieldset class="form-fieldset">
+            <legend>Tags (apply to all)</legend>
+            <div id="uploadTagsContainer" class="tags-container">
+              <!-- Tags populated by JS -->
+            </div>
+          </fieldset>
+        </div>
+
+        <!-- Upload progress -->
+        <div id="uploadProgress" class="upload-progress hidden">
+          <div class="progress-bar">
+            <div class="progress-fill" id="uploadProgressFill"></div>
+          </div>
+          <p class="progress-text" id="uploadProgressText">Uploading 0 of 0...</p>
+        </div>
+
+        <div class="upload-actions">
+          <button type="button" class="btn-secondary" id="cancelUploadBtn">Cancel</button>
+          <button type="button" class="btn-primary" id="submitUploadBtn">Upload All</button>
+        </div>
+      </div>
     </div>
 
     <!-- Filters and actions bar -->
