@@ -259,6 +259,28 @@
 }
 
 /* =============================================
+   TERMS SAVE STATUS
+   ============================================= */
+
+.save-status {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  transition: opacity 0.3s ease;
+}
+
+.save-status.saving {
+  color: var(--accent);
+}
+
+.save-status.saved {
+  color: var(--success, #10b981);
+}
+
+.save-status.error {
+  color: var(--danger, #ef4444);
+}
+
+/* =============================================
    INFO GROUPS
    ============================================= */
 

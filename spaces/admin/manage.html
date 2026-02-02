@@ -559,6 +559,69 @@
           <div id="storageIndicator" class="storage-indicator-inline"></div>
         </div>
 
+        <!-- Upload Section -->
+        <div class="upload-section">
+          <div class="upload-area" id="mediaUploadArea">
+            <input type="file" id="mediaFileInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
+            <div class="upload-prompt">
+              <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              <span>Drop images here or <button type="button" class="btn-link" id="mediaBrowseBtn">browse</button></span>
+              <span class="upload-hint">JPEG, PNG, WebP, GIF • Max 10 files at once</span>
+            </div>
+          </div>
+
+          <!-- Upload preview and options (shown when files selected) -->
+          <div id="mediaUploadPreview" class="upload-preview-section hidden">
+            <div class="upload-preview-header">
+              <span><strong id="mediaUploadFileCount">0</strong> files selected</span>
+              <button type="button" class="btn-small" id="mediaClearUploadBtn">Clear All</button>
+            </div>
+
+            <div id="mediaUploadPreviewGrid" class="upload-preview-grid"></div>
+
+            <div class="upload-options">
+              <div class="upload-options-row">
+                <div class="form-group">
+                  <label for="mediaUploadCaption">Caption for all (optional):</label>
+                  <input type="text" id="mediaUploadCaption" placeholder="Leave empty to set per-image">
+                </div>
+                <div class="form-group">
+                  <label for="mediaUploadCategory">Category:</label>
+                  <select id="mediaUploadCategory">
+                    <option value="mktg">Marketing</option>
+                    <option value="projects">Projects</option>
+                    <option value="archive">Archive</option>
+                  </select>
+                </div>
+              </div>
+
+              <fieldset class="form-fieldset">
+                <legend>Tags (apply to all)</legend>
+                <div id="mediaUploadTagsContainer" class="tags-container">
+                  <!-- Tags populated by JS -->
+                </div>
+              </fieldset>
+            </div>
+
+            <!-- Upload progress -->
+            <div id="mediaUploadProgress" class="upload-progress hidden">
+              <div class="progress-bar">
+                <div class="progress-fill" id="mediaUploadProgressFill"></div>
+              </div>
+              <p class="progress-text" id="mediaUploadProgressText">Uploading 0 of 0...</p>
+            </div>
+
+            <div class="upload-actions">
+              <button type="button" class="btn-secondary" id="mediaCancelUploadBtn">Cancel</button>
+              <button type="button" class="btn-primary" id="mediaSubmitUploadBtn">Upload All</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Filters and actions bar -->
         <div class="media-toolbar">
           <div class="toolbar-left">
@@ -571,11 +634,6 @@
                 <option value="archive">Archive</option>
               </select>
             </div>
-            <div class="filter-group">
-              <label>Tags:</label>
-              <div id="tagFilterChips" class="tag-filter-chips"></div>
-            </div>
-            <button id="clearFilters" class="btn-small">Clear Filters</button>
           </div>
           <div class="toolbar-right">
             <span id="mediaCount" class="media-count">0 items</span>
@@ -583,6 +641,12 @@
             <button id="selectAllBtn" class="btn-small">Select All</button>
             <button id="deselectAllBtn" class="btn-small hidden">Deselect All</button>
           </div>
+        </div>
+
+        <!-- Tag filters as horizontal row -->
+        <div class="tag-filter-bar">
+          <div id="tagFilterChips" class="tag-filter-chips"></div>
+          <button id="clearFilters" class="btn-small">Clear Filters</button>
         </div>
 
         <!-- Media grid -->
@@ -853,6 +917,10 @@
               <label for="termAdditionalTerms">Additional Terms</label>
               <textarea id="termAdditionalTerms" rows="4" placeholder="Any additional terms or conditions to include in the rental agreement..."></textarea>
               <small class="form-hint">Will appear in the "Additional Terms" section of the rental agreement.</small>
+            </div>
+            <div class="terms-save-row" style="margin-top: 1rem; display: flex; align-items: center; gap: 1rem;">
+              <button type="button" id="saveTermsBtn" class="btn-small btn-primary">Save Terms</button>
+              <span id="termsSaveStatus" class="save-status"></span>
             </div>
           </form>
         </div>
@@ -1158,6 +1226,7 @@
     let currentFilters = { category: '', tags: [] };
     let currentMediaId = null;
     let mediaLoaded = false;
+    let mediaUploadFiles = [];
 
     // Rentals state
     let allApplications = [];
@@ -1539,11 +1608,27 @@
       const container = document.getElementById('tagFilterChips');
       if (!container) return;
 
-      container.innerHTML = allTags.map(tag => `
-        <button type="button" class="tag-filter-chip ${currentFilters.tags.includes(tag.name) ? 'active' : ''}"
-          data-tag="${tag.name}" style="${tag.color ? `--tag-color: ${tag.color}` : ''}">
-          ${tag.name}
-        </button>
+      // Group tags by tag_group
+      const grouped = {};
+      allTags.forEach(tag => {
+        const group = tag.tag_group || 'other';
+        if (!grouped[group]) grouped[group] = [];
+        grouped[group].push(tag);
+      });
+      const sortedGroups = mediaService.sortTagGroups(grouped);
+
+      container.innerHTML = Object.entries(sortedGroups).map(([group, tags]) => `
+        <div class="tag-filter-group">
+          <span class="tag-filter-group-label">${group}</span>
+          <div class="tag-filter-group-chips">
+            ${tags.map(tag => `
+              <button type="button" class="tag-filter-chip ${currentFilters.tags.includes(tag.name) ? 'active' : ''}"
+                data-tag="${tag.name}" style="${tag.color ? `--tag-color: ${tag.color}` : ''}">
+                ${tag.name}
+              </button>
+            `).join('')}
+          </div>
+        </div>
       `).join('');
 
       container.querySelectorAll('.tag-filter-chip').forEach(chip => {
@@ -1827,9 +1912,391 @@
     }
 
     // =============================================
+    // MEDIA UPLOAD FUNCTIONALITY
+    // =============================================
+    function renderMediaUploadTags() {
+      const container = document.getElementById('mediaUploadTagsContainer');
+      if (!container) return;
+
+      const grouped = {};
+      allTags.forEach(tag => {
+        const group = tag.tag_group || 'other';
+        if (!grouped[group]) grouped[group] = [];
+        grouped[group].push(tag);
+      });
+      const sortedGroups = mediaService.sortTagGroups(grouped);
+
+      container.innerHTML = `
+        <div class="inline-add-tag">
+          <input type="text" data-quick-input placeholder="Add new tag..." class="quick-tag-input">
+          <select data-quick-group class="quick-tag-select">
+            <option value="">Category</option>
+            ${[...new Set(allTags.map(t => t.tag_group).filter(Boolean))].sort().map(g =>
+              `<option value="${g}">${g}</option>`
+            ).join('')}
+            <option value="__new__">+ New...</option>
+          </select>
+          <input type="text" data-quick-custom placeholder="New category" class="quick-tag-input hidden">
+        </div>
+        ${Object.entries(sortedGroups).map(([group, tags]) => `
+          <div class="tag-row">
+            <div class="tag-group-label">${group}</div>
+            <div class="tag-checkboxes">
+              ${tags.map(tag => `
+                <label class="tag-checkbox" style="--tag-color: ${tag.color || '#666'}">
+                  <input type="checkbox" value="${tag.name}">
+                  <span class="tag-chip">${tag.name}</span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+        `).join('')}
+      `;
+
+      setupMediaUploadQuickAddTag();
+    }
+
+    function setupMediaUploadQuickAddTag() {
+      const container = document.getElementById('mediaUploadTagsContainer');
+      if (!container) return;
+
+      const input = container.querySelector('[data-quick-input]');
+      const groupSelect = container.querySelector('[data-quick-group]');
+      const customGroupInput = container.querySelector('[data-quick-custom]');
+
+      if (!input) return;
+
+      groupSelect?.addEventListener('change', (e) => {
+        if (e.target.value === '__new__') {
+          customGroupInput?.classList.remove('hidden');
+          customGroupInput?.focus();
+        } else {
+          customGroupInput?.classList.add('hidden');
+        }
+      });
+
+      input.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          await mediaUploadQuickCreateTag();
+        }
+      });
+    }
+
+    async function mediaUploadQuickCreateTag() {
+      const container = document.getElementById('mediaUploadTagsContainer');
+      if (!container) return;
+
+      const input = container.querySelector('[data-quick-input]');
+      const groupSelect = container.querySelector('[data-quick-group]');
+      const customGroupInput = container.querySelector('[data-quick-custom]');
+
+      const name = input?.value.trim();
+      if (!name) return;
+
+      let group = groupSelect?.value;
+      if (group === '__new__') {
+        group = customGroupInput?.value.trim().toLowerCase();
+      }
+      if (group === '') group = null;
+
+      try {
+        const result = await mediaService.createTag(name, group);
+
+        if (!result.success) {
+          if (result.duplicate) {
+            showToast('Tag already exists', 'warning');
+          } else {
+            showToast('Failed to create tag: ' + result.error, 'error');
+          }
+          return;
+        }
+
+        allTags.push(result.tag);
+        renderMediaUploadTags();
+        renderTagFilters();
+
+        const newCheckbox = container.querySelector(`input[value="${result.tag.name}"]`);
+        if (newCheckbox) newCheckbox.checked = true;
+
+        showToast('Tag created', 'success');
+
+      } catch (error) {
+        console.error('Error creating tag:', error);
+        showToast('Failed to create tag', 'error');
+      }
+    }
+
+    function handleMediaFileSelect(e) {
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+
+      const filesToAdd = files.slice(0, 10);
+      if (files.length > 10) {
+        showToast('Limited to 10 files at once. First 10 selected.', 'warning');
+      }
+
+      mediaUploadFiles = filesToAdd.map((file, idx) => ({
+        file,
+        id: `file-${Date.now()}-${idx}`,
+        caption: '',
+        preview: null
+      }));
+
+      mediaUploadFiles.forEach((item) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          item.preview = e.target.result;
+          renderMediaUploadPreviews();
+        };
+        reader.readAsDataURL(item.file);
+      });
+
+      showMediaUploadPreview();
+      renderMediaUploadTags();
+    }
+
+    function handleMediaDragOver(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('mediaUploadArea').classList.add('drag-over');
+    }
+
+    function handleMediaDragLeave(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('mediaUploadArea').classList.remove('drag-over');
+    }
+
+    function handleMediaDrop(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('mediaUploadArea').classList.remove('drag-over');
+
+      const files = Array.from(e.dataTransfer.files).filter(f =>
+        ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(f.type)
+      );
+
+      if (!files.length) {
+        showToast('Please drop image files (JPEG, PNG, WebP, GIF)', 'warning');
+        return;
+      }
+
+      const filesToAdd = files.slice(0, 10);
+      if (files.length > 10) {
+        showToast('Limited to 10 files at once. First 10 selected.', 'warning');
+      }
+
+      mediaUploadFiles = filesToAdd.map((file, idx) => ({
+        file,
+        id: `file-${Date.now()}-${idx}`,
+        caption: '',
+        preview: null
+      }));
+
+      mediaUploadFiles.forEach((item) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          item.preview = e.target.result;
+          renderMediaUploadPreviews();
+        };
+        reader.readAsDataURL(item.file);
+      });
+
+      showMediaUploadPreview();
+      renderMediaUploadTags();
+    }
+
+    function showMediaUploadPreview() {
+      document.getElementById('mediaUploadArea').classList.add('hidden');
+      document.getElementById('mediaUploadPreview').classList.remove('hidden');
+      renderMediaUploadPreviews();
+    }
+
+    function hideMediaUploadPreview() {
+      document.getElementById('mediaUploadArea').classList.remove('hidden');
+      document.getElementById('mediaUploadPreview').classList.add('hidden');
+      mediaUploadFiles = [];
+      document.getElementById('mediaFileInput').value = '';
+      document.getElementById('mediaUploadCaption').value = '';
+      document.getElementById('mediaUploadCategory').value = 'mktg';
+      document.querySelectorAll('#mediaUploadTagsContainer input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+      });
+    }
+
+    function renderMediaUploadPreviews() {
+      const grid = document.getElementById('mediaUploadPreviewGrid');
+      const fileCountEl = document.getElementById('mediaUploadFileCount');
+      const submitBtn = document.getElementById('mediaSubmitUploadBtn');
+
+      if (!grid) return;
+
+      const count = mediaUploadFiles.length;
+      if (fileCountEl) fileCountEl.textContent = count;
+      if (submitBtn) submitBtn.textContent = count > 1 ? `Upload All (${count})` : 'Upload';
+
+      if (count === 0) {
+        hideMediaUploadPreview();
+        return;
+      }
+
+      grid.innerHTML = mediaUploadFiles.map((item, idx) => `
+        <div class="upload-preview-item" data-file-id="${item.id}">
+          ${item.preview
+            ? `<img src="${item.preview}" alt="Preview ${idx + 1}">`
+            : `<div class="preview-loading">Loading...</div>`
+          }
+          <span class="preview-index">${idx + 1}</span>
+          <button type="button" class="preview-remove" data-remove-id="${item.id}" title="Remove">&times;</button>
+          <div class="preview-caption">
+            <input type="text"
+              placeholder="Caption..."
+              value="${item.caption}"
+              data-caption-id="${item.id}">
+          </div>
+        </div>
+      `).join('');
+
+      grid.querySelectorAll('.preview-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          removeMediaUploadFile(btn.dataset.removeId);
+        });
+      });
+
+      grid.querySelectorAll('.preview-caption input').forEach(input => {
+        input.addEventListener('change', (e) => {
+          updateMediaFileCaption(input.dataset.captionId, e.target.value);
+        });
+        input.addEventListener('click', (e) => e.stopPropagation());
+      });
+    }
+
+    function removeMediaUploadFile(fileId) {
+      mediaUploadFiles = mediaUploadFiles.filter(f => f.id !== fileId);
+      renderMediaUploadPreviews();
+    }
+
+    function updateMediaFileCaption(fileId, caption) {
+      const item = mediaUploadFiles.find(f => f.id === fileId);
+      if (item) item.caption = caption;
+    }
+
+    async function handleMediaUpload() {
+      if (!authState?.isAdmin && !authState?.isStaff) {
+        showToast('You do not have permission to upload', 'warning');
+        return;
+      }
+
+      if (mediaUploadFiles.length === 0) {
+        showToast('Please select at least one image.', 'warning');
+        return;
+      }
+
+      const bulkCaption = document.getElementById('mediaUploadCaption')?.value.trim() || '';
+      const category = document.getElementById('mediaUploadCategory')?.value || 'mktg';
+
+      const selectedTags = [];
+      document.querySelectorAll('#mediaUploadTagsContainer input[type="checkbox"]:checked').forEach(cb => {
+        selectedTags.push(cb.value);
+      });
+
+      const submitBtn = document.getElementById('mediaSubmitUploadBtn');
+      const progressContainer = document.getElementById('mediaUploadProgress');
+      const progressFill = document.getElementById('mediaUploadProgressFill');
+      const progressText = document.getElementById('mediaUploadProgressText');
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Uploading...';
+
+      if (mediaUploadFiles.length > 1 && progressContainer) {
+        progressContainer.classList.remove('hidden');
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+      const totalFiles = mediaUploadFiles.length;
+
+      try {
+        for (let i = 0; i < mediaUploadFiles.length; i++) {
+          const item = mediaUploadFiles[i];
+
+          if (progressFill) progressFill.style.width = `${((i) / totalFiles) * 100}%`;
+          if (progressText) progressText.textContent = `Uploading ${i + 1} of ${totalFiles}...`;
+
+          const caption = item.caption || bulkCaption;
+
+          try {
+            const result = await mediaService.upload(item.file, {
+              category,
+              caption,
+              tags: selectedTags,
+            });
+
+            if (result.success) {
+              successCount++;
+            } else {
+              console.error(`Failed to upload ${item.file.name}:`, result.error);
+              failCount++;
+            }
+          } catch (err) {
+            console.error(`Error uploading ${item.file.name}:`, err);
+            failCount++;
+          }
+        }
+
+        if (progressFill) progressFill.style.width = '100%';
+        if (progressText) progressText.textContent = 'Complete!';
+
+        if (failCount === 0) {
+          if (successCount === 1) {
+            showToast('Photo uploaded successfully!', 'success');
+          } else {
+            showToast(`${successCount} photos uploaded successfully!`, 'success');
+          }
+        } else {
+          showToast(`Uploaded ${successCount} of ${totalFiles} photos. ${failCount} failed.`, 'warning');
+        }
+
+        await Promise.all([
+          loadStorageUsage(),
+          loadMedia(),
+        ]);
+
+        hideMediaUploadPreview();
+
+      } catch (error) {
+        console.error('Error during upload:', error);
+        showToast('Upload failed: ' + error.message, 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = mediaUploadFiles.length > 1 ? `Upload All (${mediaUploadFiles.length})` : 'Upload';
+        if (progressContainer) progressContainer.classList.add('hidden');
+      }
+    }
+
+    // =============================================
     // MEDIA EVENT LISTENERS
     // =============================================
     function setupMediaEventListeners() {
+      // Upload area - file input and drag/drop
+      const uploadArea = document.getElementById('mediaUploadArea');
+      const fileInput = document.getElementById('mediaFileInput');
+      const browseBtn = document.getElementById('mediaBrowseBtn');
+
+      browseBtn?.addEventListener('click', () => fileInput?.click());
+      fileInput?.addEventListener('change', handleMediaFileSelect);
+
+      uploadArea?.addEventListener('dragover', handleMediaDragOver);
+      uploadArea?.addEventListener('dragleave', handleMediaDragLeave);
+      uploadArea?.addEventListener('drop', handleMediaDrop);
+
+      // Upload controls
+      document.getElementById('mediaClearUploadBtn')?.addEventListener('click', hideMediaUploadPreview);
+      document.getElementById('mediaCancelUploadBtn')?.addEventListener('click', hideMediaUploadPreview);
+      document.getElementById('mediaSubmitUploadBtn')?.addEventListener('click', handleMediaUpload);
+
       document.getElementById('categoryFilter')?.addEventListener('change', (e) => {
         currentFilters.category = e.target.value;
         loadMedia();
@@ -2391,6 +2858,96 @@
       switchDetailTab('terms');
     };
 
+    // Save terms without changing status
+    window.saveTerms = async function() {
+      if (!currentApplicationId) return;
+
+      const statusEl = document.getElementById('termsSaveStatus');
+      const saveBtn = document.getElementById('saveTermsBtn');
+
+      try {
+        statusEl.textContent = 'Saving...';
+        statusEl.className = 'save-status saving';
+        saveBtn.disabled = true;
+
+        const terms = getTermsFormData();
+        await rentalService.saveTerms(currentApplicationId, terms);
+
+        statusEl.textContent = 'Saved';
+        statusEl.className = 'save-status saved';
+
+        // Clear the "Saved" message after 3 seconds
+        setTimeout(() => {
+          if (statusEl.textContent === 'Saved') {
+            statusEl.textContent = '';
+          }
+        }, 3000);
+
+      } catch (error) {
+        statusEl.textContent = 'Error saving';
+        statusEl.className = 'save-status error';
+        console.error('Error saving terms:', error);
+      } finally {
+        saveBtn.disabled = false;
+      }
+    };
+
+    // Helper to collect form data
+    function getTermsFormData() {
+      return {
+        spaceId: document.getElementById('termSpace').value || null,
+        rate: parseFloat(document.getElementById('termRate').value) || null,
+        rateTerm: document.getElementById('termRateTerm').value || 'monthly',
+        moveInDate: document.getElementById('termMoveIn').value || null,
+        leaseEndDate: document.getElementById('termLeaseEnd').value || null,
+        noticePeriod: document.getElementById('termNoticePeriod').value || '30_days',
+        securityDepositAmount: parseFloat(document.getElementById('termSecurityDeposit').value) || 0,
+        additionalTerms: document.getElementById('termAdditionalTerms').value.trim() || null,
+      };
+    }
+
+    // Debounced auto-save for terms
+    let termsAutoSaveTimeout = null;
+    function scheduleTermsAutoSave() {
+      if (!currentApplicationId) return;
+
+      const statusEl = document.getElementById('termsSaveStatus');
+      statusEl.textContent = 'Unsaved changes...';
+      statusEl.className = 'save-status';
+
+      clearTimeout(termsAutoSaveTimeout);
+      termsAutoSaveTimeout = setTimeout(() => {
+        saveTerms();
+      }, 1500); // Auto-save after 1.5 seconds of inactivity
+    }
+
+    // Setup terms form event listeners for auto-save
+    function setupTermsAutoSave() {
+      const formFields = [
+        'termSpace', 'termRate', 'termRateTerm', 'termMoveIn',
+        'termLeaseEnd', 'termNoticePeriod', 'termSecurityDeposit', 'termAdditionalTerms'
+      ];
+
+      formFields.forEach(fieldId => {
+        const el = document.getElementById(fieldId);
+        if (el) {
+          el.addEventListener('change', scheduleTermsAutoSave);
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+            el.addEventListener('input', scheduleTermsAutoSave);
+          }
+        }
+      });
+
+      // Save button click
+      document.getElementById('saveTermsBtn')?.addEventListener('click', () => {
+        clearTimeout(termsAutoSaveTimeout);
+        saveTerms();
+      });
+    }
+
+    // Initialize auto-save when DOM is ready
+    setupTermsAutoSave();
+
     window.markAgreementSent = async function() {
       if (!currentApplicationId) return;
       try {
@@ -2663,10 +3220,11 @@
     }
 
     async function previewLease() {
+      const leasePreviewContainer = document.getElementById('leasePreviewContainer');
       const leasePreview = document.getElementById('leasePreview');
 
       if (!currentLeaseTemplate || !currentAgreementData) {
-        showToast('No template or data available', 'warning');
+        showToast('No template or data available. Make sure Terms are filled in.', 'warning');
         return;
       }
 
@@ -2677,7 +3235,8 @@
         );
         // Convert markdown to simple HTML for preview
         leasePreview.innerHTML = markdownToHtml(parsedContent);
-        leasePreview.style.display = 'block';
+        leasePreviewContainer.style.display = 'block';
+        showToast('Preview loaded', 'success');
       } catch (e) {
         console.error('Error previewing lease:', e);
         showToast('Error generating preview: ' + e.message, 'error');

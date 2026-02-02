@@ -273,6 +273,51 @@ async function approveApplication(applicationId, terms) {
 }
 
 /**
+ * Save terms without changing application status
+ * Used for auto-save and explicit save on Terms tab
+ */
+async function saveTerms(applicationId, terms) {
+  const {
+    spaceId,
+    rate,
+    rateTerm = 'monthly',
+    moveInDate,
+    leaseEndDate = null,
+    securityDepositAmount = 0,
+    noticePeriod = '30_days',
+    additionalTerms = null,
+  } = terms;
+
+  // Move-in deposit is always 1 period's rent
+  const moveInDepositAmount = rate || 0;
+
+  const updateData = {
+    updated_at: new Date().toISOString(),
+  };
+
+  // Only update fields that have values
+  if (spaceId) updateData.approved_space_id = spaceId;
+  if (rate) updateData.approved_rate = rate;
+  if (rateTerm) updateData.approved_rate_term = rateTerm;
+  if (moveInDate) updateData.approved_move_in = moveInDate;
+  if (leaseEndDate !== undefined) updateData.approved_lease_end = leaseEndDate;
+  if (noticePeriod) updateData.notice_period = noticePeriod;
+  if (rate) updateData.move_in_deposit_amount = moveInDepositAmount;
+  if (securityDepositAmount !== undefined) updateData.security_deposit_amount = securityDepositAmount;
+  if (additionalTerms !== undefined) updateData.additional_terms = additionalTerms;
+
+  const { data, error } = await supabase
+    .from('rental_applications')
+    .update(updateData)
+    .eq('id', applicationId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
  * Deny application
  */
 async function denyApplication(applicationId, reason = null) {
@@ -1067,6 +1112,7 @@ export const rentalService = {
   createApplication,
   startReview,
   approveApplication,
+  saveTerms,
   denyApplication,
   delayApplication,
   reactivateApplication,
