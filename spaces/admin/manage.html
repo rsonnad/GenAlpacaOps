@@ -112,6 +112,59 @@
       height: 48px;
       object-fit: cover;
       border-radius: var(--radius);
+      cursor: pointer;
+      transition: opacity 0.15s ease;
+    }
+
+    .space-item-thumb:hover {
+      opacity: 0.8;
+    }
+
+    /* Lightbox */
+    .lightbox-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      cursor: pointer;
+    }
+
+    .lightbox-overlay.hidden {
+      display: none;
+    }
+
+    .lightbox-overlay img {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: var(--radius);
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lightbox-close:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
 
     .space-item-thumb-placeholder {
@@ -156,6 +209,12 @@
   </style>
 </head>
 <body>
+  <!-- Lightbox -->
+  <div id="lightboxOverlay" class="lightbox-overlay hidden" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+    <img id="lightboxImage" src="" alt="Full size image">
+  </div>
+
   <div id="loadingOverlay" class="loading-overlay">
     <div class="spinner"></div>
     <p>Loading...</p>
@@ -503,7 +562,7 @@
       container.innerHTML = allSpaces.map(space => {
         const parent = allSpaces.find(s => s.id === space.parent_id);
         const thumbHtml = space.thumbnail
-          ? `<img src="${space.thumbnail}" alt="${space.name}" class="space-item-thumb">`
+          ? `<img src="${space.thumbnail}" alt="${space.name}" class="space-item-thumb" onclick="event.stopPropagation(); openLightbox('${space.thumbnail}')">`
           : `<div class="space-item-thumb-placeholder"></div>`;
         return `
           <div class="space-item">
@@ -541,7 +600,7 @@
 
       container.innerHTML = archivedSpaces.map(space => {
         const thumbHtml = space.thumbnail
-          ? `<img src="${space.thumbnail}" alt="${space.name}" class="space-item-thumb">`
+          ? `<img src="${space.thumbnail}" alt="${space.name}" class="space-item-thumb" onclick="event.stopPropagation(); openLightbox('${space.thumbnail}')">`
           : `<div class="space-item-thumb-placeholder"></div>`;
         return `
           <div class="space-item" style="opacity: 0.7;">
@@ -1009,6 +1068,28 @@
       }
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
+
+    // Lightbox functions
+    function openLightbox(url) {
+      const overlay = document.getElementById('lightboxOverlay');
+      const img = document.getElementById('lightboxImage');
+      img.src = url;
+      overlay.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      const overlay = document.getElementById('lightboxOverlay');
+      overlay.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    // Close lightbox on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeLightbox();
+      }
+    });
 
     init();
   </script>
