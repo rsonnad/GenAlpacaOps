@@ -913,17 +913,18 @@ function renderRequestTags() {
   // Get auto-tags for current context
   const autoTags = getAutoTagsForContext(currentUploadContext);
 
-  // Group tags by tag_group
+  // Group tags by tag_group and sort by priority
   const grouped = {};
   allTags.forEach(tag => {
     const group = tag.tag_group || 'other';
     if (!grouped[group]) grouped[group] = [];
     grouped[group].push(tag);
   });
+  const sortedGroups = mediaService.sortTagGroups(grouped);
 
   // Render grouped checkboxes with add button
   container.innerHTML = `
-    ${Object.entries(grouped).map(([group, tags]) => `
+    ${Object.entries(sortedGroups).map(([group, tags]) => `
       <div class="tag-group">
         <div class="tag-group-label">${group}</div>
         <div class="tag-checkboxes">
@@ -1003,20 +1004,18 @@ function renderUploadTags() {
   // Get auto-tags for current context
   const autoTags = getAutoTagsForContext(currentUploadContext);
 
-  // Group tags by tag_group
+  // Group tags by tag_group and sort by priority
   const grouped = {};
   allTags.forEach(tag => {
     const group = tag.tag_group || 'other';
     if (!grouped[group]) grouped[group] = [];
     grouped[group].push(tag);
   });
-
-  // Get unique groups for the dropdown
-  const allGroups = [...new Set(allTags.map(t => t.tag_group).filter(Boolean))].sort();
+  const sortedGroups = mediaService.sortTagGroups(grouped);
 
   // Render grouped checkboxes with add button
   container.innerHTML = `
-    ${Object.entries(grouped).map(([group, tags]) => `
+    ${Object.entries(sortedGroups).map(([group, tags]) => `
       <div class="tag-group">
         <div class="tag-group-label">${group}</div>
         <div class="tag-checkboxes">

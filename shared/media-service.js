@@ -184,8 +184,31 @@ async function upload(file, options = {}) {
   }
 
   try {
-    // Generate unique filename
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    // Compress image before upload
+    let fileToUpload = file;
+    let finalMimeType = file.type;
+
+    // Only compress if it's a compressible image type and larger than 500KB
+    const compressibleTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (compressibleTypes.includes(file.type) && file.size > 500 * 1024) {
+      try {
+        console.log(`Compressing image: ${file.name} (${formatBytes(file.size)})`);
+        const compressedBlob = await compressImage(file, {
+          maxWidth: 1920,
+          maxHeight: 1920,
+          quality: 0.85,
+        });
+        fileToUpload = compressedBlob;
+        finalMimeType = 'image/jpeg';
+        console.log(`Compressed to: ${formatBytes(compressedBlob.size)} (${((1 - compressedBlob.size / file.size) * 100).toFixed(0)}% reduction)`);
+      } catch (compressError) {
+        console.warn('Image compression failed, uploading original:', compressError);
+        // Continue with original file if compression fails
+      }
+    }
+
+    // Generate unique filename (always use .jpg for compressed images)
+    const ext = finalMimeType === 'image/jpeg' ? 'jpg' : (file.name.split('.').pop()?.toLowerCase() || 'jpg');
     const timestamp = Date.now();
     const randomId = Math.random().toString(36).substring(2, 8);
     const storagePath = `${category}/${timestamp}-${randomId}.${ext}`;
@@ -193,8 +216,9 @@ async function upload(file, options = {}) {
     // Upload to Supabase storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(CONFIG.buckets.images)
-      .upload(storagePath, file, {
+      .upload(storagePath, fileToUpload, {
         cacheControl: '3600',
+        contentType: finalMimeType,
         upsert: false,
       });
 
@@ -225,7 +249,7 @@ async function upload(file, options = {}) {
       console.warn('Could not get image dimensions:', e);
     }
 
-    // Insert media record
+    // Insert media record (use compressed file size)
     const { data: mediaRecord, error: mediaError } = await supabase
       .from('media')
       .insert({
@@ -233,8 +257,8 @@ async function upload(file, options = {}) {
         storage_provider: 'supabase',
         storage_path: storagePath,
         media_type: 'image',
-        mime_type: file.type,
-        file_size_bytes: file.size,
+        mime_type: finalMimeType,
+        file_size_bytes: fileToUpload.size,
         width,
         height,
         title: title || null,
@@ -760,6 +784,99 @@ function getImageDimensions(file) {
   });
 }
 
+/**
+ * Compress an image file
+ * @param {File} file - The image file to compress
+ * @param {Object} options - Compression options
+ * @param {number} options.maxWidth - Maximum width (default 1920)
+ * @param {number} options.maxHeight - Maximum height (default 1920)
+ * @param {number} options.quality - JPEG quality 0-1 (default 0.8)
+ * @returns {Promise<Blob>} - Compressed image as Blob
+ */
+async function compressImage(file, options = {}) {
+  const {
+    maxWidth = 1920,
+    maxHeight = 1920,
+    quality = 0.8,
+  } = options;
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(img.src);
+
+      // Calculate new dimensions while maintaining aspect ratio
+      let { width, height } = img;
+
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+
+      if (height > maxHeight) {
+        width = (width * maxHeight) / height;
+        height = maxHeight;
+      }
+
+      // Create canvas and draw resized image
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Convert to blob
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to compress image'));
+          }
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src);
+      reject(new Error('Failed to load image for compression'));
+    };
+
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+/**
+ * Tag group priority order for display
+ */
+const TAG_GROUP_ORDER = ['space', 'purpose', 'condition', 'type', 'project', 'other'];
+
+/**
+ * Sort tag groups by priority
+ */
+function sortTagGroups(groupedTags) {
+  const sorted = {};
+
+  // Add groups in priority order
+  for (const group of TAG_GROUP_ORDER) {
+    if (groupedTags[group]) {
+      sorted[group] = groupedTags[group];
+    }
+  }
+
+  // Add any remaining groups not in the priority list
+  for (const [group, tags] of Object.entries(groupedTags)) {
+    if (!sorted[group]) {
+      sorted[group] = tags;
+    }
+  }
+
+  return sorted;
+}
+
 // =============================================
 // EXPORTS
 // =============================================
@@ -790,6 +907,11 @@ export const mediaService = {
   updateTag,
   deleteTag,
   generateTagColor,
+  sortTagGroups,
+  TAG_GROUP_ORDER,
+
+  // Image processing
+  compressImage,
 
   // Space linking
   linkToSpace,
