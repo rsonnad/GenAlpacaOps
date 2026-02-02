@@ -3,16 +3,50 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Alpaca Playhouse Austin</title>
+  <title>Available Spaces — Austin Alpaca Playhouse</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
+  <!-- Site-wide Navigation -->
+  <nav class="site-nav">
+    <a href="/GenAlpacaOps/" class="site-nav__logo">
+      <img src="https://images.squarespace-cdn.com/content/v1/6213d804273001551ffe5b8c/24787244-a26f-4ae0-8425-a9d8ccff06e6/playhouselogo_inverted.png?format=100w" alt="Austin Alpaca Playhouse">
+      <span>Austin Alpaca Playhouse</span>
+    </a>
+    <ul class="site-nav__links">
+      <li><a href="/GenAlpacaOps/">Home</a></li>
+      <li><a href="/GenAlpacaOps/visiting/">Visiting</a></li>
+      <li><a href="/GenAlpacaOps/orientation/">Orientation</a></li>
+      <li><a href="/GenAlpacaOps/overnight/">Overnighters</a></li>
+      <li><a href="/GenAlpacaOps/worktrade/">Work Trade</a></li>
+      <li><a href="/GenAlpacaOps/contact/">Contact Us</a></li>
+    </ul>
+    <button class="site-nav__toggle" id="siteNavToggle" aria-label="Toggle navigation">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- Mobile Site Navigation -->
+  <div class="site-nav-mobile" id="siteNavMobile">
+    <button class="site-nav-mobile__close" id="siteNavMobileClose">&times;</button>
+    <ul class="site-nav-mobile__links">
+      <li><a href="/GenAlpacaOps/">Home</a></li>
+      <li><a href="/GenAlpacaOps/visiting/">Visiting</a></li>
+      <li><a href="/GenAlpacaOps/orientation/">Orientation</a></li>
+      <li><a href="/GenAlpacaOps/overnight/">Overnighters</a></li>
+      <li><a href="/GenAlpacaOps/worktrade/">Work Trade</a></li>
+      <li><a href="/GenAlpacaOps/contact/">Contact Us</a></li>
+      <li class="site-nav-mobile__divider"></li>
+      <li><a href="/GenAlpacaOps/spaces/" class="active">Available Spaces</a></li>
+    </ul>
+  </div>
+
   <header>
     <div class="header-left">
-      <h1>&#129433; Alpaca Playhouse Austin</h1>
+      <h1>Available Spaces</h1>
     </div>
     <div class="header-controls">
       <div class="view-toggle">
@@ -29,6 +63,7 @@
         </button>
       </div>
       <a href="/GenAlpacaOps/spaces/apply/" class="apply-link">Apply for Rental</a>
+      <a href="/GenAlpacaOps/spaces/events/" class="apply-link">Host an Event</a>
       <a href="/GenAlpacaOps/login/" class="staff-link">Staff Login</a>
     </div>
   </header>
@@ -70,7 +105,9 @@
       <table>
         <thead>
           <tr>
+            <th class="th-thumbnail"></th>
             <th data-sort="name">Name</th>
+            <th class="th-description">Description</th>
             <th data-sort="monthly_rate">Rate</th>
             <th data-sort="sq_footage">Size</th>
             <th>Beds</th>
@@ -98,7 +135,36 @@
     </div>
   </div>
 
+  <!-- Image Lightbox -->
+  <div id="imageLightbox" class="lightbox hidden">
+    <button class="lightbox-close">&times;</button>
+    <img id="lightboxImage" src="" alt="">
+  </div>
+
   <script src="https://unpkg.com/@supabase/supabase-js@2.39.3"></script>
   <script type="module" src="app.js"></script>
+  <script>
+    // Site navigation mobile toggle
+    const siteNavToggle = document.getElementById('siteNavToggle');
+    const siteNavMobile = document.getElementById('siteNavMobile');
+    const siteNavMobileClose = document.getElementById('siteNavMobileClose');
+
+    siteNavToggle.addEventListener('click', () => {
+      siteNavMobile.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    });
+
+    siteNavMobileClose.addEventListener('click', () => {
+      siteNavMobile.classList.remove('open');
+      document.body.style.overflow = '';
+    });
+
+    siteNavMobile.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        siteNavMobile.classList.remove('open');
+        document.body.style.overflow = '';
+      });
+    });
+  </script>
 </body>
 </html>
