@@ -270,8 +270,9 @@ body.is-admin .admin-only {
   max-height: 116px;
   width: auto;
   object-fit: contain;
-  pointer-events: none;
   display: block;
+  -webkit-user-drag: none;
+  user-drag: none;
 }
 
 /* Drag handle */
