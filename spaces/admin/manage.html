@@ -67,13 +67,34 @@
       padding: 1rem 1.5rem;
       border-bottom: 1px solid var(--border);
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      gap: 1rem;
     }
 
     .section-header h2 {
       font-size: 1.125rem;
       font-weight: 600;
+    }
+
+    .filter-checkboxes {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.875rem;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+      width: 1rem;
+      height: 1rem;
+      cursor: pointer;
+      accent-color: var(--accent);
     }
 
     .section-body {
@@ -279,6 +300,16 @@
           <div class="section-header">
             <h2>All Spaces</h2>
             <span id="spacesCount" class="text-muted"></span>
+            <div class="filter-checkboxes" style="margin-left: auto;">
+              <label class="checkbox-label">
+                <input type="checkbox" id="dwellingFilter" checked>
+                Dwelling
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="nonDwellingFilter">
+                Non-dwelling
+              </label>
+            </div>
           </div>
           <div class="section-body">
             <div id="spacesList" class="spaces-list">
@@ -504,6 +535,10 @@
       // Add space form
       document.getElementById('addSpaceForm').addEventListener('submit', handleAddSpace);
 
+      // Dwelling filter checkboxes
+      document.getElementById('dwellingFilter').addEventListener('change', renderSpaces);
+      document.getElementById('nonDwellingFilter').addEventListener('change', renderSpaces);
+
       // Media library event listeners
       setupMediaEventListeners();
     }
@@ -550,16 +585,30 @@
       populateParentDropdown();
     }
 
+    function getFilteredSpaces() {
+      const showDwelling = document.getElementById('dwellingFilter').checked;
+      const showNonDwelling = document.getElementById('nonDwellingFilter').checked;
+
+      return allSpaces.filter(space => {
+        if (showDwelling && showNonDwelling) return true;
+        if (showDwelling && space.can_be_dwelling) return true;
+        if (showNonDwelling && !space.can_be_dwelling) return true;
+        if (!showDwelling && !showNonDwelling) return false;
+        return false;
+      });
+    }
+
     function renderSpaces() {
       const container = document.getElementById('spacesList');
-      document.getElementById('spacesCount').textContent = `${allSpaces.length} spaces`;
+      const filtered = getFilteredSpaces();
+      document.getElementById('spacesCount').textContent = `${filtered.length} spaces`;
 
-      if (allSpaces.length === 0) {
-        container.innerHTML = '<p class="text-muted">No spaces yet.</p>';
+      if (filtered.length === 0) {
+        container.innerHTML = '<p class="text-muted">No spaces match the current filters.</p>';
         return;
       }
 
-      container.innerHTML = allSpaces.map(space => {
+      container.innerHTML = filtered.map(space => {
         const parent = allSpaces.find(s => s.id === space.parent_id);
         const thumbHtml = space.thumbnail
           ? `<img src="${space.thumbnail}" alt="${space.name}" class="space-item-thumb" onclick="event.stopPropagation(); openLightbox('${space.thumbnail}')">`
