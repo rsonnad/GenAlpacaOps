@@ -391,6 +391,19 @@
                   <option value="shared">Shared</option>
                 </select>
               </div>
+              <div class="filter-group filter-checkboxes-group">
+                <label style="visibility: hidden;">Type</label>
+                <div class="filter-checkboxes">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="showDwellings" checked>
+                    Dwellings
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="showNonDwellings" checked>
+                    Non-dwellings
+                  </label>
+                </div>
+              </div>
               <button id="clearSpaceFilters" class="btn-small" style="align-self: flex-end;">Clear</button>
             </div>
           </div>
@@ -622,10 +635,14 @@
       document.getElementById('searchFilter').addEventListener('input', renderSpaces);
       document.getElementById('parentFilter').addEventListener('change', renderSpaces);
       document.getElementById('bathFilter').addEventListener('change', renderSpaces);
+      document.getElementById('showDwellings').addEventListener('change', renderSpaces);
+      document.getElementById('showNonDwellings').addEventListener('change', renderSpaces);
       document.getElementById('clearSpaceFilters').addEventListener('click', () => {
         document.getElementById('searchFilter').value = '';
         document.getElementById('parentFilter').value = '';
         document.getElementById('bathFilter').value = '';
+        document.getElementById('showDwellings').checked = true;
+        document.getElementById('showNonDwellings').checked = true;
         renderSpaces();
       });
 
@@ -680,8 +697,10 @@
       const searchTerm = document.getElementById('searchFilter').value.toLowerCase().trim();
       const parentId = document.getElementById('parentFilter').value;
       const bathPrivacy = document.getElementById('bathFilter').value;
+      const showDwellings = document.getElementById('showDwellings').checked;
+      const showNonDwellings = document.getElementById('showNonDwellings').checked;
 
-      return allSpaces.filter(space => {
+      let filtered = allSpaces.filter(space => {
         // Search filter
         if (searchTerm && !space.name.toLowerCase().includes(searchTerm)) {
           return false;
@@ -699,8 +718,24 @@
           return false;
         }
 
+        // Dwelling/Non-dwelling filter
+        const isDwelling = space.can_be_dwelling === true;
+        if (isDwelling && !showDwellings) return false;
+        if (!isDwelling && !showNonDwellings) return false;
+
         return true;
       });
+
+      // Sort: dwellings first, then by name
+      filtered.sort((a, b) => {
+        const aIsDwelling = a.can_be_dwelling === true;
+        const bIsDwelling = b.can_be_dwelling === true;
+        if (aIsDwelling && !bIsDwelling) return -1;
+        if (!aIsDwelling && bIsDwelling) return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      return filtered;
     }
 
     // Check if a space is a descendant of a given parent
