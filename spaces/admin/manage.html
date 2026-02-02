@@ -404,19 +404,11 @@
                   <option value="">All areas</option>
                 </select>
               </div>
-              <div class="filter-group">
-                <label for="bathFilter">Bathroom</label>
-                <select id="bathFilter">
-                  <option value="">Any bathroom</option>
-                  <option value="private">Private</option>
-                  <option value="shared">Shared</option>
-                </select>
-              </div>
               <div class="filter-group filter-checkboxes-group">
-                <label style="visibility: hidden;">Type</label>
+                <label>Type</label>
                 <div class="filter-checkboxes">
-                  <label class="checkbox-label"><input type="checkbox" id="showDwellings" checked> Dwellings</label>
-                  <label class="checkbox-label"><input type="checkbox" id="showNonDwellings" checked> Non-dwellings</label>
+                  <label class="checkbox-label"><input type="checkbox" id="showDwellings" checked> Dwelling</label>
+                  <label class="checkbox-label"><input type="checkbox" id="showNonDwellings"> Non-dwelling</label>
                 </div>
               </div>
               <button id="clearSpaceFilters" class="btn-small" style="align-self: flex-end;">Clear</button>
@@ -1067,9 +1059,8 @@
       document.getElementById('clearSpaceFilters').addEventListener('click', () => {
         document.getElementById('searchFilter').value = '';
         document.getElementById('parentFilter').value = '';
-        document.getElementById('bathFilter').value = '';
         document.getElementById('showDwellings').checked = true;
-        document.getElementById('showNonDwellings').checked = true;
+        document.getElementById('showNonDwellings').checked = false;
         renderSpaces();
       });
 

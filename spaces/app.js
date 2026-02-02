@@ -14,6 +14,8 @@ const tableViewBtn = document.getElementById('tableViewBtn');
 const searchInput = document.getElementById('searchInput');
 const parentFilter = document.getElementById('parentFilter');
 const bathFilter = document.getElementById('bathFilter');
+const showDwellings = document.getElementById('showDwellings');
+const showNonDwellings = document.getElementById('showNonDwellings');
 const clearFilters = document.getElementById('clearFilters');
 const spaceDetailModal = document.getElementById('spaceDetailModal');
 
@@ -45,12 +47,11 @@ async function loadData(retryCount = 0) {
         id, name, description, location, monthly_rate,
         sq_footage, bath_privacy, bath_fixture,
         beds_king, beds_queen, beds_double, beds_twin, beds_folding, beds_trifold,
-        min_residents, max_residents, is_listed, is_secret,
+        min_residents, max_residents, is_listed, is_secret, can_be_dwelling,
         parent:parent_id(name),
         space_amenities(amenity:amenity_id(name)),
         media_spaces(display_order, is_primary, media:media_id(id, url, caption))
       `)
-      .eq('can_be_dwelling', true)
       .order('monthly_rate', { ascending: false, nullsFirst: false })
       .order('name');
 
@@ -169,6 +170,8 @@ function setupEventListeners() {
   searchInput.addEventListener('input', render);
   parentFilter.addEventListener('change', render);
   bathFilter.addEventListener('change', render);
+  showDwellings?.addEventListener('change', render);
+  showNonDwellings?.addEventListener('change', render);
   clearFilters.addEventListener('click', resetFilters);
 
   // Populate parent filter dropdown
@@ -233,6 +236,18 @@ function getFilteredSpaces() {
     filtered = filtered.filter(s => s.bath_privacy === bath);
   }
 
+  // Dwelling filter
+  const dwellingsChecked = showDwellings?.checked ?? true;
+  const nonDwellingsChecked = showNonDwellings?.checked ?? true;
+  if (!dwellingsChecked || !nonDwellingsChecked) {
+    filtered = filtered.filter(s => {
+      const isDwelling = s.can_be_dwelling;
+      if (dwellingsChecked && isDwelling) return true;
+      if (nonDwellingsChecked && !isDwelling) return true;
+      return false;
+    });
+  }
+
   // Sort: available first, then by monthly_rate descending, then by name
   filtered.sort((a, b) => {
     // Available spaces come first
@@ -255,6 +270,8 @@ function resetFilters() {
   searchInput.value = '';
   parentFilter.value = '';
   bathFilter.value = '';
+  if (showDwellings) showDwellings.checked = true;
+  if (showNonDwellings) showNonDwellings.checked = true;
   render();
 }
 
