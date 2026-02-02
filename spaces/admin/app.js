@@ -55,12 +55,9 @@ const tableBody = document.getElementById('tableBody');
 const cardViewBtn = document.getElementById('cardViewBtn');
 const tableViewBtn = document.getElementById('tableViewBtn');
 const searchInput = document.getElementById('searchInput');
-const priceFilter = document.getElementById('priceFilter');
+const parentFilter = document.getElementById('parentFilter');
 const bathFilter = document.getElementById('bathFilter');
-const availFilter = document.getElementById('availFilter');
 const visibilityFilter = document.getElementById('visibilityFilter');
-const dwellingFilter = document.getElementById('dwellingFilter');
-const nonDwellingFilter = document.getElementById('nonDwellingFilter');
 const clearFilters = document.getElementById('clearFilters');
 const roleBadge = document.getElementById('roleBadge');
 const userInfo = document.getElementById('userInfo');
@@ -317,13 +314,13 @@ function setupEventListeners() {
 
   // Filters
   searchInput.addEventListener('input', render);
-  priceFilter.addEventListener('change', render);
+  parentFilter.addEventListener('change', render);
   bathFilter.addEventListener('change', render);
-  availFilter.addEventListener('change', render);
   visibilityFilter.addEventListener('change', render);
-  dwellingFilter.addEventListener('change', render);
-  nonDwellingFilter.addEventListener('change', render);
   clearFilters.addEventListener('click', resetFilters);
+
+  // Populate parent filter after data loads
+  populateParentFilter();
 
   // Table sorting
   document.querySelectorAll('th[data-sort]').forEach(th => {
@@ -440,21 +437,6 @@ function setView(view) {
 function getFilteredSpaces() {
   let filtered = [...spaces];
 
-  // Dwelling/Non-dwelling filter
-  const showDwelling = dwellingFilter.checked;
-  const showNonDwelling = nonDwellingFilter.checked;
-
-  if (showDwelling && showNonDwelling) {
-    // Show all
-  } else if (showDwelling) {
-    filtered = filtered.filter(s => s.can_be_dwelling);
-  } else if (showNonDwelling) {
-    filtered = filtered.filter(s => !s.can_be_dwelling);
-  } else {
-    // Neither checked - show nothing
-    filtered = [];
-  }
-
   // Search
   const search = searchInput.value.toLowerCase();
   if (search) {
@@ -464,33 +446,16 @@ function getFilteredSpaces() {
     );
   }
 
-  // Price filter
-  const price = priceFilter.value;
-  if (price) {
-    filtered = filtered.filter(s => {
-      const rate = s.monthly_rate || 0;
-      if (price === '0-400') return rate < 400;
-      if (price === '400-700') return rate >= 400 && rate < 700;
-      if (price === '700-1000') return rate >= 700 && rate < 1000;
-      if (price === '1000+') return rate >= 1000;
-      return true;
-    });
+  // Parent filter
+  const parent = parentFilter.value;
+  if (parent) {
+    filtered = filtered.filter(s => s.parent?.name === parent);
   }
 
   // Bath filter
   const bath = bathFilter.value;
   if (bath) {
     filtered = filtered.filter(s => s.bath_privacy === bath);
-  }
-
-  // Availability filter
-  const avail = availFilter.value;
-  if (avail) {
-    if (avail === 'available') {
-      filtered = filtered.filter(s => !s.currentAssignment);
-    } else if (avail === 'occupied') {
-      filtered = filtered.filter(s => s.currentAssignment);
-    }
   }
 
   // Visibility filter
@@ -556,13 +521,33 @@ function getFilteredSpaces() {
 
 function resetFilters() {
   searchInput.value = '';
-  priceFilter.value = '';
+  parentFilter.value = '';
   bathFilter.value = '';
-  availFilter.value = '';
   visibilityFilter.value = '';
-  dwellingFilter.checked = true;
-  nonDwellingFilter.checked = false;
   render();
+}
+
+// Populate parent filter dropdown from loaded spaces
+function populateParentFilter() {
+  const parents = new Set();
+  spaces.forEach(s => {
+    if (s.parent?.name) {
+      parents.add(s.parent.name);
+    }
+  });
+
+  const sortedParents = Array.from(parents).sort();
+
+  while (parentFilter.options.length > 1) {
+    parentFilter.remove(1);
+  }
+
+  sortedParents.forEach(name => {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    parentFilter.appendChild(option);
+  });
 }
 
 function handleSort(column) {

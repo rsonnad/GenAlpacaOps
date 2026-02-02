@@ -12,9 +12,8 @@ const tableBody = document.getElementById('tableBody');
 const cardViewBtn = document.getElementById('cardViewBtn');
 const tableViewBtn = document.getElementById('tableViewBtn');
 const searchInput = document.getElementById('searchInput');
-const priceFilter = document.getElementById('priceFilter');
+const parentFilter = document.getElementById('parentFilter');
 const bathFilter = document.getElementById('bathFilter');
-const availFilter = document.getElementById('availFilter');
 const clearFilters = document.getElementById('clearFilters');
 const spaceDetailModal = document.getElementById('spaceDetailModal');
 
@@ -168,10 +167,12 @@ function setupEventListeners() {
 
   // Filters
   searchInput.addEventListener('input', render);
-  priceFilter.addEventListener('change', render);
+  parentFilter.addEventListener('change', render);
   bathFilter.addEventListener('change', render);
-  availFilter.addEventListener('change', render);
   clearFilters.addEventListener('click', resetFilters);
+
+  // Populate parent filter dropdown
+  populateParentFilter();
 
   // Table sorting
   document.querySelectorAll('th[data-sort]').forEach(th => {
@@ -220,33 +221,16 @@ function getFilteredSpaces() {
     );
   }
 
-  // Price filter
-  const price = priceFilter.value;
-  if (price) {
-    filtered = filtered.filter(s => {
-      const rate = s.monthly_rate || 0;
-      if (price === '0-400') return rate < 400;
-      if (price === '400-700') return rate >= 400 && rate < 700;
-      if (price === '700-1000') return rate >= 700 && rate < 1000;
-      if (price === '1000+') return rate >= 1000;
-      return true;
-    });
+  // Parent filter
+  const parent = parentFilter.value;
+  if (parent) {
+    filtered = filtered.filter(s => s.parent?.name === parent);
   }
 
   // Bath filter
   const bath = bathFilter.value;
   if (bath) {
     filtered = filtered.filter(s => s.bath_privacy === bath);
-  }
-
-  // Availability filter
-  const avail = availFilter.value;
-  if (avail) {
-    if (avail === 'available') {
-      filtered = filtered.filter(s => s.isAvailable);
-    } else if (avail === 'occupied') {
-      filtered = filtered.filter(s => !s.isAvailable);
-    }
   }
 
   // Sort: available first, then by monthly_rate descending, then by name
@@ -269,10 +253,35 @@ function getFilteredSpaces() {
 
 function resetFilters() {
   searchInput.value = '';
-  priceFilter.value = '';
+  parentFilter.value = '';
   bathFilter.value = '';
-  availFilter.value = '';
   render();
+}
+
+// Populate parent filter dropdown from loaded spaces
+function populateParentFilter() {
+  const parents = new Set();
+  spaces.forEach(s => {
+    if (s.parent?.name) {
+      parents.add(s.parent.name);
+    }
+  });
+
+  // Sort parent names alphabetically
+  const sortedParents = Array.from(parents).sort();
+
+  // Clear existing options except first
+  while (parentFilter.options.length > 1) {
+    parentFilter.remove(1);
+  }
+
+  // Add parent options
+  sortedParents.forEach(name => {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    parentFilter.appendChild(option);
+  });
 }
 
 function handleSort(column) {

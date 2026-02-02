@@ -64,13 +64,9 @@
         <input type="text" id="searchInput" placeholder="Search spaces...">
       </div>
       <div class="filter-group">
-        <label for="priceFilter">Price</label>
-        <select id="priceFilter">
-          <option value="">All prices</option>
-          <option value="0-400">Under $400</option>
-          <option value="400-700">$400 - $700</option>
-          <option value="700-1000">$700 - $1000</option>
-          <option value="1000+">$1000+</option>
+        <label for="parentFilter">Parent Area</label>
+        <select id="parentFilter">
+          <option value="">All areas</option>
         </select>
       </div>
       <div class="filter-group">
@@ -82,14 +78,6 @@
         </select>
       </div>
       <div class="filter-group">
-        <label for="availFilter">Availability</label>
-        <select id="availFilter">
-          <option value="">All</option>
-          <option value="available">Available Now</option>
-          <option value="occupied">Currently Occupied</option>
-        </select>
-      </div>
-      <div class="filter-group">
         <label for="visibilityFilter">Visibility</label>
         <select id="visibilityFilter">
           <option value="">All visibility</option>
@@ -97,19 +85,6 @@
           <option value="unlisted">Unlisted</option>
           <option value="secret">Secret</option>
         </select>
-      </div>
-      <div class="filter-group filter-checkboxes">
-        <label>Type</label>
-        <div class="checkbox-row">
-          <label class="checkbox-label">
-            <input type="checkbox" id="dwellingFilter" checked>
-            Dwelling
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" id="nonDwellingFilter">
-            Non-dwelling
-          </label>
-        </div>
       </div>
       <button id="clearFilters" class="clear-btn">Clear all</button>
     </div>

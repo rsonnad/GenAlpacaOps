@@ -1,22 +1,23 @@
 :root {
-  --bg: #faf9f7;
+  /* Modern Sage Palette */
+  --bg: #f7f8f6;
   --bg-card: #ffffff;
-  --text: #2d3142;
-  --text-muted: #7a7d8c;
-  --border: #e8e9ed;
-  --accent: #3d8b7a;
-  --accent-light: #e5f4f1;
-  --occupied: #e07a5f;
-  --occupied-light: #fdf0ec;
-  --available: #5a9e8f;
-  --available-light: #e8f5f2;
-  --secret: #8b6fc0;
+  --text: #2b2d2c;
+  --text-muted: #6b7370;
+  --border: #e2e4e1;
+  --accent: #5f7161;
+  --accent-light: #e9f2eb;
+  --occupied: #a85d4e;
+  --occupied-light: #f8eeec;
+  --available: #4a7c59;
+  --available-light: #e9f2eb;
+  --secret: #7c6a9a;
   --secret-light: #f3effc;
-  --unlisted: #9598a4;
-  --unlisted-light: #f4f4f6;
+  --unlisted: #8a8d89;
+  --unlisted-light: #f2f3f1;
   --radius: 8px;
-  --shadow: 0 1px 3px rgba(45,49,66,0.06), 0 1px 2px rgba(45,49,66,0.08);
-  --shadow-lg: 0 4px 12px rgba(45,49,66,0.08), 0 2px 4px rgba(45,49,66,0.06);
+  --shadow: 0 1px 3px rgba(43,45,44,0.06), 0 1px 2px rgba(43,45,44,0.08);
+  --shadow-lg: 0 4px 12px rgba(43,45,44,0.08), 0 2px 4px rgba(43,45,44,0.06);
 }
 
 * {
@@ -579,7 +580,7 @@ tr:last-child td {
 }
 
 .btn-primary:hover {
-  background: #327568;
+  background: #4d5c4f;
 }
 
 .btn-secondary {

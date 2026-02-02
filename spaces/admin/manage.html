@@ -383,19 +383,7 @@
                   <option value="">All areas</option>
                 </select>
               </div>
-              <div class="filter-group filter-checkboxes-group">
-                <label>Type</label>
-                <div class="filter-checkboxes">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="dwellingFilter" checked>
-                    Dwelling
-                  </label>
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="nonDwellingFilter">
-                    Non-dwelling
-                  </label>
-                </div>
-              </div>
+              <button id="clearSpaceFilters" class="btn-small" style="align-self: flex-end;">Clear</button>
             </div>
           </div>
           <div class="section-body">
@@ -625,8 +613,11 @@
       // Space filters
       document.getElementById('searchFilter').addEventListener('input', renderSpaces);
       document.getElementById('parentFilter').addEventListener('change', renderSpaces);
-      document.getElementById('dwellingFilter').addEventListener('change', renderSpaces);
-      document.getElementById('nonDwellingFilter').addEventListener('change', renderSpaces);
+      document.getElementById('clearSpaceFilters').addEventListener('click', () => {
+        document.getElementById('searchFilter').value = '';
+        document.getElementById('parentFilter').value = '';
+        renderSpaces();
+      });
 
       // Media library event listeners
       setupMediaEventListeners();
@@ -678,8 +669,6 @@
     function getFilteredSpaces() {
       const searchTerm = document.getElementById('searchFilter').value.toLowerCase().trim();
       const parentId = document.getElementById('parentFilter').value;
-      const showDwelling = document.getElementById('dwellingFilter').checked;
-      const showNonDwelling = document.getElementById('nonDwellingFilter').checked;
 
       return allSpaces.filter(space => {
         // Search filter
@@ -692,17 +681,6 @@
           if (!isDescendantOf(space, parentId)) {
             return false;
           }
-        }
-
-        // Dwelling filter
-        if (showDwelling && showNonDwelling) {
-          // Show all
-        } else if (showDwelling && !space.can_be_dwelling) {
-          return false;
-        } else if (showNonDwelling && space.can_be_dwelling) {
-          return false;
-        } else if (!showDwelling && !showNonDwelling) {
-          return false;
         }
 
         return true;
