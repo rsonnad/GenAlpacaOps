@@ -240,6 +240,7 @@ h1 {
 .checkbox-label input[type="checkbox"] {
   width: 1rem;
   height: 1rem;
+  margin: 0;
   cursor: pointer;
   accent-color: var(--accent);
 }

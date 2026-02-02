@@ -94,6 +94,7 @@
     .checkbox-label input[type="checkbox"] {
       width: 1rem;
       height: 1rem;
+      margin: 0;
       cursor: pointer;
       accent-color: var(--accent);
     }
@@ -362,6 +363,7 @@
         <button class="manage-tab" data-tab="rentals">Rentals</button>
         <button class="manage-tab" data-tab="media">Media</button>
         <button class="manage-tab" data-tab="users">Users</button>
+        <button class="manage-tab" data-tab="settings">Settings</button>
       </div>
 
       <!-- Spaces Panel -->
@@ -578,6 +580,97 @@
           </div>
         </div>
       </div>
+
+      <!-- Settings Panel -->
+      <div id="settingsPanel" class="manage-panel">
+        <!-- Lease Template Section -->
+        <div class="section">
+          <div class="section-header">
+            <h2>Lease Agreement Template</h2>
+            <div class="header-actions">
+              <button type="button" id="loadDefaultTemplateBtn" class="btn-small">Load Default</button>
+              <button type="button" id="saveTemplateBtn" class="btn-small btn-primary">Save Template</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <p class="text-muted" style="margin-bottom: 1rem;">
+              Edit the lease agreement template below. Use <code>{{placeholder}}</code> syntax for dynamic fields.
+              The template uses Markdown formatting: <code># Header</code>, <code>**bold**</code>, <code>- bullet list</code>, <code>---</code> for horizontal rule.
+            </p>
+
+            <div class="template-editor-container">
+              <div class="template-editor">
+                <label for="templateName">Template Name</label>
+                <input type="text" id="templateName" value="Standard Lease Agreement" style="margin-bottom: 1rem;">
+
+                <label for="templateContent">Template Content</label>
+                <textarea id="templateContent" class="template-textarea" rows="20" placeholder="Enter lease template content..."></textarea>
+              </div>
+
+              <div class="placeholder-reference">
+                <h4>Available Placeholders</h4>
+                <div id="placeholderList" class="placeholder-list"></div>
+              </div>
+            </div>
+
+            <div class="template-actions" style="margin-top: 1rem;">
+              <label class="checkbox-label">
+                <input type="checkbox" id="templateMakeActive" checked>
+                Set as active template
+              </label>
+            </div>
+
+            <div id="templateValidation" class="template-validation" style="display: none; margin-top: 1rem;"></div>
+          </div>
+        </div>
+
+        <!-- Template History Section -->
+        <div class="section">
+          <div class="section-header">
+            <h2>Template History</h2>
+          </div>
+          <div class="section-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Version</th>
+                  <th>Created</th>
+                  <th>Active</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="templateHistoryBody">
+                <tr><td colspan="5" class="text-muted">No templates saved yet</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SignWell Configuration -->
+        <div class="section">
+          <div class="section-header">
+            <h2>SignWell Integration</h2>
+          </div>
+          <div class="section-body">
+            <p class="text-muted" style="margin-bottom: 1rem;">
+              Configure SignWell for electronic signature collection. Get your API key from
+              <a href="https://www.signwell.com/api/" target="_blank">signwell.com/api</a>.
+            </p>
+            <div class="form-group">
+              <label for="signwellApiKey">API Key</label>
+              <input type="password" id="signwellApiKey" placeholder="Enter SignWell API key...">
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="signwellTestMode" checked>
+                Test Mode (documents won't be sent for real signatures)
+              </label>
+            </div>
+            <button type="button" id="saveSignwellConfigBtn" class="btn-small btn-primary">Save SignWell Config</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -740,24 +833,75 @@
         <!-- Documents Tab -->
         <div id="documentsTab" class="detail-tab-content">
           <div class="documents-section">
+            <!-- Agreement Status -->
             <div class="document-status">
               <h4>Rental Agreement Status</h4>
-              <p id="agreementStatusDisplay">Pending</p>
+              <p id="agreementStatusDisplay" class="status-badge">Pending</p>
             </div>
-            <div id="agreementDataSection" class="agreement-data-section">
-              <h4>Agreement Data (Copy for Claude Skill)</h4>
-              <pre id="agreementDataPre" class="agreement-data-pre"></pre>
-              <button type="button" id="copyAgreementDataBtn" class="btn-small">Copy to Clipboard</button>
+
+            <!-- Generate Section (shown when no PDF yet) -->
+            <div id="generateSection" class="generate-section">
+              <h4>Generate Lease Agreement</h4>
+              <p class="text-muted" style="margin-bottom: 1rem;">Preview the lease agreement and generate a PDF for signing.</p>
+              <div id="leasePreviewContainer" class="lease-preview-container">
+                <div id="leasePreview" class="lease-preview"></div>
+              </div>
+              <div class="generate-actions" style="margin-top: 1rem;">
+                <button type="button" id="previewLeaseBtn" class="btn-small">Preview Agreement</button>
+                <button type="button" id="generatePdfBtn" class="btn-small btn-primary">Generate PDF</button>
+              </div>
+              <p id="noTemplateWarning" class="warning-text" style="display: none; margin-top: 0.5rem;">
+                No active lease template found. <a href="#" id="createTemplateLink">Create one</a> in the Templates section.
+              </p>
             </div>
-            <div class="form-group" style="margin-top: 1rem;">
-              <label for="agreementDocUrl">Document URL</label>
-              <input type="text" id="agreementDocUrl" placeholder="Paste generated document URL here...">
+
+            <!-- Generated PDF Section (shown after PDF is generated) -->
+            <div id="pdfSection" class="pdf-section" style="display: none;">
+              <h4>Generated Document</h4>
+              <div class="pdf-info">
+                <a id="pdfDownloadLink" href="#" target="_blank" class="pdf-link">
+                  <span class="pdf-icon">📄</span>
+                  <span id="pdfFilename">lease-agreement.pdf</span>
+                </a>
+                <span id="pdfGeneratedAt" class="text-muted"></span>
+              </div>
+              <div class="pdf-actions" style="margin-top: 1rem;">
+                <button type="button" id="regeneratePdfBtn" class="btn-small">Regenerate</button>
+                <button type="button" id="sendForSignatureBtn" class="btn-small btn-primary">Send for Signature</button>
+              </div>
             </div>
-            <div class="document-actions" style="margin-top: 1rem;">
-              <button type="button" id="markAgreementGenerated" class="btn-small">Mark as Generated</button>
-              <button type="button" id="markAgreementSent" class="btn-small">Mark as Sent</button>
-              <button type="button" id="markAgreementSigned" class="btn-small btn-primary">Mark as Signed</button>
+
+            <!-- Signature Section (shown after sent for signature) -->
+            <div id="signatureSection" class="signature-section" style="display: none;">
+              <h4>Signature Status</h4>
+              <p id="signatureStatusText">Awaiting signature...</p>
+              <div id="signedPdfSection" style="display: none; margin-top: 1rem;">
+                <a id="signedPdfLink" href="#" target="_blank" class="pdf-link">
+                  <span class="pdf-icon">✅</span>
+                  <span>Download Signed Agreement</span>
+                </a>
+              </div>
+              <div class="signature-actions" style="margin-top: 1rem;">
+                <button type="button" id="checkSignatureStatusBtn" class="btn-small">Check Status</button>
+                <button type="button" id="resendSignatureBtn" class="btn-small">Resend Request</button>
+              </div>
             </div>
+
+            <!-- Legacy Manual Section (collapsible, for backwards compatibility) -->
+            <details class="legacy-section" style="margin-top: 1.5rem;">
+              <summary class="text-muted" style="cursor: pointer;">Manual Document Entry</summary>
+              <div style="padding-top: 1rem;">
+                <div class="form-group">
+                  <label for="agreementDocUrl">Document URL</label>
+                  <input type="text" id="agreementDocUrl" placeholder="Paste document URL manually...">
+                </div>
+                <div class="document-actions" style="margin-top: 1rem;">
+                  <button type="button" id="markAgreementGenerated" class="btn-small">Mark as Generated</button>
+                  <button type="button" id="markAgreementSent" class="btn-small">Mark as Sent</button>
+                  <button type="button" id="markAgreementSigned" class="btn-small btn-primary">Mark as Signed</button>
+                </div>
+              </div>
+            </details>
           </div>
         </div>
 
@@ -940,6 +1084,8 @@
     import { initAuth, getAuthState, signOut, onAuthStateChange } from '../../shared/auth.js';
     import { mediaService } from '../../shared/media-service.js';
     import { rentalService } from '../../shared/rental-service.js';
+    import { leaseTemplateService } from '../../shared/lease-template-service.js';
+    import { pdfService } from '../../shared/pdf-service.js';
 
     // =============================================
     // TOAST NOTIFICATIONS
@@ -1044,8 +1190,19 @@
           if (tab.dataset.tab === 'rentals' && !rentalsLoaded) {
             loadRentals();
           }
+
+          // Load settings when switching to Settings tab
+          if (tab.dataset.tab === 'settings') {
+            loadSettingsPanel();
+          }
         });
       });
+
+      // Also expose switchTab function for programmatic use
+      window.switchTab = function(tabName) {
+        const tab = document.querySelector(`.manage-tab[data-tab="${tabName}"]`);
+        if (tab) tab.click();
+      };
 
       // Add space form
       document.getElementById('addSpaceForm').addEventListener('submit', handleAddSpace);
@@ -1053,7 +1210,6 @@
       // Space filters
       document.getElementById('searchFilter').addEventListener('input', renderSpaces);
       document.getElementById('parentFilter').addEventListener('change', renderSpaces);
-      document.getElementById('bathFilter').addEventListener('change', renderSpaces);
       document.getElementById('showDwellings').addEventListener('change', renderSpaces);
       document.getElementById('showNonDwellings').addEventListener('change', renderSpaces);
       document.getElementById('clearSpaceFilters').addEventListener('click', () => {
@@ -1117,7 +1273,6 @@
     function getFilteredSpaces() {
       const searchTerm = document.getElementById('searchFilter').value.toLowerCase().trim();
       const parentId = document.getElementById('parentFilter').value;
-      const bathPrivacy = document.getElementById('bathFilter').value;
       const showDwellings = document.getElementById('showDwellings').checked;
       const showNonDwellings = document.getElementById('showNonDwellings').checked;
 
@@ -1132,11 +1287,6 @@
           if (!isDescendantOf(space, parentId)) {
             return false;
           }
-        }
-
-        // Bathroom filter
-        if (bathPrivacy && space.bath_privacy !== bathPrivacy) {
-          return false;
         }
 
         // Dwelling/Non-dwelling filter
@@ -1981,13 +2131,8 @@
         app.agreement_status || 'Pending';
       document.getElementById('agreementDocUrl').value = app.agreement_document_url || '';
 
-      // Update agreement data
-      try {
-        const agreementData = await rentalService.getAgreementData(applicationId);
-        document.getElementById('agreementDataPre').textContent = JSON.stringify(agreementData, null, 2);
-      } catch (e) {
-        document.getElementById('agreementDataPre').textContent = 'Unable to load agreement data';
-      }
+      // Update documents tab state
+      await updateDocumentsTabState(app);
 
       // Deposits tab
       document.getElementById('moveInDepositAmount').textContent =
@@ -2422,18 +2567,356 @@
     }
 
     // =============================================
-    // COPY TO CLIPBOARD
+    // LEASE AGREEMENT GENERATION
     // =============================================
 
-    async function copyAgreementData() {
-      const text = document.getElementById('agreementDataPre').textContent;
+    let currentLeaseTemplate = null;
+    let currentAgreementData = null;
+
+    async function updateDocumentsTabState(app) {
+      const generateSection = document.getElementById('generateSection');
+      const pdfSection = document.getElementById('pdfSection');
+      const signatureSection = document.getElementById('signatureSection');
+      const noTemplateWarning = document.getElementById('noTemplateWarning');
+      const leasePreview = document.getElementById('leasePreview');
+
+      // Reset visibility
+      generateSection.style.display = 'block';
+      pdfSection.style.display = 'none';
+      signatureSection.style.display = 'none';
+      noTemplateWarning.style.display = 'none';
+      leasePreview.innerHTML = '';
+
+      // Load template and agreement data
       try {
-        await navigator.clipboard.writeText(text);
-        showToast('Agreement data copied to clipboard', 'success');
+        currentLeaseTemplate = await leaseTemplateService.getActiveTemplate();
+        currentAgreementData = await rentalService.getAgreementData(app.id);
+
+        if (!currentLeaseTemplate) {
+          noTemplateWarning.style.display = 'block';
+          return;
+        }
       } catch (e) {
-        showToast('Failed to copy. Please select and copy manually.', 'error');
+        console.error('Error loading template/data:', e);
+        leasePreview.innerHTML = '<p class="text-muted">Unable to load agreement data</p>';
+        return;
+      }
+
+      // Show appropriate section based on agreement status
+      const status = app.agreement_status || 'pending';
+
+      if (status === 'signed' && app.signed_pdf_url) {
+        // Show signed document
+        pdfSection.style.display = 'none';
+        signatureSection.style.display = 'block';
+        document.getElementById('signatureStatusText').textContent = 'Agreement signed!';
+        document.getElementById('signedPdfSection').style.display = 'block';
+        document.getElementById('signedPdfLink').href = app.signed_pdf_url;
+      } else if (status === 'sent' && app.signwell_document_id) {
+        // Show signature pending status
+        generateSection.style.display = 'none';
+        pdfSection.style.display = 'block';
+        signatureSection.style.display = 'block';
+        document.getElementById('signatureStatusText').textContent = 'Awaiting tenant signature...';
+        if (app.generated_pdf_url) {
+          document.getElementById('pdfDownloadLink').href = app.generated_pdf_url;
+        }
+      } else if ((status === 'generated' || app.generated_pdf_url) && app.generated_pdf_url) {
+        // Show generated PDF
+        generateSection.style.display = 'none';
+        pdfSection.style.display = 'block';
+        document.getElementById('pdfDownloadLink').href = app.generated_pdf_url;
+        document.getElementById('pdfFilename').textContent = 'lease-agreement.pdf';
+        if (app.agreement_generated_at) {
+          document.getElementById('pdfGeneratedAt').textContent =
+            `Generated ${new Date(app.agreement_generated_at).toLocaleDateString()}`;
+        }
+      }
+      // Otherwise show generate section (default)
+    }
+
+    async function previewLease() {
+      const leasePreview = document.getElementById('leasePreview');
+
+      if (!currentLeaseTemplate || !currentAgreementData) {
+        showToast('No template or data available', 'warning');
+        return;
+      }
+
+      try {
+        const parsedContent = leaseTemplateService.parseTemplate(
+          currentLeaseTemplate.content,
+          currentAgreementData
+        );
+        // Convert markdown to simple HTML for preview
+        leasePreview.innerHTML = markdownToHtml(parsedContent);
+        leasePreview.style.display = 'block';
+      } catch (e) {
+        console.error('Error previewing lease:', e);
+        showToast('Error generating preview: ' + e.message, 'error');
       }
     }
+
+    function markdownToHtml(markdown) {
+      // Simple markdown to HTML conversion for preview
+      let html = markdown
+        // Headers
+        .replace(/^### (.*$)/gm, '<h4>$1</h4>')
+        .replace(/^## (.*$)/gm, '<h3>$1</h3>')
+        .replace(/^# (.*$)/gm, '<h2>$1</h2>')
+        // Bold
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        // Horizontal rules
+        .replace(/^---$/gm, '<hr>')
+        // Line breaks
+        .replace(/\n/g, '<br>');
+
+      return html;
+    }
+
+    async function generateLeasePdf() {
+      if (!currentLeaseTemplate || !currentAgreementData) {
+        showToast('No template or data available', 'warning');
+        return;
+      }
+
+      const btn = document.getElementById('generatePdfBtn');
+      const originalText = btn.textContent;
+      btn.textContent = 'Generating...';
+      btn.disabled = true;
+
+      try {
+        // Parse template with application data
+        const parsedContent = leaseTemplateService.parseTemplate(
+          currentLeaseTemplate.content,
+          currentAgreementData
+        );
+
+        // Generate and upload PDF
+        const { url, filename } = await pdfService.generateAndUploadLeasePdf(
+          parsedContent,
+          currentApplicationId
+        );
+
+        // Update application with PDF URL
+        await rentalService.updateAgreementStatus(currentApplicationId, 'generated', url);
+
+        // Reload applications and refresh UI
+        await loadApplications();
+        await openRentalDetail(currentApplicationId);
+
+        showToast('Lease agreement PDF generated!', 'success');
+      } catch (e) {
+        console.error('Error generating PDF:', e);
+        showToast('Error generating PDF: ' + e.message, 'error');
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    async function regeneratePdf() {
+      if (confirm('This will replace the existing PDF. Continue?')) {
+        await generateLeasePdf();
+      }
+    }
+
+    async function sendForSignature() {
+      showToast('SignWell integration coming soon. For now, send the PDF manually.', 'info');
+      // TODO: Integrate with SignWell API
+      // const app = allApplications.find(a => a.id === currentApplicationId);
+      // await signwellService.createDocument(app.generated_pdf_url, app.person.email, app.person.first_name + ' ' + app.person.last_name);
+    }
+
+    // =============================================
+    // SETTINGS / TEMPLATE EDITOR
+    // =============================================
+
+    async function loadSettingsPanel() {
+      // Load placeholder reference
+      const placeholders = leaseTemplateService.getAvailablePlaceholders();
+      const placeholderList = document.getElementById('placeholderList');
+      placeholderList.innerHTML = Object.entries(placeholders)
+        .map(([key, desc]) => `
+          <div class="placeholder-item">
+            <code>{{${key}}}</code>
+            <span class="placeholder-desc">${desc}</span>
+          </div>
+        `).join('');
+
+      // Load active template
+      try {
+        const template = await leaseTemplateService.getActiveTemplate();
+        if (template) {
+          document.getElementById('templateName').value = template.name;
+          document.getElementById('templateContent').value = template.content;
+        } else {
+          // Load default template
+          document.getElementById('templateContent').value = leaseTemplateService.getDefaultTemplate();
+        }
+      } catch (e) {
+        console.error('Error loading template:', e);
+      }
+
+      // Load template history
+      await loadTemplateHistory();
+
+      // Load SignWell config
+      await loadSignwellConfig();
+    }
+
+    async function loadTemplateHistory() {
+      try {
+        const templates = await leaseTemplateService.getAllTemplates();
+        const tbody = document.getElementById('templateHistoryBody');
+
+        if (templates.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="text-muted">No templates saved yet</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = templates.map(t => `
+          <tr>
+            <td>${t.name}</td>
+            <td>v${t.version}</td>
+            <td>${new Date(t.created_at).toLocaleDateString()}</td>
+            <td>${t.is_active ? '<span class="status-badge active">Active</span>' : ''}</td>
+            <td>
+              <button class="btn-small" onclick="loadTemplate('${t.id}')">Load</button>
+              ${!t.is_active ? `<button class="btn-small" onclick="setActiveTemplate('${t.id}')">Set Active</button>` : ''}
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        console.error('Error loading template history:', e);
+      }
+    }
+
+    window.loadTemplate = async function(templateId) {
+      try {
+        const { data, error } = await supabase
+          .from('lease_templates')
+          .select('*')
+          .eq('id', templateId)
+          .single();
+
+        if (error) throw error;
+
+        document.getElementById('templateName').value = data.name;
+        document.getElementById('templateContent').value = data.content;
+        showToast('Template loaded', 'success');
+      } catch (e) {
+        showToast('Error loading template: ' + e.message, 'error');
+      }
+    };
+
+    window.setActiveTemplate = async function(templateId) {
+      try {
+        await leaseTemplateService.setActiveTemplate(templateId);
+        await loadTemplateHistory();
+        showToast('Template set as active', 'success');
+      } catch (e) {
+        showToast('Error: ' + e.message, 'error');
+      }
+    };
+
+    async function saveTemplate() {
+      const name = document.getElementById('templateName').value.trim();
+      const content = document.getElementById('templateContent').value;
+      const makeActive = document.getElementById('templateMakeActive').checked;
+
+      if (!name) {
+        showToast('Please enter a template name', 'warning');
+        return;
+      }
+
+      if (!content.trim()) {
+        showToast('Template content cannot be empty', 'warning');
+        return;
+      }
+
+      // Validate template
+      const validation = leaseTemplateService.validateTemplate(content);
+      const validationDiv = document.getElementById('templateValidation');
+
+      if (!validation.isValid) {
+        validationDiv.innerHTML = `
+          <div class="validation-error">
+            <strong>Validation Errors:</strong>
+            <ul>${validation.errors.map(e => `<li>${e}</li>`).join('')}</ul>
+          </div>
+        `;
+        validationDiv.style.display = 'block';
+        return;
+      }
+
+      if (validation.warnings.length > 0) {
+        validationDiv.innerHTML = `
+          <div class="validation-warning">
+            <strong>Warnings:</strong>
+            <ul>${validation.warnings.map(w => `<li>${w}</li>`).join('')}</ul>
+          </div>
+        `;
+        validationDiv.style.display = 'block';
+      } else {
+        validationDiv.style.display = 'none';
+      }
+
+      try {
+        await leaseTemplateService.saveTemplate(content, name, makeActive);
+        await loadTemplateHistory();
+        showToast('Template saved successfully!', 'success');
+      } catch (e) {
+        showToast('Error saving template: ' + e.message, 'error');
+      }
+    }
+
+    function loadDefaultTemplate() {
+      document.getElementById('templateContent').value = leaseTemplateService.getDefaultTemplate();
+      document.getElementById('templateName').value = 'Standard Lease Agreement';
+      showToast('Default template loaded', 'info');
+    }
+
+    async function loadSignwellConfig() {
+      try {
+        const { data, error } = await supabase
+          .from('signwell_config')
+          .select('*')
+          .single();
+
+        if (data) {
+          document.getElementById('signwellApiKey').value = data.api_key || '';
+          document.getElementById('signwellTestMode').checked = data.test_mode !== false;
+        }
+      } catch (e) {
+        console.error('Error loading SignWell config:', e);
+      }
+    }
+
+    async function saveSignwellConfig() {
+      const apiKey = document.getElementById('signwellApiKey').value.trim();
+      const testMode = document.getElementById('signwellTestMode').checked;
+
+      try {
+        const { error } = await supabase
+          .from('signwell_config')
+          .upsert({
+            id: 1,
+            api_key: apiKey || null,
+            test_mode: testMode,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (error) throw error;
+        showToast('SignWell configuration saved', 'success');
+      } catch (e) {
+        showToast('Error saving config: ' + e.message, 'error');
+      }
+    }
+
+    // =============================================
+    // COPY TO CLIPBOARD
+    // =============================================
 
     async function copyDepositRequest() {
       if (!currentApplicationId) return;
@@ -2483,8 +2966,31 @@
         tab.addEventListener('click', () => switchDetailTab(tab.dataset.detailTab));
       });
 
-      // Agreement actions
-      document.getElementById('copyAgreementDataBtn')?.addEventListener('click', copyAgreementData);
+      // New lease agreement actions
+      document.getElementById('previewLeaseBtn')?.addEventListener('click', previewLease);
+      document.getElementById('generatePdfBtn')?.addEventListener('click', generateLeasePdf);
+      document.getElementById('regeneratePdfBtn')?.addEventListener('click', regeneratePdf);
+      document.getElementById('sendForSignatureBtn')?.addEventListener('click', sendForSignature);
+      document.getElementById('checkSignatureStatusBtn')?.addEventListener('click', () => {
+        showToast('Checking signature status...', 'info');
+        // TODO: signwellService.getDocumentStatus()
+      });
+      document.getElementById('resendSignatureBtn')?.addEventListener('click', () => {
+        showToast('Resending signature request...', 'info');
+        // TODO: signwellService.resendRequest()
+      });
+      document.getElementById('createTemplateLink')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchTab('settings'); // Switch to settings/templates tab
+        showToast('Create a lease template in the Settings tab', 'info');
+      });
+
+      // Settings panel event listeners
+      document.getElementById('loadDefaultTemplateBtn')?.addEventListener('click', loadDefaultTemplate);
+      document.getElementById('saveTemplateBtn')?.addEventListener('click', saveTemplate);
+      document.getElementById('saveSignwellConfigBtn')?.addEventListener('click', saveSignwellConfig);
+
+      // Legacy manual agreement actions (backwards compatibility)
       document.getElementById('markAgreementGenerated')?.addEventListener('click', async () => {
         if (!currentApplicationId) return;
         const url = document.getElementById('agreementDocUrl').value.trim();

@@ -407,6 +407,242 @@
 }
 
 /* =============================================
+   LEASE GENERATION (New Documents Tab)
+   ============================================= */
+
+.generate-section,
+.pdf-section,
+.signature-section {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.generate-section h4,
+.pdf-section h4,
+.signature-section h4 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin: 0 0 0.5rem 0;
+}
+
+.lease-preview-container {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: white;
+  margin-bottom: 1rem;
+  display: none;
+}
+
+.lease-preview {
+  padding: 1rem;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.lease-preview h2 {
+  font-size: 1.1rem;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.lease-preview h3 {
+  font-size: 1rem;
+  margin: 0.75rem 0 0.5rem 0;
+}
+
+.lease-preview h4 {
+  font-size: 0.9rem;
+  margin: 0.5rem 0 0.25rem 0;
+}
+
+.lease-preview hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1rem 0;
+}
+
+.generate-actions,
+.pdf-actions,
+.signature-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pdf-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pdf-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: background 0.15s ease;
+}
+
+.pdf-link:hover {
+  background: var(--bg);
+}
+
+.pdf-icon {
+  font-size: 1.25rem;
+}
+
+.warning-text {
+  font-size: 0.85rem;
+  color: #d97706;
+}
+
+.warning-text a {
+  color: var(--accent);
+}
+
+.legacy-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+}
+
+.legacy-section summary {
+  font-size: 0.85rem;
+}
+
+.legacy-section[open] {
+  padding-bottom: 0.5rem;
+}
+
+/* =============================================
+   TEMPLATE EDITOR (Settings Panel)
+   ============================================= */
+
+.template-editor-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .template-editor-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.template-editor {
+  display: flex;
+  flex-direction: column;
+}
+
+.template-textarea {
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  resize: vertical;
+  min-height: 400px;
+}
+
+.placeholder-reference {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.placeholder-reference h4 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin: 0 0 1rem 0;
+}
+
+.placeholder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.placeholder-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.placeholder-item code {
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 0.8rem;
+  background: var(--bg-card);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  color: var(--accent);
+  width: fit-content;
+}
+
+.placeholder-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.template-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.template-validation {
+  padding: 1rem;
+  border-radius: var(--radius);
+}
+
+.validation-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 1rem;
+  border-radius: var(--radius);
+}
+
+.validation-warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  padding: 1rem;
+  border-radius: var(--radius);
+}
+
+.validation-error ul,
+.validation-warning ul {
+  margin: 0.5rem 0 0 1.5rem;
+  padding: 0;
+}
+
+.header-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* =============================================
    RENT TAB
    ============================================= */
 
