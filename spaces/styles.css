@@ -203,9 +203,17 @@ h1 {
   border-color: var(--accent);
 }
 
-.filter-checkboxes {
+.filter-checkboxes-group {
   flex-direction: row;
   align-items: center;
+}
+
+.filter-checkboxes {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+  height: 36px;
 }
 
 .filter-checkboxes .checkbox-row {
@@ -215,7 +223,8 @@ h1 {
   align-items: center;
 }
 
-.filter-checkboxes .checkbox-label {
+.filter-checkboxes .checkbox-label,
+.checkbox-label {
   display: flex;
   align-items: center;
   gap: 0.375rem;
@@ -227,7 +236,8 @@ h1 {
   cursor: pointer;
 }
 
-.filter-checkboxes input[type="checkbox"] {
+.filter-checkboxes input[type="checkbox"],
+.checkbox-label input[type="checkbox"] {
   width: 1rem;
   height: 1rem;
   cursor: pointer;
