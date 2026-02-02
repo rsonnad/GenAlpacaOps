@@ -127,17 +127,19 @@ INSERT INTO media_tags (name, tag_group, color, description) VALUES
   ('thumbnail', 'purpose', '#9333EA', 'Thumbnail images')
 ON CONFLICT (name) DO NOTHING;
 
--- Room tags (location within property)
+-- Space tags (location within property)
 INSERT INTO media_tags (name, tag_group, color, description) VALUES
-  ('kitchen', 'room', '#F59E0B', 'Kitchen area'),
-  ('bathroom', 'room', '#3B82F6', 'Bathroom'),
-  ('bedroom', 'room', '#8B5CF6', 'Bedroom'),
-  ('living-room', 'room', '#10B981', 'Living room'),
-  ('exterior', 'room', '#6B7280', 'Exterior/outside'),
-  ('common-area', 'room', '#EC4899', 'Shared/common areas'),
-  ('garage', 'room', '#78716C', 'Garage'),
-  ('yard', 'room', '#84CC16', 'Yard/garden'),
-  ('patio', 'room', '#06B6D4', 'Patio/deck')
+  ('kitchen', 'space', '#F59E0B', 'Kitchen area'),
+  ('bathroom', 'space', '#3B82F6', 'Bathroom'),
+  ('bedroom', 'space', '#8B5CF6', 'Bedroom'),
+  ('living-room', 'space', '#10B981', 'Living room'),
+  ('exterior', 'space', '#6B7280', 'Exterior/outside'),
+  ('common-area', 'space', '#EC4899', 'Shared/common areas'),
+  ('garage', 'space', '#78716C', 'Garage'),
+  ('yard', 'space', '#84CC16', 'Yard/garden'),
+  ('patio', 'space', '#06B6D4', 'Patio/deck'),
+  ('house', 'space', '#8B4513', 'Main house/building'),
+  ('front-yard', 'space', '#22C55E', 'Front yard area')
 ON CONFLICT (name) DO NOTHING;
 
 -- Condition tags (state of the subject)

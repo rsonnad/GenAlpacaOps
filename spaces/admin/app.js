@@ -1004,7 +1004,7 @@ function renderLibraryTagFilter() {
 
   // Show purpose and room tags as filter chips
   const filterableTags = allTags.filter(t =>
-    ['purpose', 'room', 'condition'].includes(t.tag_group)
+    ['purpose', 'space', 'condition'].includes(t.tag_group)
   );
 
   container.innerHTML = filterableTags.map(tag => `

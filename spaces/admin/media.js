@@ -302,10 +302,10 @@ async function openMediaDetail(mediaId) {
 function renderDetailTags(groupedTags, selectedTags) {
   const container = document.getElementById('detailTagsContainer');
 
-  const groupNames = ['purpose', 'room', 'condition', 'project', 'other'];
+  const groupNames = ['purpose', 'space', 'condition', 'project', 'other'];
   const groupLabels = {
     purpose: 'Purpose',
-    room: 'Room',
+    space: 'Space',
     condition: 'Condition',
     project: 'Project',
     other: 'Other',
@@ -417,10 +417,10 @@ async function openBulkTagModal() {
 
 function renderBulkTags(containerId, groupedTags) {
   const container = document.getElementById(containerId);
-  const groupNames = ['purpose', 'room', 'condition', 'project'];
+  const groupNames = ['purpose', 'space', 'condition', 'project'];
   const groupLabels = {
     purpose: 'Purpose',
-    room: 'Room',
+    space: 'Space',
     condition: 'Condition',
     project: 'Project',
   };
