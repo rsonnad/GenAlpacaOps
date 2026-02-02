@@ -1698,12 +1698,21 @@ async function handleEditSpaceSubmit() {
       can_be_dwelling: document.getElementById('editCanBeDwelling').checked,
     };
 
-    const { error } = await supabase
+    console.log('Updating space with:', updates);
+
+    const { data, error } = await supabase
       .from('spaces')
       .update(updates)
-      .eq('id', spaceId);
+      .eq('id', spaceId)
+      .select();
+
+    console.log('Update result:', { data, error });
 
     if (error) throw error;
+
+    if (!data || data.length === 0) {
+      throw new Error('No rows updated - check RLS policies');
+    }
 
     alert('Space updated successfully!');
     editSpaceModal.classList.add('hidden');
