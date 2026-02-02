@@ -1407,6 +1407,10 @@ function updateFileCaption(fileId, caption) {
 }
 
 async function handlePhotoUpload() {
+  console.log('handlePhotoUpload called');
+  console.log('isAdmin:', authState?.isAdmin);
+  console.log('selectedUploadFiles:', selectedUploadFiles.length);
+
   if (!authState?.isAdmin) {
     alert('Only admins can upload photos');
     return;
