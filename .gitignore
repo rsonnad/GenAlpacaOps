@@ -1,0 +1,11 @@
+# Project instructions with sensitive data
+CLAUDE.md
+
+# OS files
+.DS_Store
+
+# Editor files
+*.swp
+*.swo
+.idea/
+.vscode/
