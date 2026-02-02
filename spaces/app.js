@@ -4,7 +4,7 @@ import { supabase } from '../shared/supabase.js';
 // App state
 let spaces = [];
 let currentView = 'card';
-let currentSort = { column: 'availability', direction: 'asc' };
+let currentSort = { column: 'monthly_rate', direction: 'desc' };
 
 // DOM elements
 const cardView = document.getElementById('cardView');
