@@ -72,6 +72,24 @@
   gap: 0.5rem;
 }
 
+/* Tags filter should be allowed to shrink and wrap */
+.filter-group .tag-filter-chips {
+  max-width: 400px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .filter-group .tag-filter-chips {
+    max-width: 250px;
+  }
+}
+
+@media (max-width: 600px) {
+  .filter-group .tag-filter-chips {
+    max-width: 150px;
+  }
+}
+
 .filter-group label {
   font-size: 0.8rem;
   font-weight: 500;

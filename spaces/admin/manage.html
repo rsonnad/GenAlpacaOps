@@ -172,6 +172,29 @@
       }
     }
 
+    /* Tags filter in Media tab - allow shrinking and wrapping */
+    .media-toolbar .filter-group {
+      flex-shrink: 1;
+      min-width: 0;
+    }
+
+    .media-toolbar .tag-filter-chips {
+      max-width: 350px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 900px) {
+      .media-toolbar .tag-filter-chips {
+        max-width: 200px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .media-toolbar .tag-filter-chips {
+        max-width: 150px;
+      }
+    }
+
     .section-body {
       padding: 1.5rem;
     }
