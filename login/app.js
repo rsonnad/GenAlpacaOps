@@ -1,6 +1,6 @@
 // Login page application
 import { supabase } from '../shared/supabase.js';
-import { initAuth, signInWithGoogle, getAuthState } from '../shared/auth.js';
+import { initAuth, signInWithGoogle, signOut, getAuthState } from '../shared/auth.js';
 
 // DOM elements
 const loginContent = document.getElementById('loginContent');
@@ -90,6 +90,21 @@ googleSignInBtn.addEventListener('click', async () => {
 retryBtn.addEventListener('click', () => {
   showState('login');
 });
+
+// Sign out button (for unauthorized users to try another account)
+const signOutBtn = document.getElementById('signOutBtn');
+if (signOutBtn) {
+  signOutBtn.addEventListener('click', async () => {
+    showState('loading');
+    try {
+      await signOut();
+      showState('login');
+    } catch (error) {
+      console.error('Sign out error:', error);
+      showState('error', error.message);
+    }
+  });
+}
 
 // Initialize on page load
 init();
