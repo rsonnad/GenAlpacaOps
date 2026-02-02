@@ -1706,19 +1706,14 @@ async function handleEditSpaceSubmit() {
 
     console.log('Updating space with:', updates);
 
-    const { data, error } = await supabase
+    const { error, count } = await supabase
       .from('spaces')
       .update(updates)
-      .eq('id', spaceId)
-      .select();
+      .eq('id', spaceId);
 
-    console.log('Update result:', { data, error });
+    console.log('Update result:', { error, count });
 
     if (error) throw error;
-
-    if (!data || data.length === 0) {
-      throw new Error('No rows updated - check RLS policies');
-    }
 
     alert('Space updated successfully!');
     editSpaceModal.classList.add('hidden');
