@@ -737,6 +737,11 @@
                 <small class="form-hint">Can be $0. Move-in deposit is always 1 period's rent.</small>
               </div>
             </div>
+            <div class="form-group" style="margin-top: 1rem;">
+              <label for="termAdditionalTerms">Additional Terms</label>
+              <textarea id="termAdditionalTerms" rows="4" placeholder="Any additional terms or conditions to include in the rental agreement..."></textarea>
+              <small class="form-hint">Will appear in the "Additional Terms" section of the rental agreement.</small>
+            </div>
           </form>
         </div>
 
@@ -1978,6 +1983,7 @@
       document.getElementById('termLeaseEnd').value = app.approved_lease_end || '';
       document.getElementById('termNoticePeriod').value = app.notice_period || '30_days';
       document.getElementById('termSecurityDeposit').value = app.security_deposit_amount || 0;
+      document.getElementById('termAdditionalTerms').value = app.additional_terms || '';
 
       // Documents tab
       document.getElementById('agreementStatusDisplay').textContent =
@@ -2161,6 +2167,7 @@
       const leaseEndDate = document.getElementById('termLeaseEnd').value || null;
       const noticePeriod = document.getElementById('termNoticePeriod').value;
       const securityDeposit = parseFloat(document.getElementById('termSecurityDeposit').value) || 0;
+      const additionalTerms = document.getElementById('termAdditionalTerms').value.trim() || null;
 
       if (!spaceId || !rate || !moveInDate) {
         showToast('Please fill in Space, Rate, and Move-in Date on the Terms tab', 'warning');
@@ -2177,6 +2184,7 @@
           leaseEndDate,
           noticePeriod,
           securityDepositAmount: securityDeposit,
+          additionalTerms,
         });
         await loadApplications();
         openRentalDetail(currentApplicationId);

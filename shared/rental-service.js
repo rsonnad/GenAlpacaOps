@@ -232,6 +232,7 @@ async function approveApplication(applicationId, terms) {
     leaseEndDate = null,
     securityDepositAmount = 0,
     noticePeriod = '30_days',
+    additionalTerms = null,
   } = terms;
 
   // Move-in deposit is always 1 period's rent
@@ -249,6 +250,7 @@ async function approveApplication(applicationId, terms) {
       notice_period: noticePeriod,
       move_in_deposit_amount: moveInDepositAmount,
       security_deposit_amount: securityDepositAmount,
+      additional_terms: additionalTerms,
       reviewed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -494,6 +496,9 @@ async function getAgreementData(applicationId) {
     noticePeriod: app.notice_period || '30_days',
     noticePeriodDisplay: noticePeriodDisplay,
 
+    // Additional terms
+    additionalTerms: app.additional_terms || null,
+
     // Raw values for calculations
     raw: {
       rate: app.approved_rate,
@@ -503,6 +508,7 @@ async function getAgreementData(applicationId) {
       moveInDate: app.approved_move_in,
       leaseEndDate: app.approved_lease_end,
       noticePeriod: app.notice_period,
+      additionalTerms: app.additional_terms,
     },
   };
 }
