@@ -129,17 +129,27 @@ ON CONFLICT (name) DO NOTHING;
 
 -- Space tags (location within property)
 INSERT INTO media_tags (name, tag_group, color, description) VALUES
-  ('kitchen', 'space', '#F59E0B', 'Kitchen area'),
-  ('bathroom', 'space', '#3B82F6', 'Bathroom'),
-  ('bedroom', 'space', '#8B5CF6', 'Bedroom'),
-  ('living-room', 'space', '#10B981', 'Living room'),
-  ('exterior', 'space', '#6B7280', 'Exterior/outside'),
-  ('common-area', 'space', '#EC4899', 'Shared/common areas'),
-  ('garage', 'space', '#78716C', 'Garage'),
-  ('yard', 'space', '#84CC16', 'Yard/garden'),
-  ('patio', 'space', '#06B6D4', 'Patio/deck'),
   ('house', 'space', '#8B4513', 'Main house/building'),
-  ('front-yard', 'space', '#22C55E', 'Front yard area')
+  ('front-yard', 'space', '#22C55E', 'Front yard area'),
+  ('sparadise', 'space', '#06B6D4', 'Sparadise area'),
+  ('garage-mahal', 'space', '#9333EA', 'Garage Mahal (Yoga/Fitness)'),
+  ('backyard', 'space', '#84CC16', 'Backyard area'),
+  ('outhouse', 'space', '#78716C', 'Outhouse'),
+  ('front-porch', 'space', '#F59E0B', 'Front porch'),
+  ('skyloft-balcony', 'space', '#3B82F6', 'Skyloft balcony'),
+  ('kitchen', 'space', '#EF4444', 'Kitchen area'),
+  ('living-room', 'space', '#10B981', 'Living room'),
+  ('dining-room', 'space', '#EC4899', 'Dining room'),
+  ('sauna', 'space', '#DC2626', 'Sauna'),
+  ('swim-spa', 'space', '#0EA5E9', 'Swim spa'),
+  ('deck', 'space', '#A78BFA', 'Deck area'),
+  ('bathroom', 'space', '#60A5FA', 'Bathroom'),
+  ('bedroom', 'space', '#8B5CF6', 'Bedroom'),
+  ('exterior', 'space', '#6B7280', 'Exterior/outside'),
+  ('common-area', 'space', '#F472B6', 'Shared/common areas'),
+  ('garage', 'space', '#A1A1AA', 'Garage'),
+  ('yard', 'space', '#65A30D', 'Yard/garden'),
+  ('patio', 'space', '#14B8A6', 'Patio/deck')
 ON CONFLICT (name) DO NOTHING;
 
 -- Condition tags (state of the subject)
