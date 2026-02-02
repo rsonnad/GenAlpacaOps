@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../styles.css">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="media.css">
   <style>
     .manage-container {
       max-width: 1200px;
@@ -230,13 +231,45 @@
 
       <!-- Media Panel -->
       <div id="mediaPanel" class="manage-panel">
-        <div class="section">
-          <div class="section-header">
-            <h2>Media Library</h2>
+        <!-- Storage indicator -->
+        <div class="storage-banner">
+          <div id="storageIndicator" class="storage-indicator-inline"></div>
+        </div>
+
+        <!-- Filters and actions bar -->
+        <div class="media-toolbar">
+          <div class="toolbar-left">
+            <div class="filter-group">
+              <label>Category:</label>
+              <select id="categoryFilter">
+                <option value="">All</option>
+                <option value="mktg">Marketing</option>
+                <option value="projects">Projects</option>
+                <option value="archive">Archive</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Tags:</label>
+              <div id="tagFilterChips" class="tag-filter-chips"></div>
+            </div>
+            <button id="clearFilters" class="btn-small">Clear Filters</button>
           </div>
-          <div class="section-body">
-            <p>Go to the full <a href="media.html">Media Library</a> to manage images and videos.</p>
+          <div class="toolbar-right">
+            <span id="mediaCount" class="media-count">0 items</span>
+            <button id="bulkTagBtn" class="btn-small" disabled>Edit Tags (<span id="selectedCount">0</span>)</button>
+            <button id="selectAllBtn" class="btn-small">Select All</button>
+            <button id="deselectAllBtn" class="btn-small hidden">Deselect All</button>
           </div>
+        </div>
+
+        <!-- Media grid -->
+        <div id="mediaGrid" class="media-library-grid">
+          <!-- Media items populated by JS -->
+        </div>
+
+        <div id="emptyState" class="empty-state hidden">
+          <p>No media found.</p>
+          <p class="hint">Upload some images from a space's edit page.</p>
         </div>
       </div>
 
@@ -254,14 +287,102 @@
     </div>
   </div>
 
+  <!-- Media Detail/Edit Modal -->
+  <div id="mediaDetailModal" class="modal hidden">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h2>Media Details</h2>
+        <button class="modal-close" id="closeMediaDetail">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="media-detail-layout">
+          <div class="media-preview">
+            <img id="detailImage" src="" alt="Media preview">
+          </div>
+          <div class="media-details">
+            <div class="form-group">
+              <label for="detailCaption">Caption</label>
+              <input type="text" id="detailCaption" placeholder="Add a caption...">
+            </div>
+            <div class="form-group">
+              <label for="detailCategory">Category</label>
+              <select id="detailCategory">
+                <option value="mktg">Marketing</option>
+                <option value="projects">Projects</option>
+                <option value="archive">Archive</option>
+              </select>
+            </div>
+            <fieldset class="form-fieldset">
+              <legend>Tags</legend>
+              <div id="detailTagsContainer" class="tags-container"></div>
+            </fieldset>
+            <div class="media-meta">
+              <p><strong>Size:</strong> <span id="detailSize">-</span></p>
+              <p><strong>Dimensions:</strong> <span id="detailDimensions">-</span></p>
+              <p><strong>Uploaded:</strong> <span id="detailDate">-</span></p>
+              <p><strong>Used in:</strong> <span id="detailSpaces">-</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="deleteMediaBtn" class="btn-danger">Delete Permanently</button>
+        <div class="footer-right">
+          <button id="cancelMediaDetail" class="btn-secondary">Cancel</button>
+          <button id="saveMediaDetail" class="btn-primary">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Tag Edit Modal -->
+  <div id="bulkTagModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Edit Tags for <span id="bulkCount">0</span> Items</h2>
+        <button class="modal-close" id="closeBulkTag">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="form-hint" style="margin-bottom: 1rem;">Select tags to add or remove from all selected items.</p>
+        <div class="bulk-tag-actions">
+          <div class="bulk-action-group">
+            <h4>Add Tags</h4>
+            <div id="bulkAddTags" class="tags-container"></div>
+          </div>
+          <div class="bulk-action-group">
+            <h4>Remove Tags</h4>
+            <div id="bulkRemoveTags" class="tags-container"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelBulkTag" class="btn-secondary">Cancel</button>
+        <button id="applyBulkTags" class="btn-primary">Apply Changes</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script type="module">
     import { supabase } from '../../shared/supabase.js';
     import { initAuth, getAuthState, signOut, onAuthStateChange } from '../../shared/auth.js';
+    import { mediaService } from '../../shared/media-service.js';
 
+    // =============================================
+    // STATE
+    // =============================================
     let authState = null;
     let allSpaces = [];
+    let allMedia = [];
+    let allTags = [];
+    let selectedMediaIds = new Set();
+    let currentFilters = { category: '', tags: [] };
+    let currentMediaId = null;
+    let mediaLoaded = false;
 
+    // =============================================
+    // AUTH HANDLING
+    // =============================================
     function handleAuthState(state) {
       authState = state;
       if (state.appUser && state.appUser.role === 'admin') {
@@ -270,28 +391,23 @@
         document.getElementById('userInfo').textContent = state.appUser.display_name || state.appUser.email;
         loadSpaces();
       } else if (state.appUser) {
-        // Not admin
         document.getElementById('loadingOverlay').classList.add('hidden');
         document.getElementById('unauthorizedOverlay').classList.remove('hidden');
       } else if (state.isAuthenticated && state.isUnauthorized) {
-        // Logged in but not in app_users
         document.getElementById('loadingOverlay').classList.add('hidden');
         document.getElementById('unauthorizedOverlay').classList.remove('hidden');
       } else if (!state.isAuthenticated) {
-        // Not logged in - redirect to login
         window.location.href = '/GenAlpacaOps/login/?redirect=' + encodeURIComponent(window.location.pathname);
       }
     }
 
+    // =============================================
+    // INITIALIZATION
+    // =============================================
     async function init() {
-      // Initialize auth and get current state
       await initAuth();
       authState = getAuthState();
-
-      // Subscribe to future auth changes
       onAuthStateChange(handleAuthState);
-
-      // Handle current auth state
       handleAuthState(authState);
 
       // Sign out handlers
@@ -305,13 +421,24 @@
           document.querySelectorAll('.manage-panel').forEach(p => p.classList.remove('active'));
           tab.classList.add('active');
           document.getElementById(tab.dataset.tab + 'Panel').classList.add('active');
+
+          // Load media when switching to Media tab
+          if (tab.dataset.tab === 'media' && !mediaLoaded) {
+            loadMediaLibrary();
+          }
         });
       });
 
       // Add space form
       document.getElementById('addSpaceForm').addEventListener('submit', handleAddSpace);
+
+      // Media library event listeners
+      setupMediaEventListeners();
     }
 
+    // =============================================
+    // SPACES TAB
+    // =============================================
     async function loadSpaces() {
       const { data, error } = await supabase
         .from('spaces')
@@ -379,12 +506,7 @@
 
       const { data, error } = await supabase
         .from('spaces')
-        .insert({
-          name,
-          parent_id: parentId,
-          can_be_dwelling: true,
-          is_listed: false
-        })
+        .insert({ name, parent_id: parentId, can_be_dwelling: true, is_listed: false })
         .select();
 
       if (error) {
@@ -401,18 +523,405 @@
     window.deleteSpace = async function(id, name) {
       if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
 
-      const { error } = await supabase
-        .from('spaces')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from('spaces').delete().eq('id', id);
       if (error) {
         alert('Error deleting space: ' + error.message);
         return;
       }
-
       loadSpaces();
     };
+
+    // =============================================
+    // MEDIA TAB
+    // =============================================
+    async function loadMediaLibrary() {
+      mediaLoaded = true;
+      await Promise.all([loadStorageUsage(), loadTags(), loadMedia()]);
+    }
+
+    async function loadStorageUsage() {
+      const usage = await mediaService.getStorageUsage();
+      if (!usage) return;
+
+      const indicator = document.getElementById('storageIndicator');
+      const percent = usage.percent_used;
+      let statusClass = 'storage-ok';
+      if (percent >= 90) statusClass = 'storage-critical';
+      else if (percent >= 70) statusClass = 'storage-warning';
+
+      indicator.className = `storage-indicator-inline ${statusClass}`;
+      indicator.innerHTML = `
+        <div class="storage-bar">
+          <div class="storage-fill" style="width: ${Math.min(percent, 100)}%"></div>
+        </div>
+        <span class="storage-text">
+          ${mediaService.formatBytes(usage.current_bytes)} / ${mediaService.formatBytes(usage.limit_bytes)}
+          (${percent.toFixed(1)}%)
+        </span>
+      `;
+    }
+
+    async function loadTags() {
+      allTags = await mediaService.getTags();
+      renderTagFilters();
+    }
+
+    async function loadMedia() {
+      const media = await mediaService.search({
+        category: currentFilters.category || null,
+        tags: currentFilters.tags,
+        limit: 200,
+      });
+      allMedia = media;
+      renderMediaGrid();
+      updateMediaCount();
+    }
+
+    function renderTagFilters() {
+      const container = document.getElementById('tagFilterChips');
+      if (!container) return;
+
+      container.innerHTML = allTags.map(tag => `
+        <button type="button" class="tag-filter-chip ${currentFilters.tags.includes(tag.name) ? 'active' : ''}"
+          data-tag="${tag.name}" style="${tag.color ? `--tag-color: ${tag.color}` : ''}">
+          ${tag.name}
+        </button>
+      `).join('');
+
+      container.querySelectorAll('.tag-filter-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const tagName = chip.dataset.tag;
+          if (currentFilters.tags.includes(tagName)) {
+            currentFilters.tags = currentFilters.tags.filter(t => t !== tagName);
+            chip.classList.remove('active');
+          } else {
+            currentFilters.tags.push(tagName);
+            chip.classList.add('active');
+          }
+          loadMedia();
+        });
+      });
+    }
+
+    function renderMediaGrid() {
+      const grid = document.getElementById('mediaGrid');
+      const emptyState = document.getElementById('emptyState');
+      if (!grid) return;
+
+      if (allMedia.length === 0) {
+        grid.innerHTML = '';
+        emptyState?.classList.remove('hidden');
+        return;
+      }
+
+      emptyState?.classList.add('hidden');
+
+      grid.innerHTML = allMedia.map(media => {
+        const tags = media.tags || [];
+        const spacesLinked = media.spaces?.length || 0;
+        const isSelected = selectedMediaIds.has(media.id);
+
+        return `
+          <div class="media-grid-item ${isSelected ? 'selected' : ''}" data-id="${media.id}">
+            <div class="select-checkbox" data-action="select">✓</div>
+            <span class="category-badge">${media.category || 'mktg'}</span>
+            ${spacesLinked > 0 ? `<span class="spaces-count">${spacesLinked} space${spacesLinked > 1 ? 's' : ''}</span>` : ''}
+            <div class="media-thumb">
+              <img src="${media.url}" alt="${media.caption || 'Media'}" loading="lazy">
+            </div>
+            <div class="media-info">
+              <div class="media-caption ${!media.caption ? 'no-caption' : ''}">${media.caption || 'No caption'}</div>
+              <div class="media-meta">
+                <span>${media.file_size_bytes ? mediaService.formatBytes(media.file_size_bytes) : '-'}</span>
+                <span>${formatDate(media.uploaded_at)}</span>
+              </div>
+              <div class="media-tags">
+                ${tags.slice(0, 4).map(t => `<span class="media-tag" style="${t.color ? `border-left: 2px solid ${t.color}` : ''}">${t.name}</span>`).join('')}
+                ${tags.length > 4 ? `<span class="media-tag">+${tags.length - 4}</span>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      grid.querySelectorAll('.media-grid-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          const mediaId = item.dataset.id;
+          if (e.target.closest('[data-action="select"]')) {
+            toggleSelection(mediaId);
+            return;
+          }
+          openMediaDetail(mediaId);
+        });
+      });
+    }
+
+    function updateMediaCount() {
+      const el = document.getElementById('mediaCount');
+      if (el) el.textContent = `${allMedia.length} items`;
+    }
+
+    function toggleSelection(mediaId) {
+      if (selectedMediaIds.has(mediaId)) {
+        selectedMediaIds.delete(mediaId);
+      } else {
+        selectedMediaIds.add(mediaId);
+      }
+      updateSelectionUI();
+    }
+
+    function selectAll() {
+      allMedia.forEach(m => selectedMediaIds.add(m.id));
+      updateSelectionUI();
+    }
+
+    function deselectAll() {
+      selectedMediaIds.clear();
+      updateSelectionUI();
+    }
+
+    function updateSelectionUI() {
+      const count = selectedMediaIds.size;
+      const countEl = document.getElementById('selectedCount');
+      const bulkBtn = document.getElementById('bulkTagBtn');
+      const selectAllBtn = document.getElementById('selectAllBtn');
+      const deselectAllBtn = document.getElementById('deselectAllBtn');
+
+      if (countEl) countEl.textContent = count;
+      if (bulkBtn) bulkBtn.disabled = count === 0;
+
+      if (count > 0) {
+        selectAllBtn?.classList.add('hidden');
+        deselectAllBtn?.classList.remove('hidden');
+      } else {
+        selectAllBtn?.classList.remove('hidden');
+        deselectAllBtn?.classList.add('hidden');
+      }
+
+      document.querySelectorAll('.media-grid-item').forEach(item => {
+        item.classList.toggle('selected', selectedMediaIds.has(item.dataset.id));
+      });
+    }
+
+    // =============================================
+    // MEDIA DETAIL MODAL
+    // =============================================
+    async function openMediaDetail(mediaId) {
+      const media = allMedia.find(m => m.id === mediaId);
+      if (!media) return;
+
+      currentMediaId = mediaId;
+
+      document.getElementById('detailImage').src = media.url;
+      document.getElementById('detailCaption').value = media.caption || '';
+      document.getElementById('detailCategory').value = media.category || 'mktg';
+
+      document.getElementById('detailSize').textContent = media.file_size_bytes ? mediaService.formatBytes(media.file_size_bytes) : 'Unknown';
+      document.getElementById('detailDimensions').textContent = media.width && media.height ? `${media.width} × ${media.height}` : 'Unknown';
+      document.getElementById('detailDate').textContent = formatDate(media.uploaded_at, true);
+
+      const spacesLinked = media.spaces?.map(s => {
+        const space = allSpaces.find(sp => sp.id === s.space_id);
+        return space?.name || 'Unknown';
+      }).join(', ') || 'None';
+      document.getElementById('detailSpaces').textContent = spacesLinked;
+
+      const groupedTags = await mediaService.getTagsGrouped();
+      const mediaTags = media.tags?.map(t => t.name) || [];
+      renderDetailTags(groupedTags, mediaTags);
+
+      document.getElementById('mediaDetailModal').classList.remove('hidden');
+    }
+
+    function renderDetailTags(groupedTags, selectedTags) {
+      const container = document.getElementById('detailTagsContainer');
+      if (!container) return;
+
+      const groupNames = Object.keys(groupedTags).sort();
+      container.innerHTML = `
+        ${groupNames.filter(g => groupedTags[g]?.length > 0).map(group => `
+          <div class="tag-group">
+            <span class="tag-group-label">${group}</span>
+            <div class="tag-checkboxes">
+              ${groupedTags[group].map(tag => `
+                <label class="tag-checkbox">
+                  <input type="checkbox" name="detailTag" value="${tag.name}" ${selectedTags.includes(tag.name) ? 'checked' : ''}>
+                  <span class="tag-chip" style="--tag-color: ${tag.color || 'var(--accent)'}">${tag.name}</span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+        `).join('')}
+      `;
+    }
+
+    async function saveMediaDetail() {
+      if (!currentMediaId) return;
+
+      const caption = document.getElementById('detailCaption').value.trim();
+      const category = document.getElementById('detailCategory').value;
+      const selectedTags = Array.from(document.querySelectorAll('#detailTagsContainer input[name="detailTag"]:checked')).map(cb => cb.value);
+
+      const { error } = await supabase.from('media').update({ caption, category }).eq('id', currentMediaId);
+      if (error) {
+        alert('Failed to save: ' + error.message);
+        return;
+      }
+
+      await supabase.from('media_tag_assignments').delete().eq('media_id', currentMediaId);
+      if (selectedTags.length > 0) {
+        await mediaService.assignTags(currentMediaId, selectedTags);
+      }
+
+      closeMediaDetail();
+      await loadMedia();
+    }
+
+    function closeMediaDetail() {
+      document.getElementById('mediaDetailModal').classList.add('hidden');
+      currentMediaId = null;
+    }
+
+    async function deleteCurrentMedia() {
+      if (!currentMediaId) return;
+
+      const media = allMedia.find(m => m.id === currentMediaId);
+      const spacesCount = media?.spaces?.length || 0;
+
+      let confirmMsg = 'Are you sure you want to permanently delete this image?';
+      if (spacesCount > 0) {
+        confirmMsg = `This image is linked to ${spacesCount} space(s). Deleting it will remove it from all spaces.\n\nAre you sure you want to permanently delete it?`;
+      }
+
+      if (!confirm(confirmMsg)) return;
+
+      const result = await mediaService.delete(currentMediaId);
+      if (!result.success) {
+        alert('Failed to delete: ' + result.error);
+        return;
+      }
+
+      closeMediaDetail();
+      await loadMedia();
+      await loadStorageUsage();
+    }
+
+    // =============================================
+    // BULK TAG MODAL
+    // =============================================
+    async function openBulkTagModal() {
+      if (selectedMediaIds.size === 0) return;
+
+      document.getElementById('bulkCount').textContent = selectedMediaIds.size;
+      const groupedTags = await mediaService.getTagsGrouped();
+      renderBulkTags('bulkAddTags', groupedTags);
+      renderBulkTags('bulkRemoveTags', groupedTags);
+      document.getElementById('bulkTagModal').classList.remove('hidden');
+    }
+
+    function renderBulkTags(containerId, groupedTags) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      const groupNames = Object.keys(groupedTags).sort();
+      container.innerHTML = groupNames.filter(g => groupedTags[g]?.length > 0).map(group => `
+        <div class="tag-group">
+          <span class="tag-group-label">${group}</span>
+          <div class="tag-checkboxes">
+            ${groupedTags[group].map(tag => `
+              <label class="tag-checkbox">
+                <input type="checkbox" name="${containerId}Tag" value="${tag.name}">
+                <span class="tag-chip" style="--tag-color: ${tag.color || 'var(--accent)'}">${tag.name}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function applyBulkTags() {
+      const tagsToAdd = Array.from(document.querySelectorAll('#bulkAddTags input[name="bulkAddTagsTag"]:checked')).map(cb => cb.value);
+      const tagsToRemove = Array.from(document.querySelectorAll('#bulkRemoveTags input[name="bulkRemoveTagsTag"]:checked')).map(cb => cb.value);
+
+      if (tagsToAdd.length === 0 && tagsToRemove.length === 0) {
+        alert('Please select at least one tag to add or remove.');
+        return;
+      }
+
+      const { data: tagRecords } = await supabase.from('media_tags').select('id, name').in('name', tagsToRemove);
+      const tagIdMap = new Map(tagRecords?.map(t => [t.name, t.id]) || []);
+
+      for (const mediaId of selectedMediaIds) {
+        if (tagsToAdd.length > 0) await mediaService.assignTags(mediaId, tagsToAdd);
+        for (const tagName of tagsToRemove) {
+          const tagId = tagIdMap.get(tagName);
+          if (tagId) await mediaService.removeTag(mediaId, tagId);
+        }
+      }
+
+      closeBulkTagModal();
+      deselectAll();
+      await loadMedia();
+    }
+
+    function closeBulkTagModal() {
+      document.getElementById('bulkTagModal').classList.add('hidden');
+    }
+
+    // =============================================
+    // MEDIA EVENT LISTENERS
+    // =============================================
+    function setupMediaEventListeners() {
+      document.getElementById('categoryFilter')?.addEventListener('change', (e) => {
+        currentFilters.category = e.target.value;
+        loadMedia();
+      });
+
+      document.getElementById('clearFilters')?.addEventListener('click', () => {
+        currentFilters = { category: '', tags: [] };
+        document.getElementById('categoryFilter').value = '';
+        document.querySelectorAll('.tag-filter-chip').forEach(c => c.classList.remove('active'));
+        loadMedia();
+      });
+
+      document.getElementById('selectAllBtn')?.addEventListener('click', selectAll);
+      document.getElementById('deselectAllBtn')?.addEventListener('click', deselectAll);
+      document.getElementById('bulkTagBtn')?.addEventListener('click', openBulkTagModal);
+
+      document.getElementById('closeMediaDetail')?.addEventListener('click', closeMediaDetail);
+      document.getElementById('cancelMediaDetail')?.addEventListener('click', closeMediaDetail);
+      document.getElementById('saveMediaDetail')?.addEventListener('click', saveMediaDetail);
+      document.getElementById('deleteMediaBtn')?.addEventListener('click', deleteCurrentMedia);
+
+      document.getElementById('closeBulkTag')?.addEventListener('click', closeBulkTagModal);
+      document.getElementById('cancelBulkTag')?.addEventListener('click', closeBulkTagModal);
+      document.getElementById('applyBulkTags')?.addEventListener('click', applyBulkTags);
+
+      document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) modal.classList.add('hidden');
+        });
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeMediaDetail();
+          closeBulkTagModal();
+        }
+      });
+    }
+
+    // =============================================
+    // UTILITIES
+    // =============================================
+    function formatDate(dateStr, full = false) {
+      if (!dateStr) return '-';
+      const date = new Date(dateStr);
+      if (full) {
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      }
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
 
     init();
   </script>
