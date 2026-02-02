@@ -256,7 +256,7 @@
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script type="module">
-    import { initAuth, getAuthState, signOut } from '../../shared/auth.js';
+    import { initAuth, getAuthState, signOut, onAuthStateChange } from '../../shared/auth.js';
 
     const SUPABASE_URL = 'https://yqxkcxawdfpnlljgvfnj.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxeGtjeGF3ZGZwbmxsamd2Zm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxMzk0NjcsImV4cCI6MjA2MTcxNTQ2N30.aHpSvi1Qgpa-R6bWTbdS4leA8Qa9gVCWMxvZumyinQE';
@@ -265,20 +265,37 @@
     let authState = null;
     let allSpaces = [];
 
+    function handleAuthState(state) {
+      authState = state;
+      if (state.appUser && state.appUser.role === 'admin') {
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        document.getElementById('appContent').classList.remove('hidden');
+        document.getElementById('userInfo').textContent = state.appUser.display_name || state.appUser.email;
+        loadSpaces();
+      } else if (state.appUser) {
+        // Not admin
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        document.getElementById('unauthorizedOverlay').classList.remove('hidden');
+      } else if (state.isAuthenticated && state.isUnauthorized) {
+        // Logged in but not in app_users
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        document.getElementById('unauthorizedOverlay').classList.remove('hidden');
+      } else if (!state.isAuthenticated) {
+        // Not logged in - redirect to login
+        window.location.href = '/GenAlpacaOps/login/?redirect=' + encodeURIComponent(window.location.pathname);
+      }
+    }
+
     async function init() {
-      authState = await initAuth((state) => {
-        authState = state;
-        if (state.appUser && state.appUser.role === 'admin') {
-          document.getElementById('loadingOverlay').classList.add('hidden');
-          document.getElementById('appContent').classList.remove('hidden');
-          document.getElementById('userInfo').textContent = state.appUser.display_name || state.appUser.email;
-          loadSpaces();
-        } else if (state.appUser) {
-          // Not admin
-          document.getElementById('loadingOverlay').classList.add('hidden');
-          document.getElementById('unauthorizedOverlay').classList.remove('hidden');
-        }
-      });
+      // Initialize auth and get current state
+      await initAuth();
+      authState = getAuthState();
+
+      // Subscribe to future auth changes
+      onAuthStateChange(handleAuthState);
+
+      // Handle current auth state
+      handleAuthState(authState);
 
       // Sign out handlers
       document.getElementById('signOutBtn')?.addEventListener('click', () => signOut());
