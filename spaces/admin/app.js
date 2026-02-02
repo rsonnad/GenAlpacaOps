@@ -147,6 +147,7 @@ async function loadData() {
           )
         )
       `)
+      .order('monthly_rate', { ascending: false, nullsFirst: false })
       .order('name');
 
     if (spacesError) throw spacesError;
