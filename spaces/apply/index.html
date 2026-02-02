@@ -711,6 +711,53 @@
           });
         }
 
+        // Send admin notification email
+        try {
+          // Get the selected space name if one was selected
+          let spaceName = null;
+          const selectedSpace = spaceSelect.options[spaceSelect.selectedIndex];
+          if (selectedSpace && selectedSpace.value) {
+            spaceName = selectedSpace.textContent;
+          }
+
+          await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              type: 'admin_rental_application',
+              to: 'alpacaplayhouse@gmail.com',
+              data: {
+                first_name: firstName,
+                last_name: lastName,
+                email: email,
+                phone: getValue('phone'),
+                current_location: getValue('current_address'),
+                space_name: spaceName,
+                desired_move_in: getValue('desired_move_in'),
+                desired_lease_length: getValue('desired_term'),
+                employment_status: getValue('employment_status'),
+                employer: getValue('employer'),
+                monthly_income: getValue('monthly_income'),
+                about_yourself: null,
+                why_interested: getValue('referral_source') ? `Referral: ${getValue('referral_source')}` : null,
+                additional_notes: [
+                  getValue('vehicles') ? `Vehicles: ${getValue('vehicles')}` : null,
+                  getValue('pets') ? `Pets: ${getValue('pets')}` : null,
+                  getValue('allergies') ? `Allergies: ${getValue('allergies')}` : null,
+                  getValue('kids_ages') ? `Children's ages: ${getValue('kids_ages')}` : null,
+                  document.getElementById('prior_evictions').checked ? 'Has prior evictions' : null
+                ].filter(Boolean).join('\n') || null
+              }
+            })
+          });
+        } catch (emailError) {
+          console.error('Failed to send admin notification email:', emailError);
+          // Don't fail the submission if email fails
+        }
+
         // Show success
         formContainer.classList.add('hidden');
         successContainer.classList.remove('hidden');

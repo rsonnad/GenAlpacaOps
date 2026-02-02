@@ -1064,6 +1064,48 @@
           throw new Error(errorData.message || 'Failed to submit request');
         }
 
+        // Send admin notification email
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              type: 'admin_event_request',
+              to: 'alpacaplayhouse@gmail.com',
+              data: {
+                first_name: firstName,
+                last_name: lastName,
+                email: email,
+                phone: phone,
+                organization_name: getValue('organization_name') || null,
+                has_hosted_before: document.getElementById('has_hosted_before').checked,
+                event_name: getValue('event_name'),
+                event_type: getValue('event_type'),
+                event_date: getValue('event_date'),
+                event_start_time: getValue('event_start_time'),
+                event_end_time: getValue('event_end_time'),
+                expected_guests: getValue('expected_guests'),
+                is_ticketed: document.getElementById('is_ticketed').checked,
+                event_description: getValue('event_description'),
+                setup_staff_name: getValue('setup_staff_name'),
+                setup_staff_phone: getValue('setup_staff_phone'),
+                cleanup_staff_name: getValue('cleanup_staff_name'),
+                cleanup_staff_phone: getValue('cleanup_staff_phone'),
+                parking_manager_name: getValue('parking_manager_name'),
+                parking_manager_phone: getValue('parking_manager_phone'),
+                marketing_materials_link: getValue('marketing_materials_link') || null,
+                special_requests: getValue('special_requests') || null
+              }
+            })
+          });
+        } catch (emailError) {
+          console.error('Failed to send admin notification email:', emailError);
+          // Don't fail the submission if email fails
+        }
+
         // Success!
         formContainer.classList.add('hidden');
         successContainer.classList.remove('hidden');
