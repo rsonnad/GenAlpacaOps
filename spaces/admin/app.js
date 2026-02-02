@@ -30,7 +30,7 @@ const visibilityFilter = document.getElementById('visibilityFilter');
 const clearFilters = document.getElementById('clearFilters');
 const roleBadge = document.getElementById('roleBadge');
 const userInfo = document.getElementById('userInfo');
-const manageUsersLink = document.getElementById('manageUsersLink');
+const manageLink = document.getElementById('manageLink');
 
 // Modals
 const spaceDetailModal = document.getElementById('spaceDetailModal');
@@ -115,10 +115,10 @@ function updateRoleUI() {
   // Show/hide admin-only features
   if (authState.isAdmin) {
     document.body.classList.add('is-admin');
-    manageUsersLink.classList.remove('hidden');
+    manageLink.classList.remove('hidden');
   } else {
     document.body.classList.remove('is-admin');
-    manageUsersLink.classList.add('hidden');
+    manageLink.classList.add('hidden');
   }
 }
 

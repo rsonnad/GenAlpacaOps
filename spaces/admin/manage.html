@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage - GenAlpaca Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .manage-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .manage-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 2rem;
+    }
+
+    .manage-tab {
+      padding: 1rem 2rem;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .manage-tab:hover {
+      color: var(--text);
+    }
+
+    .manage-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .manage-panel {
+      display: none;
+    }
+
+    .manage-panel.active {
+      display: block;
+    }
+
+    .section {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+
+    .section-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .section-header h2 {
+      font-size: 1.125rem;
+      font-weight: 600;
+    }
+
+    .section-body {
+      padding: 1.5rem;
+    }
+
+    /* Spaces list */
+    .spaces-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .space-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: var(--bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
+    .space-item:hover {
+      border-color: var(--accent);
+    }
+
+    .space-item-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .space-item-thumb {
+      width: 48px;
+      height: 48px;
+      object-fit: cover;
+      border-radius: var(--radius);
+    }
+
+    .space-item-thumb-placeholder {
+      width: 48px;
+      height: 48px;
+      background: var(--border);
+      border-radius: var(--radius);
+    }
+
+    .space-item-details h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.125rem;
+    }
+
+    .space-item-details small {
+      color: var(--text-muted);
+    }
+
+    .space-item-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    /* Add space form */
+    .add-space-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 1rem;
+      align-items: end;
+    }
+
+    .add-space-form .form-group {
+      margin-bottom: 0;
+    }
+
+    @media (max-width: 768px) {
+      .add-space-form {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <div id="unauthorizedOverlay" class="loading-overlay hidden">
+    <div class="unauthorized-card">
+      <h2>Access Denied</h2>
+      <p>Only admins can access the Manage section.</p>
+      <div class="unauthorized-actions">
+        <a href="/GenAlpacaOps/spaces/admin/" class="btn-secondary">Back to Admin</a>
+        <button id="signOutBtn" class="btn-secondary">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="appContent" class="hidden">
+    <header>
+      <div class="header-left">
+        <h1>&#129433; GenAlpaca Admin</h1>
+        <span class="role-badge">Admin</span>
+      </div>
+      <div class="header-controls">
+        <a href="/GenAlpacaOps/spaces/admin/" class="btn-small">← Back to Spaces</a>
+        <a href="/GenAlpacaOps/spaces/" class="btn-small">Public View</a>
+        <span id="userInfo" class="user-info"></span>
+        <button id="headerSignOutBtn" class="btn-secondary">Sign Out</button>
+      </div>
+    </header>
+
+    <div class="manage-container">
+      <div class="manage-tabs">
+        <button class="manage-tab active" data-tab="spaces">Spaces</button>
+        <button class="manage-tab" data-tab="media">Media</button>
+        <button class="manage-tab" data-tab="users">Users</button>
+      </div>
+
+      <!-- Spaces Panel -->
+      <div id="spacesPanel" class="manage-panel active">
+        <div class="section">
+          <div class="section-header">
+            <h2>Add New Space</h2>
+          </div>
+          <div class="section-body">
+            <form id="addSpaceForm" class="add-space-form">
+              <div class="form-group">
+                <label for="newSpaceName">Name *</label>
+                <input type="text" id="newSpaceName" required placeholder="e.g., Garden Suite">
+              </div>
+              <div class="form-group">
+                <label for="newSpaceParent">Parent Space</label>
+                <select id="newSpaceParent">
+                  <option value="">None (top-level)</option>
+                </select>
+              </div>
+              <button type="submit" class="btn-primary">Add Space</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">
+            <h2>All Spaces</h2>
+            <span id="spacesCount" class="text-muted"></span>
+          </div>
+          <div class="section-body">
+            <div id="spacesList" class="spaces-list">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Media Panel -->
+      <div id="mediaPanel" class="manage-panel">
+        <div class="section">
+          <div class="section-header">
+            <h2>Media Library</h2>
+          </div>
+          <div class="section-body">
+            <p>Go to the full <a href="media.html">Media Library</a> to manage images and videos.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users Panel -->
+      <div id="usersPanel" class="manage-panel">
+        <div class="section">
+          <div class="section-header">
+            <h2>User Management</h2>
+          </div>
+          <div class="section-body">
+            <p>Go to <a href="users.html">User Management</a> to invite users and manage roles.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script type="module">
+    import { initAuth, getAuthState, signOut } from '../../shared/auth.js';
+
+    const SUPABASE_URL = 'https://yqxkcxawdfpnlljgvfnj.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxeGtjeGF3ZGZwbmxsamd2Zm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxMzk0NjcsImV4cCI6MjA2MTcxNTQ2N30.aHpSvi1Qgpa-R6bWTbdS4leA8Qa9gVCWMxvZumyinQE';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let authState = null;
+    let allSpaces = [];
+
+    async function init() {
+      authState = await initAuth((state) => {
+        authState = state;
+        if (state.appUser && state.appUser.role === 'admin') {
+          document.getElementById('loadingOverlay').classList.add('hidden');
+          document.getElementById('appContent').classList.remove('hidden');
+          document.getElementById('userInfo').textContent = state.appUser.display_name || state.appUser.email;
+          loadSpaces();
+        } else if (state.appUser) {
+          // Not admin
+          document.getElementById('loadingOverlay').classList.add('hidden');
+          document.getElementById('unauthorizedOverlay').classList.remove('hidden');
+        }
+      });
+
+      // Sign out handlers
+      document.getElementById('signOutBtn')?.addEventListener('click', () => signOut());
+      document.getElementById('headerSignOutBtn').addEventListener('click', () => signOut());
+
+      // Tab switching
+      document.querySelectorAll('.manage-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.manage-tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.manage-panel').forEach(p => p.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById(tab.dataset.tab + 'Panel').classList.add('active');
+        });
+      });
+
+      // Add space form
+      document.getElementById('addSpaceForm').addEventListener('submit', handleAddSpace);
+    }
+
+    async function loadSpaces() {
+      const { data, error } = await supabase
+        .from('spaces')
+        .select('id, name, parent_id, can_be_dwelling, is_listed, monthly_rate')
+        .order('name');
+
+      if (error) {
+        console.error('Error loading spaces:', error);
+        return;
+      }
+
+      allSpaces = data || [];
+      renderSpaces();
+      populateParentDropdown();
+    }
+
+    function renderSpaces() {
+      const container = document.getElementById('spacesList');
+      document.getElementById('spacesCount').textContent = `${allSpaces.length} spaces`;
+
+      if (allSpaces.length === 0) {
+        container.innerHTML = '<p class="text-muted">No spaces yet.</p>';
+        return;
+      }
+
+      container.innerHTML = allSpaces.map(space => {
+        const parent = allSpaces.find(s => s.id === space.parent_id);
+        return `
+          <div class="space-item">
+            <div class="space-item-info">
+              <div class="space-item-thumb-placeholder"></div>
+              <div class="space-item-details">
+                <h3>${space.name}</h3>
+                <small>
+                  ${parent ? `in ${parent.name}` : 'Top-level'}
+                  ${space.can_be_dwelling ? ' • Dwelling' : ''}
+                  ${space.monthly_rate ? ` • $${space.monthly_rate}/mo` : ''}
+                </small>
+              </div>
+            </div>
+            <div class="space-item-actions">
+              <a href="/GenAlpacaOps/spaces/admin/?edit=${space.id}" class="btn-small">Edit</a>
+              <button class="btn-small btn-secondary" onclick="deleteSpace('${space.id}', '${space.name}')">Delete</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function populateParentDropdown() {
+      const select = document.getElementById('newSpaceParent');
+      select.innerHTML = '<option value="">None (top-level)</option>' +
+        allSpaces.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    }
+
+    async function handleAddSpace(e) {
+      e.preventDefault();
+      const name = document.getElementById('newSpaceName').value.trim();
+      const parentId = document.getElementById('newSpaceParent').value || null;
+
+      if (!name) {
+        alert('Name is required');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('spaces')
+        .insert({
+          name,
+          parent_id: parentId,
+          can_be_dwelling: true,
+          is_listed: false
+        })
+        .select();
+
+      if (error) {
+        alert('Error creating space: ' + error.message);
+        return;
+      }
+
+      document.getElementById('newSpaceName').value = '';
+      document.getElementById('newSpaceParent').value = '';
+      loadSpaces();
+      alert('Space created! You can now edit it from the main admin page.');
+    }
+
+    window.deleteSpace = async function(id, name) {
+      if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+
+      const { error } = await supabase
+        .from('spaces')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        alert('Error deleting space: ' + error.message);
+        return;
+      }
+
+      loadSpaces();
+    };
+
+    init();
+  </script>
+</body>
+</html>
