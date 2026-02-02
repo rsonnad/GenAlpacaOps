@@ -1090,8 +1090,19 @@ function renderUploadTags() {
   });
   const sortedGroups = mediaService.sortTagGroups(grouped);
 
-  // Render with tag-row wrapper for alignment
+  // Render with inline add tag at top
   container.innerHTML = `
+    <div class="inline-add-tag">
+      <input type="text" id="quickAddTagInput" placeholder="Add new tag..." class="quick-tag-input">
+      <select id="quickAddTagGroup" class="quick-tag-select">
+        <option value="">Category</option>
+        ${[...new Set(allTags.map(t => t.tag_group).filter(Boolean))].sort().map(g =>
+          `<option value="${g}">${g}</option>`
+        ).join('')}
+        <option value="__new__">+ New...</option>
+      </select>
+      <input type="text" id="quickAddTagCustomGroup" placeholder="New category" class="quick-tag-input hidden">
+    </div>
     ${Object.entries(sortedGroups).map(([group, tags]) => `
       <div class="tag-row">
         <div class="tag-group-label">${group}</div>
@@ -1108,10 +1119,107 @@ function renderUploadTags() {
         </div>
       </div>
     `).join('')}
-    <div class="tag-row">
-      <button type="button" class="btn-add-tag" onclick="showAddTagForm('uploadTagsContainer')">+ Add Tag</button>
-    </div>
   `;
+
+  // Setup inline add tag handlers
+  setupQuickAddTag('uploadTagsContainer');
+}
+
+// Quick inline add tag functionality
+function setupQuickAddTag(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const input = container.querySelector('#quickAddTagInput');
+  const groupSelect = container.querySelector('#quickAddTagGroup');
+  const customGroupInput = container.querySelector('#quickAddTagCustomGroup');
+
+  if (!input) return;
+
+  // Show/hide custom group input
+  groupSelect?.addEventListener('change', (e) => {
+    if (e.target.value === '__new__') {
+      customGroupInput?.classList.remove('hidden');
+      customGroupInput?.focus();
+    } else {
+      customGroupInput?.classList.add('hidden');
+    }
+  });
+
+  // Create tag on Enter
+  input.addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      await quickCreateTag(containerId);
+    }
+  });
+
+  // Also create on blur if there's content
+  input.addEventListener('blur', async () => {
+    if (input.value.trim()) {
+      // Small delay to allow clicking away without triggering
+      setTimeout(async () => {
+        if (input.value.trim() && document.activeElement !== input) {
+          await quickCreateTag(containerId);
+        }
+      }, 200);
+    }
+  });
+}
+
+async function quickCreateTag(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const input = container.querySelector('#quickAddTagInput');
+  const groupSelect = container.querySelector('#quickAddTagGroup');
+  const customGroupInput = container.querySelector('#quickAddTagCustomGroup');
+
+  const name = input?.value.trim();
+  if (!name) return;
+
+  let group = groupSelect?.value;
+  if (group === '__new__') {
+    group = customGroupInput?.value.trim().toLowerCase();
+  }
+  if (group === '') group = null;
+
+  try {
+    const result = await mediaService.createTag(name, group);
+
+    if (!result.success) {
+      if (result.duplicate) {
+        showToast('Tag already exists', 'warning');
+      } else {
+        showToast('Failed to create tag: ' + result.error, 'error');
+      }
+      return;
+    }
+
+    // Add to allTags and re-render
+    allTags.push(result.tag);
+
+    // Clear input
+    input.value = '';
+    if (groupSelect) groupSelect.value = '';
+    if (customGroupInput) {
+      customGroupInput.value = '';
+      customGroupInput.classList.add('hidden');
+    }
+
+    // Re-render and auto-select the new tag
+    renderUploadTags();
+
+    // Select the newly created tag
+    const checkbox = container.querySelector(`input[value="${result.tag.name}"]`);
+    if (checkbox) checkbox.checked = true;
+
+    showToast(`Tag "${name}" created`, 'success');
+
+  } catch (error) {
+    console.error('Error creating tag:', error);
+    showToast('Failed to create tag', 'error');
+  }
 }
 
 // Track existing tag groups for the dropdown

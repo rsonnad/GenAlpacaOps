@@ -396,6 +396,45 @@ body.is-admin .admin-only {
   gap: 0.625rem;
 }
 
+/* Inline quick add tag */
+.inline-add-tag {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.quick-tag-input {
+  flex: 1;
+  max-width: 200px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+
+.quick-tag-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.quick-tag-select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  font-family: inherit;
+  background: var(--bg-card);
+  min-width: 120px;
+}
+
+.quick-tag-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .tag-row {
   display: flex;
   align-items: baseline;
