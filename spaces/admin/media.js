@@ -2,7 +2,8 @@
  * Media Library - Browse, filter, and manage all media
  */
 
-import { supabase, checkAuth } from '../../shared/supabase.js';
+import { supabase } from '../../shared/supabase.js';
+import { initAuth, getAuthState, signOut } from '../../shared/auth.js';
 import { mediaService } from '../../shared/media-service.js';
 
 // =============================================
@@ -18,27 +19,31 @@ let currentFilters = {
   tags: [],
 };
 let currentMediaId = null;
+let authState = null;
 
 // =============================================
 // INITIALIZATION
 // =============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const authState = await checkAuth();
+  // Initialize auth
+  await initAuth();
+  authState = getAuthState();
 
-  if (!authState.authenticated) {
-    window.location.href = '/GenAlpacaOps/login/';
+  if (!authState.isAuthenticated) {
+    window.location.href = '/GenAlpacaOps/login/?redirect=' + encodeURIComponent(window.location.pathname);
     return;
   }
 
   if (!authState.isAdmin && !authState.isStaff) {
     document.getElementById('loadingOverlay').classList.add('hidden');
     document.getElementById('unauthorizedOverlay').classList.remove('hidden');
+    document.getElementById('signOutBtn')?.addEventListener('click', () => signOut());
     return;
   }
 
   // Update UI with user info
-  document.getElementById('userInfo').textContent = authState.user?.email || '';
+  document.getElementById('userInfo').textContent = authState.appUser?.display_name || authState.user?.email || '';
   const roleBadge = document.getElementById('roleBadge');
   roleBadge.textContent = authState.role || 'Staff';
   roleBadge.className = `role-badge ${authState.role}`;
@@ -46,6 +51,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Show app content
   document.getElementById('loadingOverlay').classList.add('hidden');
   document.getElementById('appContent').classList.remove('hidden');
+
+  // Sign out handler
+  document.getElementById('headerSignOutBtn')?.addEventListener('click', () => signOut());
 
   // Load initial data
   await Promise.all([
