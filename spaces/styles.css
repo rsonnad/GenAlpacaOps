@@ -203,10 +203,16 @@ h1 {
   border-color: var(--accent);
 }
 
+.filter-checkboxes {
+  flex-direction: row;
+  align-items: center;
+}
+
 .filter-checkboxes .checkbox-row {
   display: flex;
   gap: 1rem;
-  padding-top: 0.25rem;
+  height: 36px;
+  align-items: center;
 }
 
 .filter-checkboxes .checkbox-label {
