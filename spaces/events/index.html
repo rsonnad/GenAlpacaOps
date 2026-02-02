@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Host an Event - Alpaca Playhouse Austin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf9f7;
+      --bg-card: #ffffff;
+      --text: #2d3142;
+      --text-muted: #7a7d8c;
+      --border: #e8e9ed;
+      --accent: #3d8b7a;
+      --accent-light: #e5f4f1;
+      --error: #e07a5f;
+      --error-light: #fdf0ec;
+      --success: #5a9e8f;
+      --success-light: #e8f5f2;
+      --warning: #f59e0b;
+      --warning-light: #fffbeb;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(45,49,66,0.06), 0 1px 2px rgba(45,49,66,0.08);
+      --shadow-lg: 0 4px 12px rgba(45,49,66,0.08), 0 2px 4px rgba(45,49,66,0.06);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 2rem;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    main {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .intro-section {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .intro-section h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--accent);
+    }
+
+    .intro-section p {
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+
+    .intro-section ul {
+      margin: 1rem 0 1rem 1.5rem;
+    }
+
+    .intro-section li {
+      margin-bottom: 0.5rem;
+    }
+
+    .fees-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    @media (max-width: 600px) {
+      .fees-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .fee-card {
+      background: var(--accent-light);
+      border-radius: var(--radius);
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .fee-card .fee-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .fee-card .fee-amount {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .fee-card .fee-note {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .policy-section {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 2rem;
+      overflow: hidden;
+    }
+
+    .policy-header {
+      padding: 1rem 1.5rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      color: var(--accent);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .policy-header:hover {
+      background: var(--accent-light);
+    }
+
+    .policy-header .toggle-icon {
+      transition: transform 0.2s ease;
+    }
+
+    .policy-section[open] .policy-header .toggle-icon {
+      transform: rotate(180deg);
+    }
+
+    .policy-content {
+      padding: 1.5rem;
+    }
+
+    .policy-content h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin: 1rem 0 0.5rem 0;
+      color: var(--text);
+    }
+
+    .policy-content h4:first-child {
+      margin-top: 0;
+    }
+
+    .policy-content p {
+      margin-bottom: 0.75rem;
+      font-size: 0.95rem;
+    }
+
+    .policy-content ul {
+      margin: 0.5rem 0 1rem 1.5rem;
+    }
+
+    .policy-content li {
+      margin-bottom: 0.375rem;
+      font-size: 0.95rem;
+    }
+
+    .warning-box {
+      background: var(--warning-light);
+      border: 1px solid var(--warning);
+      border-radius: var(--radius);
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+
+    .warning-box strong {
+      color: #92400e;
+    }
+
+    .form-container {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .form-section {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .form-section:last-of-type {
+      border-bottom: none;
+    }
+
+    .form-section h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--accent);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 600px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+    }
+
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .form-group label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .form-group label .required {
+      color: var(--error);
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 0.625rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 0.95rem;
+      background: var(--bg);
+      transition: border-color 0.15s ease;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: var(--bg-card);
+    }
+
+    .form-group input.error,
+    .form-group select.error,
+    .form-group textarea.error {
+      border-color: var(--error);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-group .hint {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .time-inputs {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .time-inputs input {
+      flex: 1;
+    }
+
+    .time-inputs span {
+      color: var(--text-muted);
+    }
+
+    .checkbox-group {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: 1.125rem;
+      height: 1.125rem;
+      accent-color: var(--accent);
+      cursor: pointer;
+      margin-top: 0.125rem;
+      flex-shrink: 0;
+    }
+
+    .checkbox-group label {
+      cursor: pointer;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .spaces-checklist {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+      padding: 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    @media (max-width: 600px) {
+      .spaces-checklist {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .space-checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    .space-checkbox-item input[type="checkbox"] {
+      width: 1rem;
+      height: 1rem;
+      accent-color: var(--accent);
+    }
+
+    .acknowledgments-section {
+      background: var(--warning-light);
+      border: 1px solid var(--warning);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+
+    .acknowledgments-section h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #92400e;
+      margin-bottom: 0.75rem;
+    }
+
+    .ack-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .ack-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .ack-item input[type="checkbox"] {
+      width: 1rem;
+      height: 1rem;
+      accent-color: var(--accent);
+      margin-top: 0.125rem;
+      flex-shrink: 0;
+    }
+
+    .ack-item label {
+      font-size: 0.85rem;
+      cursor: pointer;
+      line-height: 1.4;
+    }
+
+    .form-actions {
+      padding: 1.5rem;
+      background: var(--bg);
+      display: flex;
+      justify-content: center;
+    }
+
+    .btn-submit {
+      padding: 0.875rem 2.5rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .btn-submit:hover {
+      background: #327568;
+    }
+
+    .btn-submit:disabled {
+      background: var(--text-muted);
+      cursor: not-allowed;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .success-message {
+      text-align: center;
+      padding: 3rem 2rem;
+    }
+
+    .success-message .icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+
+    .success-message h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: var(--success);
+    }
+
+    .success-message p {
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .success-message a {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background: var(--accent);
+      color: white;
+      text-decoration: none;
+      border-radius: var(--radius);
+      font-weight: 500;
+      transition: background 0.15s ease;
+    }
+
+    .success-message a:hover {
+      background: #327568;
+    }
+
+    .error-banner {
+      padding: 1rem 1.5rem;
+      background: var(--error-light);
+      color: var(--error);
+      border-bottom: 1px solid var(--error);
+      font-weight: 500;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 600px) {
+      header {
+        padding: 1.5rem 1rem;
+      }
+
+      header h1 {
+        font-size: 1.5rem;
+      }
+
+      main {
+        padding: 1rem;
+      }
+
+      .intro-section,
+      .form-section {
+        padding: 1.25rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Host an Event at Alpaca Playhouse</h1>
+    <p>A unique venue in Cedar Creek, TX for gatherings, workshops, retreats, and celebrations</p>
+  </header>
+
+  <main>
+    <a href="/GenAlpacaOps/spaces/" class="back-link">&larr; Back to Spaces</a>
+
+    <!-- Introduction -->
+    <div class="intro-section">
+      <h2>About Event Hosting</h2>
+      <p>
+        The Austin Alpaca Playhouse is a unique community venue in Cedar Creek, Texas &mdash; just 13 minutes
+        east of Austin Airport. Our property features friendly alpacas, a wood-fired sauna, cold plunge,
+        indoor and outdoor gathering spaces, and a welcoming atmosphere for events of all kinds.
+      </p>
+      <p>
+        We welcome a variety of events including:
+      </p>
+      <ul>
+        <li>Private parties and celebrations</li>
+        <li>Music performances and gatherings</li>
+        <li>Workshops and classes</li>
+        <li>Retreats and team gatherings</li>
+        <li>Ceremonies (including weddings)</li>
+        <li>Photoshoots and creative projects</li>
+      </ul>
+      <p>
+        <strong>Note:</strong> This is a community-minded venue focused on healthy, vegetarian-inclusive
+        gatherings. Please bring only healthy food to share with others and include vegetarian options.
+        Meat may be grilled outside but is not permitted inside the house.
+      </p>
+
+      <h2>Standard Fees</h2>
+      <div class="fees-grid">
+        <div class="fee-card">
+          <div class="fee-label">Rental Fee</div>
+          <div class="fee-amount">$295</div>
+          <div class="fee-note">Starting rate</div>
+        </div>
+        <div class="fee-card">
+          <div class="fee-label">Reservation Fee</div>
+          <div class="fee-amount">$95</div>
+          <div class="fee-note">Refundable</div>
+        </div>
+        <div class="fee-card">
+          <div class="fee-label">Cleaning Deposit</div>
+          <div class="fee-amount">$195</div>
+          <div class="fee-note">Refundable</div>
+        </div>
+      </div>
+      <p style="font-size: 0.9rem; color: var(--text-muted);">
+        The reservation fee and cleaning deposit are fully refundable after your event, provided there is
+        no damage and cleaning is completed per the agreement. Some events may qualify for complementary rates.
+      </p>
+    </div>
+
+    <!-- Policies -->
+    <details class="policy-section" open>
+      <summary class="policy-header">
+        <span>Venue Policies & Requirements</span>
+        <span class="toggle-icon">&#9660;</span>
+      </summary>
+      <div class="policy-content">
+        <h4>Staffing Requirements</h4>
+        <p>As the event host, you are responsible for providing:</p>
+        <ul>
+          <li><strong>Setup staff</strong> - Must arrive 90 minutes before event start</li>
+          <li><strong>Cleanup crew</strong> - Post-event cleaning must be complete by 1:01pm the next day</li>
+          <li><strong>Parking coordinator</strong> - Must manage parking throughout the event to prevent parking on neighbors' property</li>
+        </ul>
+
+        <h4>Guest Limits</h4>
+        <p>
+          Your approved guest count will be specified in the agreement. A $15 fee applies per additional
+          person beyond your approved limit. You agree to candidly report actual attendance.
+        </p>
+
+        <h4>Address Privacy</h4>
+        <div class="warning-box">
+          <strong>Important:</strong> Do NOT post our address in any marketing materials, texts, emails,
+          or social media. Instead, direct attendees to <a href="https://alpacaplayhouse.com/visiting" target="_blank" style="color: #92400e;">alpacaplayhouse.com/visiting</a> for directions.
+          This page contains important information about parking, alpaca safety, food policies, and venue rules
+          that all guests should read before arriving.
+          <strong>$100 fee if the address is posted publicly.</strong>
+        </div>
+
+        <h4>Noise & Quiet Hours</h4>
+        <p>
+          Keep outdoor noise and music to a minimum after 9:30pm. Keep doors closed when loud music is
+          playing inside. No PA speakers at high volume outdoors after 9:30pm.
+          <strong>$100 fee if neighbors complain about noise.</strong>
+        </p>
+
+        <h4>Parking</h4>
+        <ul>
+          <li>Use the gravel lot inside the gate &mdash; park near other vehicles, facing the street or container</li>
+          <li><strong>Never park on grass</strong> (risks damage to sprinklers and getting stuck in mud)</li>
+          <li>Do not obstruct the circle, garage, sauna area, or delivery access</li>
+          <li>Overflow parking is available across the street or on the frontage road (5-minute walk)</li>
+          <li><strong>$150 penalty for each neighbor complaint about parking</strong> &mdash; Manage parking to ensure no vehicles are parked in front of neighbors' houses</li>
+        </ul>
+
+        <h4>Alpaca & Gate Safety</h4>
+        <div class="warning-box">
+          <strong>Critical:</strong> <strong>Always keep the back fence gates closed</strong> to prevent alpacas
+          from escaping. Please refer to them as "alpacas," not "llamas." Keep all dogs and pets out of
+          the alpaca area in the back yard; pets may only be tied in the front yard.
+        </div>
+
+        <h4>House Rules</h4>
+        <ul>
+          <li><strong>No alcohol inside the house</strong> (exceptions only for wedding events)</li>
+          <li><strong>No meat inside the house</strong> &mdash; Meat may be grilled outside and stored in the external refrigerator, not the kitchen</li>
+          <li><strong>No animals inside the house or backyard</strong> &mdash; Dogs may be tied in the front yard only ($100 fee if violated)</li>
+          <li><strong>No RVs parked on property</strong> &mdash; Can park on frontage road ($100 fee if violated)</li>
+          <li><strong>Healthy, vegetarian-inclusive food</strong> &mdash; Please bring only healthy food to share</li>
+          <li>Wash and replace any used linens and towels</li>
+          <li>Return all furniture to original positions (take photos before moving anything)</li>
+          <li>Propane usage will be deducted from the deposit</li>
+        </ul>
+
+        <h4>Cleaning</h4>
+        <p>
+          Submit cleaning photos via the provided checklist. If cleaning is not completed, we will hire
+          cleaners at $30 + $30/hour, deducted from your deposit.
+        </p>
+      </div>
+    </details>
+
+    <!-- Application Form -->
+    <div class="form-container" id="formContainer">
+      <form id="eventRequestForm">
+        <div id="errorBanner" class="error-banner hidden"></div>
+
+        <!-- Section 1: Your Information -->
+        <div class="form-section">
+          <h2>Your Information</h2>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="first_name">First Name <span class="required">*</span></label>
+              <input type="text" id="first_name" name="first_name" required>
+            </div>
+            <div class="form-group">
+              <label for="last_name">Last Name <span class="required">*</span></label>
+              <input type="text" id="last_name" name="last_name" required>
+            </div>
+            <div class="form-group">
+              <label for="email">Email <span class="required">*</span></label>
+              <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+              <label for="phone">Phone <span class="required">*</span></label>
+              <input type="tel" id="phone" name="phone" required>
+            </div>
+            <div class="form-group full-width">
+              <label for="organization_name">Organization Name (if applicable)</label>
+              <input type="text" id="organization_name" name="organization_name" placeholder="Leave blank if hosting personally">
+            </div>
+            <div class="form-group full-width checkbox-group">
+              <input type="checkbox" id="has_hosted_before" name="has_hosted_before">
+              <label for="has_hosted_before">I have hosted an event at Alpaca Playhouse before</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Event Details -->
+        <div class="form-section">
+          <h2>Event Details</h2>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label for="event_name">Event Name <span class="required">*</span></label>
+              <input type="text" id="event_name" name="event_name" required placeholder="e.g., Sarah's 30th Birthday, Yoga Workshop">
+            </div>
+            <div class="form-group">
+              <label for="event_type">Event Type <span class="required">*</span></label>
+              <select id="event_type" name="event_type" required>
+                <option value="">Select type...</option>
+                <option value="party">Party / Celebration</option>
+                <option value="workshop">Workshop / Class</option>
+                <option value="retreat">Retreat</option>
+                <option value="ceremony">Ceremony</option>
+                <option value="meeting">Meeting / Gathering</option>
+                <option value="photoshoot">Photoshoot</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="expected_guests">Expected Guests <span class="required">*</span></label>
+              <input type="number" id="expected_guests" name="expected_guests" required min="1" max="100" placeholder="Including you and staff">
+            </div>
+            <div class="form-group">
+              <label for="event_date">Event Date <span class="required">*</span></label>
+              <input type="date" id="event_date" name="event_date" required>
+            </div>
+            <div class="form-group">
+              <label>Event Time <span class="required">*</span></label>
+              <div class="time-inputs">
+                <input type="time" id="event_start_time" name="event_start_time" required>
+                <span>to</span>
+                <input type="time" id="event_end_time" name="event_end_time" required>
+              </div>
+            </div>
+            <div class="form-group full-width">
+              <label for="event_description">Event Description <span class="required">*</span></label>
+              <textarea id="event_description" name="event_description" required placeholder="Tell us about your event - what you're planning, the purpose, any special requirements..."></textarea>
+            </div>
+            <div class="form-group full-width checkbox-group">
+              <input type="checkbox" id="is_ticketed" name="is_ticketed">
+              <label for="is_ticketed">This is a ticketed/paid event</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Spaces Needed -->
+        <div class="form-section">
+          <h2>Spaces Needed</h2>
+          <p class="hint" style="margin-bottom: 1rem;">Select all the spaces you would like to use for your event:</p>
+          <div class="spaces-checklist" id="spacesChecklist">
+            <!-- Populated by JS -->
+            <div class="space-checkbox-item">
+              <input type="checkbox" id="space_living" name="spaces[]" value="living_room">
+              <label for="space_living">Living Room</label>
+            </div>
+            <div class="space-checkbox-item">
+              <input type="checkbox" id="space_kitchen" name="spaces[]" value="kitchen">
+              <label for="space_kitchen">Kitchen</label>
+            </div>
+            <div class="space-checkbox-item">
+              <input type="checkbox" id="space_dining" name="spaces[]" value="dining_room">
+              <label for="space_dining">Dining Room</label>
+            </div>
+            <div class="space-checkbox-item">
+              <input type="checkbox" id="space_garage" name="spaces[]" value="garage">
+              <label for="space_garage">Garage & Cold Plunge</label>
+            </div>
+            <div class="space-checkbox-item">
+              <input type="checkbox" id="space_backyard" name="spaces[]" value="backyard">
+              <label for="space_backyard">Back Yard</label>
+            </div>
+            <div class="space-checkbox-item">
+              <input type="checkbox" id="space_frontyard" name="spaces[]" value="frontyard">
+              <label for="space_frontyard">Front Yard</label>
+            </div>
+            <div class="space-checkbox-item">
+              <input type="checkbox" id="space_sauna" name="spaces[]" value="sauna">
+              <label for="space_sauna">Sauna & Deck</label>
+            </div>
+            <div class="space-checkbox-item">
+              <input type="checkbox" id="space_bathroom" name="spaces[]" value="common_bathroom">
+              <label for="space_bathroom">Common Bathroom</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 4: Staffing -->
+        <div class="form-section">
+          <h2>Staffing Contacts</h2>
+          <p class="hint" style="margin-bottom: 1rem;">Provide contact info for your event staff (can be yourself):</p>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="setup_staff_name">Setup Coordinator Name <span class="required">*</span></label>
+              <input type="text" id="setup_staff_name" name="setup_staff_name" required>
+            </div>
+            <div class="form-group">
+              <label for="setup_staff_phone">Setup Coordinator Phone <span class="required">*</span></label>
+              <input type="tel" id="setup_staff_phone" name="setup_staff_phone" required>
+            </div>
+            <div class="form-group">
+              <label for="cleanup_staff_name">Cleanup Coordinator Name <span class="required">*</span></label>
+              <input type="text" id="cleanup_staff_name" name="cleanup_staff_name" required>
+            </div>
+            <div class="form-group">
+              <label for="cleanup_staff_phone">Cleanup Coordinator Phone <span class="required">*</span></label>
+              <input type="tel" id="cleanup_staff_phone" name="cleanup_staff_phone" required>
+            </div>
+            <div class="form-group">
+              <label for="parking_manager_name">Parking Coordinator Name <span class="required">*</span></label>
+              <input type="text" id="parking_manager_name" name="parking_manager_name" required>
+            </div>
+            <div class="form-group">
+              <label for="parking_manager_phone">Parking Coordinator Phone <span class="required">*</span></label>
+              <input type="tel" id="parking_manager_phone" name="parking_manager_phone" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 5: Additional Info -->
+        <div class="form-section">
+          <h2>Additional Information</h2>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label for="marketing_materials_link">Marketing Materials Link</label>
+              <input type="url" id="marketing_materials_link" name="marketing_materials_link" placeholder="Link to event page, flyer, etc. (if applicable)">
+            </div>
+            <div class="form-group full-width">
+              <label for="special_requests">Special Requests or Questions</label>
+              <textarea id="special_requests" name="special_requests" placeholder="Any special needs, equipment requests, or questions about the venue..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 6: Acknowledgments -->
+        <div class="form-section">
+          <h2>Acknowledgments</h2>
+          <div class="acknowledgments-section">
+            <h3>Please confirm you understand and agree to the following:</h3>
+            <div class="ack-list">
+              <div class="ack-item">
+                <input type="checkbox" id="ack_no_address_posting" name="ack_no_address_posting" required>
+                <label for="ack_no_address_posting">I will NOT post the venue address publicly and will direct attendees to alpacaplayhouse.com/visiting</label>
+              </div>
+              <div class="ack-item">
+                <input type="checkbox" id="ack_parking_management" name="ack_parking_management" required>
+                <label for="ack_parking_management">I will manage parking to prevent vehicles from parking in front of neighbors' houses</label>
+              </div>
+              <div class="ack-item">
+                <input type="checkbox" id="ack_noise_curfew" name="ack_noise_curfew" required>
+                <label for="ack_noise_curfew">I will keep outdoor noise to a minimum after 9:30pm</label>
+              </div>
+              <div class="ack-item">
+                <input type="checkbox" id="ack_no_alcohol_inside" name="ack_no_alcohol_inside" required>
+                <label for="ack_no_alcohol_inside">No alcohol will be brought inside the house</label>
+              </div>
+              <div class="ack-item">
+                <input type="checkbox" id="ack_no_meat_inside" name="ack_no_meat_inside" required>
+                <label for="ack_no_meat_inside">No meat will be brought inside the house (grilling outside is OK)</label>
+              </div>
+              <div class="ack-item">
+                <input type="checkbox" id="ack_no_rvs" name="ack_no_rvs" required>
+                <label for="ack_no_rvs">No RVs will be parked on the property</label>
+              </div>
+              <div class="ack-item">
+                <input type="checkbox" id="ack_no_animals_inside" name="ack_no_animals_inside" required>
+                <label for="ack_no_animals_inside">No animals will be brought inside the house or backyard</label>
+              </div>
+              <div class="ack-item">
+                <input type="checkbox" id="ack_cleaning_responsibility" name="ack_cleaning_responsibility" required>
+                <label for="ack_cleaning_responsibility">I am responsible for cleaning and will complete it by 1:01pm the day after the event</label>
+              </div>
+              <div class="ack-item">
+                <input type="checkbox" id="ack_linens_furniture" name="ack_linens_furniture" required>
+                <label for="ack_linens_furniture">I will wash used linens and return furniture to original positions</label>
+              </div>
+              <div class="ack-item">
+                <input type="checkbox" id="ack_propane_reimbursement" name="ack_propane_reimbursement" required>
+                <label for="ack_propane_reimbursement">I understand propane usage will be deducted from my deposit</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-submit" id="submitBtn">Submit Event Request</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Success Message -->
+    <div class="form-container hidden" id="successContainer">
+      <div class="success-message">
+        <div class="icon">&#129433;</div>
+        <h2>Request Submitted!</h2>
+        <p>
+          Thank you for your interest in hosting an event at Alpaca Playhouse! We've received your
+          request and will review it shortly. You'll hear back from us within a few days.
+        </p>
+        <p>
+          In the meantime, learn more about our venue:
+        </p>
+        <a href="https://alpacaplayhouse.com" target="_blank">Visit alpacaplayhouse.com</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Supabase config
+    const SUPABASE_URL = 'https://aphrrfprbixmhissnjfn.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwaHJyZnByYml4bWhpc3NuamZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5MzA0MjUsImV4cCI6MjA4NTUwNjQyNX0.yYkdQIq97GQgxK7yT2OQEPi0Tt-a7gM45aF8xjSD6wk';
+
+    // Elements
+    const form = document.getElementById('eventRequestForm');
+    const formContainer = document.getElementById('formContainer');
+    const successContainer = document.getElementById('successContainer');
+    const errorBanner = document.getElementById('errorBanner');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('event_date').setAttribute('min', today);
+
+    // Form submission
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Clear previous errors
+      errorBanner.classList.add('hidden');
+      document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+
+      // Validate required fields
+      const requiredFields = [
+        'first_name', 'last_name', 'email', 'phone',
+        'event_name', 'event_type', 'expected_guests', 'event_date',
+        'event_start_time', 'event_end_time', 'event_description',
+        'setup_staff_name', 'setup_staff_phone',
+        'cleanup_staff_name', 'cleanup_staff_phone',
+        'parking_manager_name', 'parking_manager_phone'
+      ];
+
+      let hasError = false;
+      requiredFields.forEach(field => {
+        const el = document.getElementById(field);
+        if (!el.value.trim()) {
+          el.classList.add('error');
+          hasError = true;
+        }
+      });
+
+      // Check all acknowledgments
+      const ackFields = [
+        'ack_no_address_posting', 'ack_parking_management', 'ack_noise_curfew',
+        'ack_no_alcohol_inside', 'ack_no_meat_inside', 'ack_no_rvs',
+        'ack_no_animals_inside', 'ack_cleaning_responsibility',
+        'ack_linens_furniture', 'ack_propane_reimbursement'
+      ];
+
+      ackFields.forEach(field => {
+        const el = document.getElementById(field);
+        if (!el.checked) {
+          hasError = true;
+        }
+      });
+
+      if (hasError) {
+        showError('Please fill in all required fields and acknowledge all policies.');
+        return;
+      }
+
+      // Disable form
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+
+      try {
+        // First, create or find the person
+        const firstName = getValue('first_name');
+        const lastName = getValue('last_name');
+        const email = getValue('email');
+        const phone = getValue('phone');
+
+        // Check if person exists
+        let personId;
+        const checkResponse = await fetch(
+          `${SUPABASE_URL}/rest/v1/people?email=eq.${encodeURIComponent(email)}&select=id`,
+          {
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`
+            }
+          }
+        );
+
+        const existingPeople = await checkResponse.json();
+
+        if (existingPeople.length > 0) {
+          personId = existingPeople[0].id;
+        } else {
+          // Create new person
+          const personResponse = await fetch(`${SUPABASE_URL}/rest/v1/people`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({
+              first_name: firstName,
+              last_name: lastName,
+              email: email,
+              phone: phone,
+              type: 'event_host'
+            })
+          });
+
+          if (!personResponse.ok) {
+            throw new Error('Failed to create contact record');
+          }
+
+          const [person] = await personResponse.json();
+          personId = person.id;
+        }
+
+        // Create event hosting request
+        const eventData = {
+          person_id: personId,
+          organization_name: getValue('organization_name') || null,
+          has_hosted_before: document.getElementById('has_hosted_before').checked,
+          event_name: getValue('event_name'),
+          event_description: getValue('event_description'),
+          event_type: getValue('event_type'),
+          event_date: getValue('event_date'),
+          event_start_time: getValue('event_start_time'),
+          event_end_time: getValue('event_end_time'),
+          expected_guests: parseInt(getValue('expected_guests')),
+          is_ticketed: document.getElementById('is_ticketed').checked,
+          marketing_materials_link: getValue('marketing_materials_link') || null,
+          special_requests: getValue('special_requests') || null,
+          setup_staff_name: getValue('setup_staff_name'),
+          setup_staff_phone: getValue('setup_staff_phone'),
+          cleanup_staff_name: getValue('cleanup_staff_name'),
+          cleanup_staff_phone: getValue('cleanup_staff_phone'),
+          parking_manager_name: getValue('parking_manager_name'),
+          parking_manager_phone: getValue('parking_manager_phone'),
+          ack_no_address_posting: true,
+          ack_parking_management: true,
+          ack_noise_curfew: true,
+          ack_no_alcohol_inside: true,
+          ack_no_meat_inside: true,
+          ack_no_rvs: true,
+          ack_no_animals_inside: true,
+          ack_cleaning_responsibility: true,
+          ack_linens_furniture: true,
+          ack_propane_reimbursement: true,
+          request_status: 'submitted'
+        };
+
+        const eventResponse = await fetch(`${SUPABASE_URL}/rest/v1/event_hosting_requests`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify(eventData)
+        });
+
+        if (!eventResponse.ok) {
+          const errorData = await eventResponse.json();
+          throw new Error(errorData.message || 'Failed to submit request');
+        }
+
+        // Success!
+        formContainer.classList.add('hidden');
+        successContainer.classList.remove('hidden');
+
+      } catch (error) {
+        console.error('Submission error:', error);
+        showError(error.message || 'Something went wrong. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Event Request';
+      }
+    });
+
+    function getValue(id) {
+      const el = document.getElementById(id);
+      return el ? el.value.trim() : '';
+    }
+
+    function showError(message) {
+      errorBanner.textContent = message;
+      errorBanner.classList.remove('hidden');
+      errorBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  </script>
+</body>
+</html>
