@@ -999,8 +999,19 @@ function renderRequestTags() {
   });
   const sortedGroups = mediaService.sortTagGroups(grouped);
 
-  // Render with tag-row wrapper for alignment
+  // Render with inline add tag at top
   container.innerHTML = `
+    <div class="inline-add-tag">
+      <input type="text" data-quick-input placeholder="Add new tag..." class="quick-tag-input">
+      <select data-quick-group class="quick-tag-select">
+        <option value="">Category</option>
+        ${[...new Set(allTags.map(t => t.tag_group).filter(Boolean))].sort().map(g =>
+          `<option value="${g}">${g}</option>`
+        ).join('')}
+        <option value="__new__">+ New...</option>
+      </select>
+      <input type="text" data-quick-custom placeholder="New category" class="quick-tag-input hidden">
+    </div>
     ${Object.entries(sortedGroups).map(([group, tags]) => `
       <div class="tag-row">
         <div class="tag-group-label">${group}</div>
@@ -1017,10 +1028,10 @@ function renderRequestTags() {
         </div>
       </div>
     `).join('')}
-    <div class="tag-row">
-      <button type="button" class="btn-add-tag" onclick="showAddTagForm('requestTagsContainer')">+ Add Tag</button>
-    </div>
   `;
+
+  // Setup inline add tag handlers
+  setupQuickAddTag('requestTagsContainer', renderRequestTags);
 }
 
 function renderExistingRequests() {
@@ -1093,15 +1104,15 @@ function renderUploadTags() {
   // Render with inline add tag at top
   container.innerHTML = `
     <div class="inline-add-tag">
-      <input type="text" id="quickAddTagInput" placeholder="Add new tag..." class="quick-tag-input">
-      <select id="quickAddTagGroup" class="quick-tag-select">
+      <input type="text" data-quick-input placeholder="Add new tag..." class="quick-tag-input">
+      <select data-quick-group class="quick-tag-select">
         <option value="">Category</option>
         ${[...new Set(allTags.map(t => t.tag_group).filter(Boolean))].sort().map(g =>
           `<option value="${g}">${g}</option>`
         ).join('')}
         <option value="__new__">+ New...</option>
       </select>
-      <input type="text" id="quickAddTagCustomGroup" placeholder="New category" class="quick-tag-input hidden">
+      <input type="text" data-quick-custom placeholder="New category" class="quick-tag-input hidden">
     </div>
     ${Object.entries(sortedGroups).map(([group, tags]) => `
       <div class="tag-row">
@@ -1122,17 +1133,17 @@ function renderUploadTags() {
   `;
 
   // Setup inline add tag handlers
-  setupQuickAddTag('uploadTagsContainer');
+  setupQuickAddTag('uploadTagsContainer', renderUploadTags);
 }
 
 // Quick inline add tag functionality
-function setupQuickAddTag(containerId) {
+function setupQuickAddTag(containerId, rerenderFn) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  const input = container.querySelector('#quickAddTagInput');
-  const groupSelect = container.querySelector('#quickAddTagGroup');
-  const customGroupInput = container.querySelector('#quickAddTagCustomGroup');
+  const input = container.querySelector('[data-quick-input]');
+  const groupSelect = container.querySelector('[data-quick-group]');
+  const customGroupInput = container.querySelector('[data-quick-custom]');
 
   if (!input) return;
 
@@ -1150,30 +1161,18 @@ function setupQuickAddTag(containerId) {
   input.addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      await quickCreateTag(containerId);
-    }
-  });
-
-  // Also create on blur if there's content
-  input.addEventListener('blur', async () => {
-    if (input.value.trim()) {
-      // Small delay to allow clicking away without triggering
-      setTimeout(async () => {
-        if (input.value.trim() && document.activeElement !== input) {
-          await quickCreateTag(containerId);
-        }
-      }, 200);
+      await quickCreateTag(containerId, rerenderFn);
     }
   });
 }
 
-async function quickCreateTag(containerId) {
+async function quickCreateTag(containerId, rerenderFn) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  const input = container.querySelector('#quickAddTagInput');
-  const groupSelect = container.querySelector('#quickAddTagGroup');
-  const customGroupInput = container.querySelector('#quickAddTagCustomGroup');
+  const input = container.querySelector('[data-quick-input]');
+  const groupSelect = container.querySelector('[data-quick-group]');
+  const customGroupInput = container.querySelector('[data-quick-custom]');
 
   const name = input?.value.trim();
   if (!name) return;
@@ -1196,19 +1195,11 @@ async function quickCreateTag(containerId) {
       return;
     }
 
-    // Add to allTags and re-render
+    // Add to allTags
     allTags.push(result.tag);
 
-    // Clear input
-    input.value = '';
-    if (groupSelect) groupSelect.value = '';
-    if (customGroupInput) {
-      customGroupInput.value = '';
-      customGroupInput.classList.add('hidden');
-    }
-
-    // Re-render and auto-select the new tag
-    renderUploadTags();
+    // Re-render tags
+    if (rerenderFn) rerenderFn();
 
     // Select the newly created tag
     const checkbox = container.querySelector(`input[value="${result.tag.name}"]`);
