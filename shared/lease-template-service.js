@@ -215,7 +215,7 @@ function parseTemplate(templateContent, agreementData) {
     // Replace {{additional_terms}} with intro text + the actual terms
     parsed = parsed.replace(
       /\{\{additional_terms\}\}/g,
-      `Additionally, the following terms will apply to this rental agreement:\n\n${additionalTerms}`
+      `The following additional terms will apply to this rental agreement:\n\n${additionalTerms}`
     );
   } else {
     // Remove the placeholder and any surrounding whitespace/newlines
