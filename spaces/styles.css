@@ -132,6 +132,21 @@ h1 {
   border-color: var(--occupied);
 }
 
+.apply-link {
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: white;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: var(--radius);
+  transition: background 0.15s ease;
+}
+
+.apply-link:hover {
+  background: #327568;
+}
+
 .staff-link {
   padding: 0.5rem 1rem;
   color: var(--text-muted);

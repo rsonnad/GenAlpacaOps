@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apply - Alpaca Playhouse Austin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf9f7;
+      --bg-card: #ffffff;
+      --text: #2d3142;
+      --text-muted: #7a7d8c;
+      --border: #e8e9ed;
+      --accent: #3d8b7a;
+      --accent-light: #e5f4f1;
+      --error: #e07a5f;
+      --error-light: #fdf0ec;
+      --success: #5a9e8f;
+      --success-light: #e8f5f2;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(45,49,66,0.06), 0 1px 2px rgba(45,49,66,0.08);
+      --shadow-lg: 0 4px 12px rgba(45,49,66,0.08), 0 2px 4px rgba(45,49,66,0.06);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 1.5rem 2rem;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.25rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .form-container {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .form-section {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .form-section:last-of-type {
+      border-bottom: none;
+    }
+
+    .form-section h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--accent);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+    }
+
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .form-group label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .form-group label .required {
+      color: var(--error);
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 0.625rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 0.95rem;
+      background: var(--bg);
+      transition: border-color 0.15s ease;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: var(--bg-card);
+    }
+
+    .form-group input.error,
+    .form-group select.error,
+    .form-group textarea.error {
+      border-color: var(--error);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-group .hint {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .checkbox-group {
+      flex-direction: row;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: 1.125rem;
+      height: 1.125rem;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .checkbox-group label {
+      cursor: pointer;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .form-actions {
+      padding: 1.5rem;
+      background: var(--bg);
+      display: flex;
+      justify-content: center;
+    }
+
+    .btn-submit {
+      padding: 0.875rem 2.5rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .btn-submit:hover {
+      background: #327568;
+    }
+
+    .btn-submit:disabled {
+      background: var(--text-muted);
+      cursor: not-allowed;
+    }
+
+    /* Success state */
+    .success-message {
+      text-align: center;
+      padding: 3rem 2rem;
+    }
+
+    .success-message .icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+
+    .success-message h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: var(--success);
+    }
+
+    .success-message p {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .success-message a {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background: var(--accent);
+      color: white;
+      text-decoration: none;
+      border-radius: var(--radius);
+      font-weight: 500;
+      transition: background 0.15s ease;
+    }
+
+    .success-message a:hover {
+      background: #327568;
+    }
+
+    /* Error message */
+    .error-banner {
+      padding: 1rem 1.5rem;
+      background: var(--error-light);
+      color: var(--error);
+      border-bottom: 1px solid var(--error);
+      font-weight: 500;
+    }
+
+    /* Loading state */
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      header {
+        padding: 1.25rem 1rem;
+      }
+
+      header h1 {
+        font-size: 1.5rem;
+      }
+
+      main {
+        padding: 1rem;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-section {
+        padding: 1.25rem;
+      }
+
+      .form-actions {
+        padding: 1.25rem;
+      }
+
+      .btn-submit {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Alpaca Playhouse Austin</h1>
+    <p>Residency Application</p>
+  </header>
+
+  <main>
+    <div class="form-container" id="formContainer">
+      <form id="applicationForm">
+        <div id="errorBanner" class="error-banner hidden"></div>
+
+        <!-- Section 1: Basic Info -->
+        <div class="form-section">
+          <h2>Basic Information</h2>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="first_name">First Name <span class="required">*</span></label>
+              <input type="text" id="first_name" name="first_name" required>
+            </div>
+            <div class="form-group">
+              <label for="last_name">Last Name <span class="required">*</span></label>
+              <input type="text" id="last_name" name="last_name" required>
+            </div>
+            <div class="form-group">
+              <label for="email">Email <span class="required">*</span></label>
+              <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+              <label for="phone">Phone</label>
+              <input type="tel" id="phone" name="phone">
+            </div>
+            <div class="form-group">
+              <label for="date_of_birth">Date of Birth</label>
+              <input type="date" id="date_of_birth" name="date_of_birth">
+            </div>
+            <div class="form-group">
+              <label for="gender">Gender</label>
+              <select id="gender" name="gender">
+                <option value="">Select...</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group full-width">
+              <label for="current_address">Current Address</label>
+              <textarea id="current_address" name="current_address" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Desired Housing -->
+        <div class="form-section">
+          <h2>Desired Housing</h2>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="desired_space_id">Preferred Space</label>
+              <select id="desired_space_id" name="desired_space_id">
+                <option value="">Flexible / Unknown</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="desired_move_in">Desired Move-in Date</label>
+              <input type="date" id="desired_move_in" name="desired_move_in">
+            </div>
+            <div class="form-group full-width">
+              <label for="desired_term">Desired Term</label>
+              <input type="text" id="desired_term" name="desired_term" placeholder="e.g. 6 months, 1 year, flexible">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Financial -->
+        <div class="form-section">
+          <h2>Financial Information</h2>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="employment_status">Employment Status</label>
+              <input type="text" id="employment_status" name="employment_status" placeholder="e.g. Full-time, Self-employed">
+            </div>
+            <div class="form-group">
+              <label for="monthly_income">Monthly Income ($)</label>
+              <input type="number" id="monthly_income" name="monthly_income" min="0" step="1">
+            </div>
+            <div class="form-group full-width">
+              <label for="deposit_return_method">Preferred Deposit Return Method</label>
+              <select id="deposit_return_method" name="deposit_return_method">
+                <option value="">Select...</option>
+                <option value="zelle">Zelle</option>
+                <option value="venmo">Venmo</option>
+                <option value="paypal">PayPal</option>
+                <option value="check">Check</option>
+                <option value="cash">Cash</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 4: Previous Residence -->
+        <div class="form-section">
+          <h2>Previous Residence</h2>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label for="prev_address">Address</label>
+              <textarea id="prev_address" name="prev_address" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="prev_start_date">Move-in Date</label>
+              <input type="date" id="prev_start_date" name="prev_start_date">
+            </div>
+            <div class="form-group">
+              <label for="prev_end_date">Move-out Date</label>
+              <input type="date" id="prev_end_date" name="prev_end_date">
+            </div>
+            <div class="form-group">
+              <label for="landlord_name">Landlord Name</label>
+              <input type="text" id="landlord_name" name="landlord_name">
+            </div>
+            <div class="form-group">
+              <label for="landlord_contact">Landlord Contact</label>
+              <input type="text" id="landlord_contact" name="landlord_contact" placeholder="Phone or email">
+            </div>
+            <div class="form-group full-width">
+              <label for="reason_for_leaving">Reason for Leaving</label>
+              <textarea id="reason_for_leaving" name="reason_for_leaving" rows="2"></textarea>
+            </div>
+            <div class="form-group full-width checkbox-group">
+              <input type="checkbox" id="prior_evictions" name="prior_evictions">
+              <label for="prior_evictions">I have had a prior eviction</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 5: Household -->
+        <div class="form-section">
+          <h2>Household</h2>
+          <div class="form-grid">
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="has_partner" name="has_partner">
+              <label for="has_partner">I have a partner who will also be applying</label>
+            </div>
+            <div class="form-group hidden" id="partnerEmailGroup">
+              <label for="partner_email">Partner's Email</label>
+              <input type="email" id="partner_email" name="partner_email">
+            </div>
+            <div class="form-group full-width">
+              <label for="kids_ages">Children's Ages</label>
+              <input type="text" id="kids_ages" name="kids_ages" placeholder="e.g. 4, 7, 12 (leave blank if none)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 6: Property Details -->
+        <div class="form-section">
+          <h2>Property Details</h2>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label for="vehicles">Vehicles</label>
+              <textarea id="vehicles" name="vehicles" rows="2" placeholder="Describe type and size (e.g. Honda Civic sedan, Ford F-150 truck)"></textarea>
+            </div>
+            <div class="form-group full-width">
+              <label for="pets">Pets</label>
+              <textarea id="pets" name="pets" rows="2" placeholder="Type and details (e.g. 2 cats, 1 medium dog - golden retriever)"></textarea>
+            </div>
+            <div class="form-group full-width">
+              <label for="allergies">Allergies</label>
+              <input type="text" id="allergies" name="allergies" placeholder="Any allergies we should know about">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 7: Social Profiles -->
+        <div class="form-section">
+          <h2>Social Profiles <span style="font-weight: 400; color: var(--text-muted);">(Optional)</span></h2>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="instagram">Instagram</label>
+              <input type="text" id="instagram" name="instagram" placeholder="@username">
+            </div>
+            <div class="form-group">
+              <label for="facebook">Facebook</label>
+              <input type="text" id="facebook" name="facebook" placeholder="Profile URL or name">
+            </div>
+            <div class="form-group">
+              <label for="x_handle">X (Twitter)</label>
+              <input type="text" id="x_handle" name="x_handle" placeholder="@handle">
+            </div>
+            <div class="form-group">
+              <label for="whatsapp">WhatsApp</label>
+              <input type="text" id="whatsapp" name="whatsapp" placeholder="Phone number">
+            </div>
+            <div class="form-group">
+              <label for="myspace">MySpace</label>
+              <input type="text" id="myspace" name="myspace" placeholder="Profile URL">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 8: Referral -->
+        <div class="form-section">
+          <h2>Referral</h2>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label for="referral_source">How did you hear about us?</label>
+              <input type="text" id="referral_source" name="referral_source" placeholder="e.g. Friend, Google, Social Media">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-submit" id="submitBtn">Submit Application</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Success Message (hidden by default) -->
+    <div class="form-container hidden" id="successContainer">
+      <div class="success-message">
+        <div class="icon">&#129433;</div>
+        <h2>Application Submitted!</h2>
+        <p>Thank you for your interest in Alpaca Playhouse Austin. We've received your application and will be in touch soon.</p>
+        <p>In the meantime, please read about our community:</p>
+        <a href="https://alpacaplayhouse.com" target="_blank">Visit alpacaplayhouse.com</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Supabase config
+    const SUPABASE_URL = 'https://aphrrfprbixmhissnjfn.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwaHJyZnByYml4bWhpc3NuamZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5MzA0MjUsImV4cCI6MjA4NTUwNjQyNX0.yYkdQIq97GQgxK7yT2OQEPi0Tt-a7gM45aF8xjSD6wk';
+
+    // Elements
+    const form = document.getElementById('applicationForm');
+    const formContainer = document.getElementById('formContainer');
+    const successContainer = document.getElementById('successContainer');
+    const errorBanner = document.getElementById('errorBanner');
+    const submitBtn = document.getElementById('submitBtn');
+    const spaceSelect = document.getElementById('desired_space_id');
+    const hasPartnerCheckbox = document.getElementById('has_partner');
+    const partnerEmailGroup = document.getElementById('partnerEmailGroup');
+
+    // Load dwelling spaces for dropdown
+    async function loadSpaces() {
+      try {
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/spaces?can_be_dwelling=eq.true&is_archived=eq.false&select=id,name&order=name`,
+          {
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`
+            }
+          }
+        );
+
+        if (!response.ok) throw new Error('Failed to load spaces');
+
+        const spaces = await response.json();
+        spaces.forEach(space => {
+          const option = document.createElement('option');
+          option.value = space.id;
+          option.textContent = space.name;
+          spaceSelect.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error loading spaces:', error);
+      }
+    }
+
+    // Toggle partner email field
+    hasPartnerCheckbox.addEventListener('change', () => {
+      partnerEmailGroup.classList.toggle('hidden', !hasPartnerCheckbox.checked);
+      if (!hasPartnerCheckbox.checked) {
+        document.getElementById('partner_email').value = '';
+      }
+    });
+
+    // Form submission
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Clear previous errors
+      errorBanner.classList.add('hidden');
+      document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+
+      // Validate required fields
+      const firstName = document.getElementById('first_name').value.trim();
+      const lastName = document.getElementById('last_name').value.trim();
+      const email = document.getElementById('email').value.trim();
+
+      let hasError = false;
+
+      if (!firstName) {
+        document.getElementById('first_name').classList.add('error');
+        hasError = true;
+      }
+      if (!lastName) {
+        document.getElementById('last_name').classList.add('error');
+        hasError = true;
+      }
+      if (!email) {
+        document.getElementById('email').classList.add('error');
+        hasError = true;
+      }
+
+      if (hasError) {
+        showError('Please fill in all required fields.');
+        return;
+      }
+
+      // Disable form while submitting
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+      form.classList.add('loading');
+
+      try {
+        // Build person data
+        const personData = {
+          first_name: firstName,
+          last_name: lastName,
+          email: email,
+          phone: getValue('phone'),
+          date_of_birth: getValue('date_of_birth') || null,
+          gender: getValue('gender') || null,
+          current_address: getValue('current_address'),
+          desired_space_id: getValue('desired_space_id') || null,
+          desired_move_in: getValue('desired_move_in') || null,
+          desired_term: getValue('desired_term'),
+          employment_status: getValue('employment_status'),
+          monthly_income: getValue('monthly_income') ? parseFloat(getValue('monthly_income')) : null,
+          deposit_return_method: getValue('deposit_return_method') || null,
+          has_partner: document.getElementById('has_partner').checked,
+          partner_email: getValue('partner_email'),
+          kids_ages: getValue('kids_ages'),
+          vehicles: getValue('vehicles'),
+          pets: getValue('pets'),
+          allergies: getValue('allergies'),
+          prior_evictions: document.getElementById('prior_evictions').checked,
+          instagram: getValue('instagram'),
+          facebook: getValue('facebook'),
+          x_handle: getValue('x_handle'),
+          whatsapp: getValue('whatsapp'),
+          myspace: getValue('myspace'),
+          referral_source: getValue('referral_source'),
+          status: 'candidate'
+        };
+
+        // Insert person
+        const personResponse = await fetch(`${SUPABASE_URL}/rest/v1/people`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify(personData)
+        });
+
+        if (!personResponse.ok) {
+          const errorData = await personResponse.json();
+          throw new Error(errorData.message || 'Failed to submit application');
+        }
+
+        const [person] = await personResponse.json();
+
+        // Insert previous residence if provided
+        const prevAddress = getValue('prev_address');
+        if (prevAddress) {
+          const residenceData = {
+            person_id: person.id,
+            address: prevAddress,
+            start_date: getValue('prev_start_date') || null,
+            end_date: getValue('prev_end_date') || null,
+            landlord_name: getValue('landlord_name'),
+            landlord_contact: getValue('landlord_contact'),
+            reason_for_leaving: getValue('reason_for_leaving')
+          };
+
+          await fetch(`${SUPABASE_URL}/rest/v1/previous_residences`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(residenceData)
+          });
+        }
+
+        // Show success
+        formContainer.classList.add('hidden');
+        successContainer.classList.remove('hidden');
+
+      } catch (error) {
+        console.error('Submission error:', error);
+        showError(error.message || 'Something went wrong. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Application';
+        form.classList.remove('loading');
+      }
+    });
+
+    function getValue(id) {
+      const el = document.getElementById(id);
+      return el ? el.value.trim() : '';
+    }
+
+    function showError(message) {
+      errorBanner.textContent = message;
+      errorBanner.classList.remove('hidden');
+      errorBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Initialize
+    loadSpaces();
+  </script>
+</body>
+</html>
