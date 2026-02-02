@@ -254,6 +254,14 @@ main {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* Hide alt text while loading (Firefox shows it prominently) */
+  color: transparent;
+  font-size: 0;
+}
+
+/* Firefox-specific: hide alt text placeholder */
+.card-image img:-moz-loading {
+  visibility: hidden;
 }
 
 .card-image .no-photo {
