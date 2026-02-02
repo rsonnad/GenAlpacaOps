@@ -244,16 +244,19 @@ async function loadData() {
 
       const currentAssignment = spaceAssignments.find(a => {
         if (a.status !== 'active') return false;
-        // Use desired_departure_date if set, otherwise end_date
-        const effectiveEndDate = a.desired_departure_date || a.end_date;
+        // Only use desired_departure_date if it's listed (for availability display)
+        const effectiveEndDate = (a.desired_departure_listed && a.desired_departure_date) || a.end_date;
         if (!effectiveEndDate) return true;
         return new Date(effectiveEndDate) >= today;
       });
 
-      // Get effective end date (desired_departure_date takes priority for availability display)
+      // Get effective end date (only use desired_departure_date if listed)
       const getEffectiveEndDate = (assignment) => {
         if (!assignment) return null;
-        return assignment.desired_departure_date || assignment.end_date;
+        if (assignment.desired_departure_listed && assignment.desired_departure_date) {
+          return assignment.desired_departure_date;
+        }
+        return assignment.end_date;
       };
 
       const effectiveEndDate = getEffectiveEndDate(currentAssignment);
@@ -786,9 +789,21 @@ function showSpaceDetail(spaceId) {
         ${isAdmin ? `
           <div style="margin-top: 0.75rem;">
             <label style="font-size: 0.875rem; color: var(--text-muted);">Desired Departure (Early Exit):</label>
-            <input type="date" id="desiredDepartureDate" value="${a.desired_departure_date || ''}"
-              style="margin-left: 0.5rem; padding: 0.25rem 0.5rem; border: 1px solid var(--border); border-radius: var(--radius);"
-              onchange="updateDesiredDeparture('${a.id}', this.value)">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+              <input type="date" id="desiredDepartureDate" value="${a.desired_departure_date || ''}"
+                style="padding: 0.25rem 0.5rem; border: 1px solid var(--border); border-radius: var(--radius);"
+                onchange="updateDesiredDeparture('${a.id}', this.value)">
+              ${a.desired_departure_date ? `
+                <button onclick="toggleDesiredDepartureListed('${a.id}', ${!a.desired_departure_listed})"
+                  style="padding: 0.25rem 0.75rem; border: 1px solid ${a.desired_departure_listed ? 'var(--error)' : 'var(--accent)'};
+                    background: ${a.desired_departure_listed ? 'var(--error-light)' : 'var(--accent-light)'};
+                    color: ${a.desired_departure_listed ? 'var(--error)' : 'var(--accent)'};
+                    border-radius: var(--radius); cursor: pointer; font-size: 0.875rem; font-weight: 500;">
+                  ${a.desired_departure_listed ? 'Unlist' : 'List'}
+                </button>
+                ${a.desired_departure_listed ? '<span style="color: var(--accent); font-size: 0.75rem;">✓ Listed for new renters</span>' : '<span style="color: var(--text-muted); font-size: 0.75rem;">Not listed yet</span>'}
+              ` : ''}
+            </div>
           </div>
         ` : ''}
       </div>
@@ -2093,9 +2108,13 @@ async function deleteMedia(mediaId) {
 // Update desired departure date for early exit
 async function updateDesiredDeparture(assignmentId, dateValue) {
   try {
+    // When date changes, also reset the listed flag
     const { error } = await supabase
       .from('assignments')
-      .update({ desired_departure_date: dateValue || null })
+      .update({
+        desired_departure_date: dateValue || null,
+        desired_departure_listed: false
+      })
       .eq('id', assignmentId);
 
     if (error) throw error;
@@ -2109,8 +2128,28 @@ async function updateDesiredDeparture(assignmentId, dateValue) {
   }
 }
 
+// Toggle listing status for desired departure date
+async function toggleDesiredDepartureListed(assignmentId, listed) {
+  try {
+    const { error } = await supabase
+      .from('assignments')
+      .update({ desired_departure_listed: listed })
+      .eq('id', assignmentId);
+
+    if (error) throw error;
+
+    showToast(listed ? 'Early exit date listed for new renters' : 'Early exit date unlisted', 'success');
+    await loadData();
+    render();
+  } catch (error) {
+    console.error('Error toggling listed status:', error);
+    showToast('Failed to update listing status', 'error');
+  }
+}
+
 // Make functions globally accessible for onclick handlers
 window.updateDesiredDeparture = updateDesiredDeparture;
+window.toggleDesiredDepartureListed = toggleDesiredDepartureListed;
 window.showSpaceDetail = showSpaceDetail;
 window.openPhotoRequest = openPhotoRequest;
 window.openPhotoUpload = openPhotoUpload;

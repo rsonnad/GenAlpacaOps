@@ -56,13 +56,32 @@ GenAlpaca manages rental spaces at GenAlpaca Residency (160 Still Forest Drive, 
 
 ```
 GenAlpacaOps/
-├── index.html      # Main UI entry point
-├── styles.css      # All styling
-├── app.js          # Application logic, Supabase client
-├── README.md       # Quick setup guide
-├── API.md          # Full REST API reference
-├── SKILL.md        # OpenClaw skill file
-└── ARCHITECTURE.md # This file
+├── index.html              # Landing page (redirects to spaces)
+├── styles.css              # Global styling
+├── app.js                  # Legacy (redirects)
+├── 404.html                # GitHub Pages 404 handler
+│
+├── shared/                 # Shared modules
+│   ├── supabase.js         # Supabase client singleton
+│   ├── auth.js             # Authentication module
+│   └── media-service.js    # Media upload/management service
+│
+├── login/                  # Login page
+│   ├── index.html
+│   └── app.js
+│
+├── spaces/                 # Consumer-facing spaces view
+│   ├── index.html
+│   └── app.js              # Public space listing (filtered)
+│
+└── spaces/admin/           # Admin dashboard
+    ├── index.html          # Admin spaces view
+    ├── app.js              # Admin spaces logic
+    ├── manage.html         # Management dashboard (tabs)
+    ├── media.html          # Media library page
+    ├── media.js            # Media library logic
+    ├── users.html          # User management
+    └── users.js            # User management logic
 ```
 
 ## Database Schema
@@ -97,14 +116,41 @@ GenAlpacaOps/
 **assignment_spaces** - Junction: assignments ↔ spaces
 - `assignment_id` (FK), `space_id` (FK)
 
-### Photo System
+### Media System (New)
 
-**photos** - Photo metadata
+The system has migrated from the legacy `photos` table to a unified `media` system with tagging support.
+
+**media** - All media assets (images, videos, documents)
+- `id` (uuid, PK)
+- `url` (Supabase storage URL)
+- `storage_path` (path in storage bucket)
+- `mime_type`, `file_size`
+- `width`, `height` (for images)
+- `title`, `caption`
+- `category` (mktg, projects, archive)
+- `uploaded_by`, `created_at`, `updated_at`
+
+**media_spaces** - Junction: media ↔ spaces
+- `media_id` (FK), `space_id` (FK)
+- `display_order` (integer for ordering)
+- `is_primary` (boolean, primary image for space)
+
+**media_tags** - Tag definitions
+- `id` (uuid, PK)
+- `name` (unique tag name)
+- `color` (hex color for display)
+
+**media_tag_assignments** - Junction: media ↔ tags
+- `media_id` (FK), `tag_id` (FK)
+
+### Legacy Photo System (Deprecated)
+
+**photos** - Photo metadata (legacy, still used by consumer view)
 - `id` (uuid, PK)
 - `url` (Supabase storage URL)
 - `caption`, `uploaded_by`
 
-**photo_spaces** - Junction: photos ↔ spaces
+**photo_spaces** - Junction: photos ↔ spaces (legacy)
 - `photo_id` (FK), `space_id` (FK)
 
 **photo_requests** - Pending photo requests
@@ -155,6 +201,15 @@ create policy "Allow public reads" on storage.objects for select using (bucket_i
 create policy "Allow public deletes" on storage.objects for delete using (bucket_id = 'housephotos');
 ```
 
+### Media Upload Pipeline
+
+Images are processed client-side before upload via `shared/media-service.js`:
+1. **Validation**: Check file type and size limits
+2. **Compression**: Images > 500KB are compressed (max 1920x1920, 85% quality)
+3. **Upload**: Stored in Supabase Storage with path `{category}/{timestamp}-{randomId}.{ext}`
+4. **Metadata**: Dimensions extracted and stored in `media` table
+5. **Linking**: Associated with spaces via `media_spaces` junction table
+
 ### Access Control (Application Level)
 
 The UI has two modes controlled by JavaScript:
@@ -187,13 +242,15 @@ This is UI-level only, not enforced at database level. For true security, implem
 3. Filters to `is_listed=true, is_secret=false`
 4. Shows availability based on assignment end dates
 
-### Admin Uploads Photo
-1. Enter Admin mode (button toggle)
-2. Click Upload on space card
-3. Select file, add caption
-4. JS uploads to Supabase Storage
-5. Creates photo record in `photos` table
-6. Links via `photo_spaces` junction
+### Admin Uploads Media
+1. Navigate to admin view or Media Library
+2. Click "Add images" or upload button
+3. Select file(s), add caption/tags
+4. Client compresses image if > 500KB
+5. Uploads to Supabase Storage (`housephotos` bucket)
+6. Creates record in `media` table with dimensions
+7. Links to space via `media_spaces` junction
+8. Supports drag-and-drop reordering of photos
 
 ### OpenClaw Answers "Who lives in Skyloft?"
 1. Discord user asks question
@@ -243,9 +300,10 @@ values ('New Space', 500, true, true, ...);
 - Uses SKILL.md for API knowledge
 - Can query/update Supabase directly
 
-### Future: Notion
-- Photos currently on Notion pages
-- Plan to migrate to Supabase Storage
+### Media Library
+- Centralized media management at `/spaces/admin/manage.html`
+- Supports tagging, filtering, and bulk operations
+- Images stored in Supabase Storage with automatic compression
 
 ## Contacts & Accounts
 
@@ -254,6 +312,24 @@ values ('New Space', 500, true, true, ...);
 | GitHub | rsonnad |
 | Supabase | (Rahul's account) |
 | DigitalOcean | (Rahul's account) |
+
+## Recent Features
+
+### Space Archiving
+Spaces can be soft-deleted via archive/unarchive. Archived spaces have `is_archived = true` and are filtered out of all views.
+
+### Admin UI Improvements
+- **Lightbox**: Click any photo to view full-size in overlay
+- **Drag-and-drop**: Reorder photos by dragging
+- **Toast notifications**: Non-blocking success/error messages
+- **Table view**: Alternative list view with thumbnails
+- **Inline tag editing**: Add tags directly in the UI
+
+### Management Dashboard
+Located at `/spaces/admin/manage.html` with tabs for:
+- **Spaces**: Space management with archive/unarchive
+- **Media**: Full media library with tagging and filtering
+- **Users**: User management (future)
 
 ## Related Documentation
 

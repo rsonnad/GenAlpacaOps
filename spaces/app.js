@@ -63,6 +63,7 @@ async function loadData() {
         start_date,
         end_date,
         desired_departure_date,
+        desired_departure_listed,
         status,
         assignment_spaces(space_id)
       `)
@@ -96,16 +97,19 @@ async function loadData() {
       // Find current assignment (active and either no end date or end date >= today)
       const currentAssignment = spaceAssignments.find(a => {
         if (a.status !== 'active') return false;
-        // Use desired_departure_date if set, otherwise end_date
-        const effectiveEndDate = a.desired_departure_date || a.end_date;
+        // Only use desired_departure_date if it's listed (published for consumers)
+        const effectiveEndDate = (a.desired_departure_listed && a.desired_departure_date) || a.end_date;
         if (!effectiveEndDate) return true;
         return new Date(effectiveEndDate) >= today;
       });
 
-      // Get effective end date (desired_departure_date takes priority)
+      // Get effective end date (only use desired_departure_date if listed)
       const getEffectiveEndDate = (assignment) => {
         if (!assignment) return null;
-        return assignment.desired_departure_date || assignment.end_date;
+        if (assignment.desired_departure_listed && assignment.desired_departure_date) {
+          return assignment.desired_departure_date;
+        }
+        return assignment.end_date;
       };
 
       // Find next assignment (starts after current ends)
