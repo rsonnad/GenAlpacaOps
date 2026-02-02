@@ -383,6 +383,14 @@
                   <option value="">All areas</option>
                 </select>
               </div>
+              <div class="filter-group">
+                <label for="bathFilter">Bathroom</label>
+                <select id="bathFilter">
+                  <option value="">Any bathroom</option>
+                  <option value="private">Private</option>
+                  <option value="shared">Shared</option>
+                </select>
+              </div>
               <button id="clearSpaceFilters" class="btn-small" style="align-self: flex-end;">Clear</button>
             </div>
           </div>
@@ -613,9 +621,11 @@
       // Space filters
       document.getElementById('searchFilter').addEventListener('input', renderSpaces);
       document.getElementById('parentFilter').addEventListener('change', renderSpaces);
+      document.getElementById('bathFilter').addEventListener('change', renderSpaces);
       document.getElementById('clearSpaceFilters').addEventListener('click', () => {
         document.getElementById('searchFilter').value = '';
         document.getElementById('parentFilter').value = '';
+        document.getElementById('bathFilter').value = '';
         renderSpaces();
       });
 
@@ -633,7 +643,7 @@
       const { data, error } = await supabase
         .from('spaces')
         .select(`
-          id, name, parent_id, can_be_dwelling, type, is_listed, monthly_rate, is_archived,
+          id, name, parent_id, can_be_dwelling, type, is_listed, monthly_rate, is_archived, bath_privacy,
           media_spaces(
             display_order,
             is_primary,
@@ -669,6 +679,7 @@
     function getFilteredSpaces() {
       const searchTerm = document.getElementById('searchFilter').value.toLowerCase().trim();
       const parentId = document.getElementById('parentFilter').value;
+      const bathPrivacy = document.getElementById('bathFilter').value;
 
       return allSpaces.filter(space => {
         // Search filter
@@ -681,6 +692,11 @@
           if (!isDescendantOf(space, parentId)) {
             return false;
           }
+        }
+
+        // Bathroom filter
+        if (bathPrivacy && space.bath_privacy !== bathPrivacy) {
+          return false;
         }
 
         return true;
