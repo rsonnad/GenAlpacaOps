@@ -74,6 +74,11 @@ async function getApplications(filters = {}) {
     `)
     .order('submitted_at', { ascending: false });
 
+  // Filter archived applications (default: exclude archived)
+  if (filters.includeArchived !== true) {
+    query = query.or('is_archived.is.null,is_archived.eq.false');
+  }
+
   // Apply filters
   if (filters.application_status) {
     if (Array.isArray(filters.application_status)) {
@@ -326,6 +331,60 @@ async function reactivateApplication(applicationId) {
       application_status: APPLICATION_STATUS.SUBMITTED,
       delay_reason: null,
       delay_revisit_date: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', applicationId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Archive an application (soft delete)
+ */
+async function archiveApplication(applicationId) {
+  const { data, error } = await supabase
+    .from('rental_applications')
+    .update({
+      is_archived: true,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', applicationId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Unarchive an application
+ */
+async function unarchiveApplication(applicationId) {
+  const { data, error } = await supabase
+    .from('rental_applications')
+    .update({
+      is_archived: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', applicationId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Toggle test flag on an application
+ */
+async function toggleTestFlag(applicationId, isTest) {
+  const { data, error } = await supabase
+    .from('rental_applications')
+    .update({
+      is_test: isTest,
       updated_at: new Date().toISOString(),
     })
     .eq('id', applicationId)
@@ -1005,6 +1064,9 @@ export const rentalService = {
   denyApplication,
   delayApplication,
   reactivateApplication,
+  archiveApplication,
+  unarchiveApplication,
+  toggleTestFlag,
 
   // Rental agreement
   updateAgreementStatus,

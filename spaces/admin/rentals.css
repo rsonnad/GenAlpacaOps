@@ -139,6 +139,17 @@
   white-space: nowrap;
 }
 
+.pipeline-card .test-badge {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: white;
+  background: #f59e0b;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 .pipeline-card .card-body {
   font-size: 0.8rem;
   color: var(--text-muted);

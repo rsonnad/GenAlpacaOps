@@ -646,6 +646,7 @@
       <div class="modal-header">
         <h2 id="rentalDetailTitle">Application Details</h2>
         <span id="rentalDetailStatus" class="status-badge"></span>
+        <span id="rentalDetailTestBadge" class="status-badge test" style="display: none; background: #f59e0b; color: white;">TEST</span>
         <button class="modal-close" id="closeRentalDetail">&times;</button>
       </div>
       <div class="modal-body">
@@ -1817,10 +1818,13 @@
         subStatus = app.agreement_status;
       }
 
+      const testBadge = app.is_test ? '<span class="test-badge">TEST</span>' : '';
+
       return `
         <div class="pipeline-card" data-id="${app.id}">
           <div class="card-header">
             <span class="applicant-name">${person.first_name || ''} ${person.last_name || ''}</span>
+            ${testBadge}
             <span class="days-ago">${days}d</span>
           </div>
           <div class="card-body">
@@ -1916,6 +1920,12 @@
       const statusBadge = document.getElementById('rentalDetailStatus');
       statusBadge.textContent = app.application_status;
       statusBadge.className = `status-badge ${app.application_status}`;
+
+      // Show test badge if applicable
+      const testBadge = document.getElementById('rentalDetailTestBadge');
+      if (testBadge) {
+        testBadge.style.display = app.is_test ? 'inline-block' : 'none';
+      }
 
       // Applicant tab
       document.getElementById('applicantName').textContent =
@@ -2052,6 +2062,11 @@
         buttons.unshift('<button class="btn-primary" onclick="approveApplication()">Approve</button>');
       }
 
+      // Add test toggle and archive buttons (always available)
+      const testLabel = app.is_test ? 'Remove Test Flag' : 'Mark as Test';
+      buttons.push(`<button class="btn-secondary btn-small" onclick="toggleTestFlag()" style="margin-left: auto;">${testLabel}</button>`);
+      buttons.push('<button class="btn-danger btn-small" onclick="archiveApplication()">Archive</button>');
+
       container.innerHTML = buttons.join('');
     }
 
@@ -2065,6 +2080,31 @@
     // =============================================
 
     window.openRentalDetail = openRentalDetail;
+
+    window.archiveApplication = async function() {
+      if (!currentApplicationId) return;
+      if (!confirm('Archive this application? It will be hidden from the pipeline.')) return;
+      try {
+        await rentalService.archiveApplication(currentApplicationId);
+        closeRentalDetail();
+        await loadApplications();
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+
+    window.toggleTestFlag = async function() {
+      if (!currentApplicationId) return;
+      try {
+        const app = allApplications.find(a => a.id === currentApplicationId);
+        const newTestValue = !app?.is_test;
+        await rentalService.toggleTestFlag(currentApplicationId, newTestValue);
+        await loadApplications();
+        openRentalDetail(currentApplicationId);
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
 
     window.startReviewApplication = async function() {
       if (!currentApplicationId) return;
