@@ -588,10 +588,10 @@ function renderCards(spacesToRender) {
     const availFromStr = space.availableFrom && space.availableFrom > new Date()
       ? formatDate(space.availableFrom)
       : 'NOW';
-    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'INDEFINITELY';
+    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'THE COWS COME HOME';
 
     const fromBadgeClass = availFromStr === 'NOW' ? 'available' : 'occupied';
-    const untilBadgeClass = availUntilStr === 'INDEFINITELY' ? 'available' : 'occupied';
+    const untilBadgeClass = availUntilStr === 'THE COWS COME HOME' ? 'available' : 'occupied';
 
     let badges = `<span class="badge ${fromBadgeClass}">Available: ${availFromStr}</span>`;
     badges += `<span class="badge ${untilBadgeClass} badge-right">Until: ${availUntilStr}</span>`;
@@ -699,7 +699,7 @@ function renderTable(spacesToRender) {
     const availFromStr = space.availableFrom && space.availableFrom > new Date()
       ? formatDate(space.availableFrom)
       : 'NOW';
-    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'INDEFINITELY';
+    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'THE COWS COME HOME';
 
     let statusBadge = isOccupied
       ? '<span class="badge occupied">Occupied</span>'

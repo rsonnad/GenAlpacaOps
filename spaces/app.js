@@ -310,10 +310,10 @@ function renderCards(spacesToRender) {
 
     // Availability display
     const availFromStr = space.isAvailable ? 'NOW' : (space.availableFrom ? formatDate(space.availableFrom) : 'TBD');
-    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'INDEFINITELY';
+    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'THE COWS COME HOME';
 
     const fromBadgeClass = space.isAvailable ? 'available' : 'occupied';
-    const untilBadgeClass = availUntilStr === 'INDEFINITELY' ? 'available' : 'occupied';
+    const untilBadgeClass = availUntilStr === 'THE COWS COME HOME' ? 'available' : 'occupied';
 
     // Location/parent display
     const locationText = space.location || (space.parent ? space.parent.name : '');
@@ -370,7 +370,7 @@ function renderTable(spacesToRender) {
     const beds = getBedSummary(space);
 
     const availFromStr = space.isAvailable ? 'NOW' : (space.availableFrom ? formatDate(space.availableFrom) : 'TBD');
-    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'INDEFINITELY';
+    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'THE COWS COME HOME';
     const fromBadgeClass = space.isAvailable ? 'available' : 'occupied';
 
     return `
@@ -479,7 +479,7 @@ function displaySpaceDetail(space) {
 
   // Availability info
   const availFromStr = space.isAvailable ? 'Now' : (space.availableFrom ? formatDate(space.availableFrom) : 'TBD');
-  const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'Indefinitely';
+  const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'the cows come home';
 
   document.getElementById('spaceDetailBody').innerHTML = `
     ${photosHtml}
