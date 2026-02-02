@@ -46,7 +46,7 @@ async function loadData(retryCount = 0) {
       .select(`
         id, name, description, location, monthly_rate,
         sq_footage, bath_privacy, bath_fixture,
-        beds_king, beds_queen, beds_double, beds_twin, beds_folding, beds_trifold,
+        beds_king, beds_queen, beds_double, beds_twin, beds_folding,
         min_residents, max_residents, is_listed, is_secret, can_be_dwelling,
         parent:parent_id(name),
         space_amenities(amenity:amenity_id(name)),
@@ -248,11 +248,18 @@ function getFilteredSpaces() {
     });
   }
 
-  // Sort: available first, then by monthly_rate descending, then by name
+  // Sort: available within 30 days first, then by monthly_rate descending, then by name
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const thirtyDaysFromNow = new Date(today);
+  thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
   filtered.sort((a, b) => {
-    // Available spaces come first
-    if (a.isAvailable && !b.isAvailable) return -1;
-    if (!a.isAvailable && b.isAvailable) return 1;
+    // Spaces available within the next 30 days come first
+    const aAvailSoon = a.availableFrom && a.availableFrom <= thirtyDaysFromNow;
+    const bAvailSoon = b.availableFrom && b.availableFrom <= thirtyDaysFromNow;
+    if (aAvailSoon && !bAvailSoon) return -1;
+    if (!aAvailSoon && bAvailSoon) return 1;
 
     // Then sort by monthly_rate descending (highest first)
     const aRate = a.monthly_rate || 0;
@@ -358,6 +365,7 @@ function renderCards(spacesToRender) {
             <div>
               <div class="card-title">${space.name}</div>
               ${locationText ? `<div class="card-subtitle">in ${locationText}</div>` : ''}
+              ${space.description ? `<div class="card-description">${space.description}</div>` : ''}
             </div>
           </div>
           <div class="card-details">
@@ -390,9 +398,21 @@ function renderTable(spacesToRender) {
     const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'The Cows Come Home';
     const fromBadgeClass = space.isAvailable ? 'available' : 'occupied';
 
+    // Thumbnail
+    const thumbnail = space.photos.length > 0
+      ? `<img src="${space.photos[0].url}" alt="" class="table-thumbnail" onclick="event.stopPropagation(); openLightbox('${space.photos[0].url}')" style="cursor: zoom-in;">`
+      : `<div class="table-thumbnail-placeholder"></div>`;
+
+    // Description (truncated)
+    const description = space.description
+      ? (space.description.length > 80 ? space.description.substring(0, 80) + '...' : space.description)
+      : '-';
+
     return `
       <tr onclick="showSpaceDetail('${space.id}')" style="cursor:pointer;">
+        <td class="td-thumbnail">${thumbnail}</td>
         <td><strong>${space.name}</strong>${space.location ? `<br><small style="color:var(--text-muted)">in ${space.location}</small>` : (space.parent ? `<br><small style="color:var(--text-muted)">in ${space.parent.name}</small>` : '')}</td>
+        <td class="td-description">${description}</td>
         <td>${space.monthly_rate ? `$${space.monthly_rate}/mo` : '-'}</td>
         <td>${space.sq_footage || '-'}</td>
         <td>${beds || '-'}</td>
@@ -413,7 +433,6 @@ function getBedSummary(space) {
   if (space.beds_double) beds.push(`${space.beds_double} double`);
   if (space.beds_twin) beds.push(`${space.beds_twin} twin`);
   if (space.beds_folding) beds.push(`${space.beds_folding} folding`);
-  if (space.beds_trifold) beds.push(`${space.beds_trifold} trifold`);
   return beds.join(', ');
 }
 
@@ -436,7 +455,7 @@ async function fetchAndShowSpace(spaceId) {
       .select(`
         id, name, description, location, monthly_rate,
         sq_footage, bath_privacy, bath_fixture,
-        beds_king, beds_queen, beds_double, beds_twin, beds_folding, beds_trifold,
+        beds_king, beds_queen, beds_double, beds_twin, beds_folding,
         min_residents, max_residents, is_listed, is_secret,
         parent:parent_id(name),
         space_amenities(amenity:amenity_id(name)),
@@ -538,5 +557,43 @@ function displaySpaceDetail(space) {
   spaceDetailModal.classList.remove('hidden');
 }
 
+// Lightbox functionality
+function openLightbox(imageUrl) {
+  const lightbox = document.getElementById('imageLightbox');
+  const lightboxImage = document.getElementById('lightboxImage');
+  if (lightbox && lightboxImage) {
+    lightboxImage.src = imageUrl;
+    lightbox.classList.remove('hidden');
+  }
+}
+
+function closeLightbox() {
+  const lightbox = document.getElementById('imageLightbox');
+  if (lightbox) {
+    lightbox.classList.add('hidden');
+    document.getElementById('lightboxImage').src = '';
+  }
+}
+
+// Lightbox event listeners
+document.addEventListener('DOMContentLoaded', () => {
+  const lightbox = document.getElementById('imageLightbox');
+  if (lightbox) {
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox || e.target.classList.contains('lightbox-close')) {
+        closeLightbox();
+      }
+    });
+  }
+
+  // ESC key closes lightbox
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeLightbox();
+    }
+  });
+});
+
 // Make functions globally accessible for onclick handlers
 window.showSpaceDetail = showSpaceDetail;
+window.openLightbox = openLightbox;
