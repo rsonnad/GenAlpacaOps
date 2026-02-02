@@ -206,6 +206,19 @@ body.is-admin .admin-only {
   color: white;
 }
 
+/* Add more link in fieldset legend */
+.add-more-link {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+  margin-left: 0.75rem;
+}
+
+.add-more-link:hover {
+  text-decoration: underline;
+}
+
 /* Edit Photos Grid */
 .edit-photos-grid {
   display: grid;

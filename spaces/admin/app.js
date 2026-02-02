@@ -326,6 +326,15 @@ function setupEventListeners() {
   editSpaceModal.addEventListener('click', (e) => {
     if (e.target === editSpaceModal) editSpaceModal.classList.add('hidden');
   });
+
+  // Add more photos link in edit modal
+  document.getElementById('addMorePhotosLink')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const spaceId = document.getElementById('editSpaceId').value;
+    if (spaceId) {
+      openPhotoUpload(spaceId);
+    }
+  });
 }
 
 // View management
