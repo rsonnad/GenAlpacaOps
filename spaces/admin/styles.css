@@ -958,3 +958,24 @@ body.is-admin .admin-only {
     width: 100%;
   }
 }
+
+/* Table thumbnails */
+.table-thumbnail {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: var(--radius);
+}
+
+.table-thumbnail-placeholder {
+  width: 50px;
+  height: 50px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  border: 1px dashed var(--border);
+}
+
+.td-thumbnail {
+  width: 50px;
+  padding: 0.25rem !important;
+}

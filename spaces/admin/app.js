@@ -9,7 +9,7 @@ let assignments = [];
 let photoRequests = [];
 let authState = null;
 let currentView = 'card';
-let currentSort = { column: 'availability', direction: 'asc' };
+let currentSort = { column: 'monthly_rate', direction: 'desc' };
 let allTags = [];
 let storageUsage = null;
 
@@ -423,8 +423,12 @@ function getFilteredSpaces() {
       bVal = b.currentAssignment?.person?.first_name || '';
     }
 
-    if (aVal === null || aVal === undefined) aVal = '';
-    if (bVal === null || bVal === undefined) bVal = '';
+    // Handle nulls - put them at the end regardless of sort direction
+    const aNull = aVal === null || aVal === undefined || aVal === '';
+    const bNull = bVal === null || bVal === undefined || bVal === '';
+    if (aNull && !bNull) return 1;  // a goes to end
+    if (!aNull && bNull) return -1; // b goes to end
+    if (aNull && bNull) return a.name.localeCompare(b.name); // both null, sort by name
 
     if (typeof aVal === 'string') {
       aVal = aVal.toLowerCase();
@@ -433,7 +437,7 @@ function getFilteredSpaces() {
 
     if (aVal < bVal) return currentSort.direction === 'asc' ? -1 : 1;
     if (aVal > bVal) return currentSort.direction === 'asc' ? 1 : -1;
-    return 0;
+    return a.name.localeCompare(b.name); // equal values, sort by name
   });
 
   return filtered;
@@ -599,8 +603,13 @@ function renderTable(spacesToRender) {
     if (space.is_secret) statusBadge += ' <span class="badge secret">Secret</span>';
     else if (!space.is_listed) statusBadge += ' <span class="badge unlisted">Unlisted</span>';
 
+    const thumbnail = space.photos.length > 0
+      ? `<img src="${space.photos[0].url}" alt="" class="table-thumbnail">`
+      : `<div class="table-thumbnail-placeholder"></div>`;
+
     return `
       <tr onclick="showSpaceDetail('${space.id}')" style="cursor:pointer;">
+        <td class="td-thumbnail">${thumbnail}</td>
         <td><strong>${space.name}</strong>${space.location ? `<br><small style="color:var(--text-muted)">in ${space.location}</small>` : (space.parent ? `<br><small style="color:var(--text-muted)">in ${space.parent.name}</small>` : '')}</td>
         <td>${space.monthly_rate ? `$${space.monthly_rate}/mo` : '-'}</td>
         <td>${space.sq_footage || '-'}</td>
