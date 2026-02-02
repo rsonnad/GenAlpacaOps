@@ -721,24 +721,18 @@ function showSpaceDetail(spaceId) {
   let photosHtml = '';
   if (space.photos.length) {
     const photoItems = space.photos.map((p, idx) => {
-      const orderControls = isAdmin ? `
-        <div class="photo-order-controls">
-          <button onclick="event.stopPropagation(); movePhoto('${space.id}', '${p.id}', 'up')" title="Move up" ${idx === 0 ? 'disabled' : ''}>↑</button>
-          <button onclick="event.stopPropagation(); movePhoto('${space.id}', '${p.id}', 'down')" title="Move down" ${idx === space.photos.length - 1 ? 'disabled' : ''}>↓</button>
-          <button class="btn-remove" onclick="event.stopPropagation(); removePhotoFromSpace('${space.id}', '${p.id}')" title="Remove from space">×</button>
-        </div>
-      ` : '';
       return `
-        <div class="detail-photo">
+        <div class="detail-photo" onclick="openLightbox('${p.url}')" style="cursor: zoom-in;">
           <img src="${p.url}" alt="${p.caption || space.name}">
-          ${orderControls}
         </div>
       `;
     }).join('');
 
+    const editLink = isAdmin ? `<a href="#" class="edit-photos-link" onclick="event.preventDefault(); openEditSpace('${space.id}'); spaceDetailModal.classList.add('hidden');">Edit photos</a>` : '';
+
     photosHtml = `
       <div class="detail-section detail-photos">
-        <h3>Photos</h3>
+        <h3>Photos ${editLink}</h3>
         <div class="detail-photos-grid">
           ${photoItems}
         </div>
