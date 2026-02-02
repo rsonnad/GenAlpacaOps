@@ -897,10 +897,12 @@
     </div>
   </main>
 
-  <script>
-    // Supabase config
-    const SUPABASE_URL = 'https://aphrrfprbixmhissnjfn.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwaHJyZnByYml4bWhpc3NuamZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5MzA0MjUsImV4cCI6MjA4NTUwNjQyNX0.yYkdQIq97GQgxK7yT2OQEPi5Tt-a7gM45aF8xjSD6wk';
+  <!-- Load Supabase library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module">
+    // Import shared Supabase config (single source of truth)
+    import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../../shared/supabase.js';
+    const SUPABASE_KEY = SUPABASE_ANON_KEY;
 
     // Elements
     const form = document.getElementById('eventRequestForm');
