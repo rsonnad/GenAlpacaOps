@@ -2,6 +2,40 @@
 import { supabase } from '../../shared/supabase.js';
 import { initAuth, getAuthState, signOut, onAuthStateChange } from '../../shared/auth.js';
 
+// =============================================
+// TOAST NOTIFICATIONS
+// =============================================
+
+function showToast(message, type = 'info', duration = 4000) {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+
+  const icons = {
+    success: '<svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
+    error: '<svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>',
+    warning: '<svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>',
+    info: '<svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>'
+  };
+
+  toast.innerHTML = `
+    <span class="toast-icon">${icons[type] || icons.info}</span>
+    <span class="toast-message">${message}</span>
+    <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+  `;
+
+  container.appendChild(toast);
+
+  if (duration > 0) {
+    setTimeout(() => {
+      toast.classList.add('toast-exit');
+      setTimeout(() => toast.remove(), 200);
+    }, duration);
+  }
+}
+
 let authState = null;
 let users = [];
 let invitations = [];
@@ -120,21 +154,21 @@ async function loadInvitations() {
 async function inviteUser(email, role) {
   // Validate email
   if (!email || !email.includes('@')) {
-    alert('Please enter a valid email address');
+    showToast('Please enter a valid email address', 'warning');
     return;
   }
 
   // Check if user already exists
   const existing = users.find(u => u.email.toLowerCase() === email);
   if (existing) {
-    alert('This user already has an account');
+    showToast('This user already has an account', 'warning');
     return;
   }
 
   // Check if invitation already pending
   const pendingInvite = invitations.find(i => i.email.toLowerCase() === email);
   if (pendingInvite) {
-    alert('An invitation is already pending for this email');
+    showToast('An invitation is already pending for this email', 'warning');
     return;
   }
 
@@ -159,7 +193,7 @@ async function inviteUser(email, role) {
 
   } catch (error) {
     console.error('Error inviting user:', error);
-    alert('Failed to send invitation: ' + error.message);
+    showToast('Failed to send invitation: ' + error.message, 'error');
   }
 }
 
@@ -192,7 +226,7 @@ function copyInviteText() {
   const textarea = document.getElementById('inviteTextContent');
   textarea.select();
   document.execCommand('copy');
-  alert('Invitation text copied to clipboard!');
+  showToast('Invitation text copied to clipboard', 'success');
 }
 
 function closeInviteModal() {
@@ -210,10 +244,11 @@ async function revokeInvitation(invitationId) {
 
     await loadInvitations();
     render();
+    showToast('Invitation revoked', 'success');
 
   } catch (error) {
     console.error('Error revoking invitation:', error);
-    alert('Failed to revoke: ' + error.message);
+    showToast('Failed to revoke: ' + error.message, 'error');
   }
 }
 
@@ -228,10 +263,11 @@ async function updateUserRole(userId, newRole) {
 
     await loadUsers();
     render();
+    showToast('Role updated', 'success');
 
   } catch (error) {
     console.error('Error updating role:', error);
-    alert('Failed to update role: ' + error.message);
+    showToast('Failed to update role: ' + error.message, 'error');
   }
 }
 
@@ -248,10 +284,11 @@ async function removeUser(userId) {
 
     await loadUsers();
     render();
+    showToast('User removed', 'success');
 
   } catch (error) {
     console.error('Error removing user:', error);
-    alert('Failed to remove user: ' + error.message);
+    showToast('Failed to remove user: ' + error.message, 'error');
   }
 }
 

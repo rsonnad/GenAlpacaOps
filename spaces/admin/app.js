@@ -1779,6 +1779,16 @@ function openEditSpace(spaceId) {
   document.getElementById('editSpaceName').textContent = space.name;
   document.getElementById('editSpaceId').value = spaceId;
 
+  // Populate parent space dropdown
+  const parentSelect = document.getElementById('editParentSpace');
+  if (parentSelect) {
+    // Get all spaces except the current one (to avoid circular reference)
+    const possibleParents = spaces.filter(s => s.id !== spaceId && !s.is_archived);
+    parentSelect.innerHTML = '<option value="">None (top level)</option>' +
+      possibleParents.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    parentSelect.value = space.parent_id || '';
+  }
+
   // Populate form fields
   document.getElementById('editName').value = space.name || '';
   document.getElementById('editLocation').value = space.location || '';
@@ -1951,6 +1961,7 @@ async function handleEditSpaceSubmit() {
 
     const updates = {
       name: name,
+      parent_id: getVal('editParentSpace') || null,
       location: getVal('editLocation'),
       type: getVal('editType'),
       description: getVal('editDescription'),
