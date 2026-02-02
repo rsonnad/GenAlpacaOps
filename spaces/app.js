@@ -306,7 +306,7 @@ function renderCards(spacesToRender) {
   cardView.innerHTML = spacesToRender.map(space => {
     const photo = space.photos[0];
     const beds = getBedSummary(space);
-    const bathText = space.bath_privacy ? `${space.bath_privacy} bath` : '';
+    const bathText = space.bath_privacy || '';
 
     // Availability display
     const availFromStr = space.isAvailable ? 'NOW' : (space.availableFrom ? formatDate(space.availableFrom) : 'TBD');
@@ -314,6 +314,9 @@ function renderCards(spacesToRender) {
 
     const fromBadgeClass = space.isAvailable ? 'available' : 'occupied';
     const untilBadgeClass = availUntilStr === 'INDEFINITELY' ? 'available' : 'occupied';
+
+    // Location/parent display
+    const locationText = space.location || (space.parent ? space.parent.name : '');
 
     return `
       <div class="space-card" onclick="showSpaceDetail('${space.id}')">
@@ -334,22 +337,28 @@ function renderCards(spacesToRender) {
           </div>
         </div>
         <div class="card-body">
-          <div class="card-title">${space.name}</div>
-          ${space.location ? `<div class="card-parent">in ${space.location}</div>` : (space.parent ? `<div class="card-parent">in ${space.parent.name}</div>` : '')}
-          <div class="card-details">
-            ${space.sq_footage ? `<span>${space.sq_footage} sq ft</span>` : ''}
-            ${beds ? `<span>${beds}</span>` : ''}
-            ${bathText ? `<span>${bathText}</span>` : ''}
-          </div>
-          <div class="card-price">
-            ${space.monthly_rate ? `$${space.monthly_rate}<span>/mo</span>` : '<span>Contact for rates</span>'}
-          </div>
-          ${space.amenities.length ? `
-            <div class="card-amenities">
-              ${space.amenities.slice(0, 4).map(a => `<span class="amenity-tag">${a}</span>`).join('')}
-              ${space.amenities.length > 4 ? `<span class="amenity-tag">+${space.amenities.length - 4}</span>` : ''}
+          <div class="card-header">
+            <div>
+              <div class="card-title">${space.name}</div>
+              ${locationText ? `<div class="card-subtitle">in ${locationText}</div>` : ''}
             </div>
-          ` : ''}
+          </div>
+          <div class="card-details">
+            ${space.sq_footage ? `<span class="detail-item"><span class="detail-icon">📐</span>${space.sq_footage} sq ft</span>` : ''}
+            ${beds ? `<span class="detail-item"><span class="detail-icon">🛏️</span>${beds}</span>` : ''}
+            ${bathText ? `<span class="detail-item"><span class="detail-icon">🚿</span>${bathText} bath</span>` : ''}
+          </div>
+          <div class="card-footer">
+            <div class="card-price">
+              ${space.monthly_rate ? `$${space.monthly_rate}<span>/mo</span>` : '<span class="contact-text">Contact for rates</span>'}
+            </div>
+            ${space.amenities.length ? `
+              <div class="card-amenities">
+                ${space.amenities.slice(0, 3).map(a => `<span class="amenity-tag">${a}</span>`).join('')}
+                ${space.amenities.length > 3 ? `<span class="amenity-tag amenity-more">+${space.amenities.length - 3}</span>` : ''}
+              </div>
+            ` : ''}
+          </div>
         </div>
       </div>
     `;
