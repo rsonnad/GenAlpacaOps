@@ -1831,12 +1831,7 @@
 
             // Add click handlers
             container.querySelectorAll('.pipeline-card').forEach(card => {
-              card.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = card.dataset.id;
-                console.log('Pipeline card clicked, id:', id);
-                openRentalDetail(id);
-              });
+              card.addEventListener('click', () => openRentalDetail(card.dataset.id));
             });
           }
         }
@@ -1943,17 +1938,9 @@
     // =============================================
 
     async function openRentalDetail(applicationId) {
-      console.log('openRentalDetail called with:', applicationId);
-      console.log('allApplications count:', allApplications.length);
-      console.log('allApplications ids:', allApplications.map(a => a.id));
-
       currentApplicationId = applicationId;
       const app = allApplications.find(a => a.id === applicationId);
-      console.log('Found app:', app);
-      if (!app) {
-        console.error('Application not found for id:', applicationId);
-        return;
-      }
+      if (!app) return;
 
       const person = app.person || {};
       const desiredSpace = app.desired_space;
