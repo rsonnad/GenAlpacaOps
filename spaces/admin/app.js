@@ -158,7 +158,6 @@ function updateRoleUI() {
 async function loadData() {
   try {
     // Load spaces with all related data (using new media tables)
-    // Filter out archived spaces by default
     const { data: spacesData, error: spacesError } = await supabase
       .from('spaces')
       .select(`
@@ -180,7 +179,6 @@ async function loadData() {
           )
         )
       `)
-      .or('is_archived.is.null,is_archived.eq.false')
       .order('monthly_rate', { ascending: false, nullsFirst: false })
       .order('name');
 
@@ -213,7 +211,8 @@ async function loadData() {
 
     if (requestsError) throw requestsError;
 
-    spaces = spacesData || [];
+    // Filter out archived spaces (client-side for compatibility if column doesn't exist)
+    spaces = (spacesData || []).filter(s => !s.is_archived);
     assignments = assignmentsData || [];
     photoRequests = requestsData || [];
 

@@ -455,11 +455,10 @@
     let archivedSpaces = [];
 
     async function loadSpaces() {
-      // Load active spaces
+      // Load all spaces (filter archived client-side for compatibility)
       const { data, error } = await supabase
         .from('spaces')
         .select('id, name, parent_id, can_be_dwelling, is_listed, monthly_rate, is_archived')
-        .or('is_archived.is.null,is_archived.eq.false')
         .order('name');
 
       if (error) {
@@ -467,18 +466,11 @@
         return;
       }
 
-      allSpaces = data || [];
+      const allData = data || [];
 
-      // Load archived spaces
-      const { data: archived, error: archiveError } = await supabase
-        .from('spaces')
-        .select('id, name, parent_id, can_be_dwelling, is_listed, monthly_rate, is_archived')
-        .eq('is_archived', true)
-        .order('name');
-
-      if (!archiveError) {
-        archivedSpaces = archived || [];
-      }
+      // Split into active and archived (is_archived column may not exist yet)
+      allSpaces = allData.filter(s => !s.is_archived);
+      archivedSpaces = allData.filter(s => s.is_archived === true);
 
       renderSpaces();
       renderArchivedSpaces();
