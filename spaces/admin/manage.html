@@ -317,6 +317,9 @@
   </style>
 </head>
 <body>
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
   <!-- Lightbox -->
   <div id="lightboxOverlay" class="lightbox-overlay hidden" onclick="closeLightbox()">
     <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
@@ -948,6 +951,39 @@
     import { rentalService } from '../../shared/rental-service.js';
 
     // =============================================
+    // TOAST NOTIFICATIONS
+    // =============================================
+    function showToast(message, type = 'info', duration = 4000) {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+
+      const icons = {
+        success: '<svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
+        error: '<svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>',
+        warning: '<svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>',
+        info: '<svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>'
+      };
+
+      toast.innerHTML = `
+        <span class="toast-icon">${icons[type] || icons.info}</span>
+        <span class="toast-message">${message}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+      `;
+
+      container.appendChild(toast);
+
+      if (duration > 0) {
+        setTimeout(() => {
+          toast.classList.add('toast-exit');
+          setTimeout(() => toast.remove(), 200);
+        }, duration);
+      }
+    }
+
+    // =============================================
     // STATE
     // =============================================
     let authState = null;
@@ -1238,7 +1274,7 @@
       const parentId = document.getElementById('newSpaceParent').value || null;
 
       if (!name) {
-        alert('Name is required');
+        showToast('Name is required', 'warning');
         return;
       }
 
@@ -1248,14 +1284,14 @@
         .select();
 
       if (error) {
-        alert('Error creating space: ' + error.message);
+        showToast('Error creating space: ' + error.message, 'error');
         return;
       }
 
       document.getElementById('newSpaceName').value = '';
       document.getElementById('newSpaceParent').value = '';
       loadSpaces();
-      alert('Space created! You can now edit it from the main admin page.');
+      showToast('Space created! You can now edit it from the main admin page.', 'success');
     }
 
     window.unarchiveSpace = async function(id, name) {
@@ -1267,10 +1303,11 @@
         .eq('id', id);
 
       if (error) {
-        alert('Error restoring space: ' + error.message);
+        showToast('Error restoring space: ' + error.message, 'error');
         return;
       }
       loadSpaces();
+      showToast('Space restored', 'success');
     };
 
     window.deleteSpace = async function(id, name) {
@@ -1278,10 +1315,11 @@
 
       const { error } = await supabase.from('spaces').delete().eq('id', id);
       if (error) {
-        alert('Error deleting space: ' + error.message);
+        showToast('Error deleting space: ' + error.message, 'error');
         return;
       }
       loadSpaces();
+      showToast('Space deleted', 'success');
     };
 
     // =============================================
@@ -1517,7 +1555,7 @@
 
       const { error } = await supabase.from('media').update({ caption, category }).eq('id', currentMediaId);
       if (error) {
-        alert('Failed to save: ' + error.message);
+        showToast('Failed to save: ' + error.message, 'error');
         return;
       }
 
@@ -1550,7 +1588,7 @@
 
       const result = await mediaService.delete(currentMediaId);
       if (!result.success) {
-        alert('Failed to delete: ' + result.error);
+        showToast('Failed to delete: ' + result.error, 'error');
         return;
       }
 
@@ -1597,7 +1635,7 @@
       const tagsToRemove = Array.from(document.querySelectorAll('#bulkRemoveTags input[name="bulkRemoveTagsTag"]:checked')).map(cb => cb.value);
 
       if (tagsToAdd.length === 0 && tagsToRemove.length === 0) {
-        alert('Please select at least one tag to add or remove.');
+        showToast('Please select at least one tag to add or remove', 'warning');
         return;
       }
 
@@ -1799,7 +1837,12 @@
 
             // Add click handlers
             container.querySelectorAll('.pipeline-card').forEach(card => {
-              card.addEventListener('click', () => openRentalDetail(card.dataset.id));
+              card.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = card.dataset.id;
+                console.log('Pipeline card clicked, id:', id);
+                openRentalDetail(id);
+              });
             });
           }
         }
@@ -1906,9 +1949,17 @@
     // =============================================
 
     async function openRentalDetail(applicationId) {
+      console.log('openRentalDetail called with:', applicationId);
+      console.log('allApplications count:', allApplications.length);
+      console.log('allApplications ids:', allApplications.map(a => a.id));
+
       currentApplicationId = applicationId;
       const app = allApplications.find(a => a.id === applicationId);
-      if (!app) return;
+      console.log('Found app:', app);
+      if (!app) {
+        console.error('Application not found for id:', applicationId);
+        return;
+      }
 
       const person = app.person || {};
       const desiredSpace = app.desired_space;
@@ -2088,8 +2139,9 @@
         await rentalService.archiveApplication(currentApplicationId);
         closeRentalDetail();
         await loadApplications();
+        showToast('Application archived', 'success');
       } catch (error) {
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
       }
     };
 
@@ -2101,8 +2153,9 @@
         await rentalService.toggleTestFlag(currentApplicationId, newTestValue);
         await loadApplications();
         openRentalDetail(currentApplicationId);
+        showToast(newTestValue ? 'Marked as test' : 'Unmarked as test', 'success');
       } catch (error) {
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
       }
     };
 
@@ -2113,7 +2166,7 @@
         await loadApplications();
         openRentalDetail(currentApplicationId);
       } catch (error) {
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
       }
     };
 
@@ -2129,7 +2182,7 @@
       const securityDeposit = parseFloat(document.getElementById('termSecurityDeposit').value) || 0;
 
       if (!spaceId || !rate || !moveInDate) {
-        alert('Please fill in Space, Rate, and Move-in Date on the Terms tab.');
+        showToast('Please fill in Space, Rate, and Move-in Date on the Terms tab', 'warning');
         switchDetailTab('terms');
         return;
       }
@@ -2146,8 +2199,9 @@
         });
         await loadApplications();
         openRentalDetail(currentApplicationId);
+        showToast('Application approved', 'success');
       } catch (error) {
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
       }
     };
 
@@ -2158,8 +2212,9 @@
         await rentalService.denyApplication(currentApplicationId, reason);
         await loadApplications();
         closeRentalDetail();
+        showToast('Application denied', 'success');
       } catch (error) {
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
       }
     };
 
@@ -2170,8 +2225,9 @@
         await rentalService.delayApplication(currentApplicationId, reason);
         await loadApplications();
         closeRentalDetail();
+        showToast('Application delayed', 'success');
       } catch (error) {
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
       }
     };
 
@@ -2189,8 +2245,9 @@
         await rentalService.updateAgreementStatus(currentApplicationId, 'sent');
         await loadApplications();
         openRentalDetail(currentApplicationId);
+        showToast('Agreement marked as sent', 'success');
       } catch (error) {
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
       }
     };
 
@@ -2200,8 +2257,9 @@
         await rentalService.updateAgreementStatus(currentApplicationId, 'signed');
         await loadApplications();
         openRentalDetail(currentApplicationId);
+        showToast('Agreement marked as signed', 'success');
       } catch (error) {
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
       }
     };
 
@@ -2211,8 +2269,9 @@
         await rentalService.confirmDeposit(currentApplicationId);
         await loadApplications();
         openRentalDetail(currentApplicationId);
+        showToast('Deposit confirmed', 'success');
       } catch (error) {
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
       }
     };
 
@@ -2223,9 +2282,9 @@
         await rentalService.confirmMoveIn(currentApplicationId);
         await loadApplications();
         closeRentalDetail();
-        alert('Move-in confirmed! Assignment created.');
+        showToast('Move-in confirmed! Assignment created.', 'success');
       } catch (error) {
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
       }
     };
 
@@ -2239,7 +2298,7 @@
       const spaceId = document.getElementById('newAppSpaceId').value || null;
 
       if (!personId) {
-        alert('Please select a person.');
+        showToast('Please select a person', 'warning');
         return;
       }
 
@@ -2250,9 +2309,9 @@
         await loadApplications();
         document.getElementById('newAppPersonId').value = '';
         document.getElementById('newAppSpaceId').value = '';
-        alert('Application created!');
+        showToast('Application created', 'success');
       } catch (error) {
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
       }
     }
 
@@ -2300,7 +2359,7 @@
       };
 
       if (!data.name) {
-        alert('Name is required.');
+        showToast('Name is required', 'warning');
         return;
       }
 
@@ -2308,8 +2367,9 @@
         await rentalService.savePaymentMethod(data);
         await loadPaymentMethods();
         closePaymentMethodModal();
+        showToast('Payment method saved', 'success');
       } catch (error) {
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
       }
     }
 
@@ -2322,8 +2382,9 @@
         await rentalService.deletePaymentMethod(id);
         await loadPaymentMethods();
         closePaymentMethodModal();
+        showToast('Payment method deleted', 'success');
       } catch (error) {
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
       }
     }
 
@@ -2357,7 +2418,7 @@
       const transactionId = document.getElementById('depositTransactionId').value.trim() || null;
 
       if (!method) {
-        alert('Please select a payment method.');
+        showToast('Please select a payment method', 'warning');
         return;
       }
 
@@ -2370,8 +2431,9 @@
         await loadApplications();
         closeRecordDepositModal();
         openRentalDetail(currentApplicationId);
+        showToast('Deposit recorded', 'success');
       } catch (error) {
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
       }
     }
 
@@ -2387,9 +2449,9 @@
       const text = document.getElementById('agreementDataPre').textContent;
       try {
         await navigator.clipboard.writeText(text);
-        alert('Agreement data copied to clipboard!');
+        showToast('Agreement data copied to clipboard', 'success');
       } catch (e) {
-        alert('Failed to copy. Please select and copy manually.');
+        showToast('Failed to copy. Please select and copy manually.', 'error');
       }
     }
 
@@ -2398,9 +2460,9 @@
       try {
         const message = await rentalService.generateDepositRequestMessage(currentApplicationId);
         await navigator.clipboard.writeText(message);
-        alert('Payment instructions copied to clipboard!');
+        showToast('Payment instructions copied to clipboard', 'success');
       } catch (e) {
-        alert('Failed to copy: ' + e.message);
+        showToast('Failed to copy: ' + e.message, 'error');
       }
     }
 
@@ -2410,8 +2472,9 @@
         await rentalService.requestDeposit(currentApplicationId);
         await loadApplications();
         openRentalDetail(currentApplicationId);
+        showToast('Deposit requested', 'success');
       } catch (error) {
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
       }
     }
 
@@ -2449,8 +2512,9 @@
           await rentalService.updateAgreementStatus(currentApplicationId, 'generated', url || null);
           await loadApplications();
           openRentalDetail(currentApplicationId);
+          showToast('Agreement marked as generated', 'success');
         } catch (error) {
-          alert('Error: ' + error.message);
+          showToast('Error: ' + error.message, 'error');
         }
       });
       document.getElementById('markAgreementSent')?.addEventListener('click', markAgreementSent);
