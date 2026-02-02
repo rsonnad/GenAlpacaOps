@@ -335,6 +335,33 @@ function setupEventListeners() {
       openPhotoUpload(spaceId);
     }
   });
+
+  // Image lightbox
+  const lightbox = document.getElementById('imageLightbox');
+  const lightboxImage = document.getElementById('lightboxImage');
+
+  lightbox?.addEventListener('click', (e) => {
+    if (e.target === lightbox || e.target.classList.contains('lightbox-close')) {
+      lightbox.classList.add('hidden');
+    }
+  });
+
+  // Close lightbox on escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !lightbox?.classList.contains('hidden')) {
+      lightbox.classList.add('hidden');
+    }
+  });
+}
+
+// Open image in lightbox
+function openLightbox(imageUrl) {
+  const lightbox = document.getElementById('imageLightbox');
+  const lightboxImage = document.getElementById('lightboxImage');
+  if (lightbox && lightboxImage) {
+    lightboxImage.src = imageUrl;
+    lightbox.classList.remove('hidden');
+  }
 }
 
 // View management
@@ -1593,7 +1620,7 @@ function renderEditPhotos(space) {
     return `
       <div class="edit-photo-item" draggable="true" data-photo-id="${photo.id}" data-space-id="${space.id}">
         <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
-        <img src="${photo.url}" alt="${photo.caption || 'Photo ' + (idx + 1)}">
+        <img src="${photo.url}" alt="${photo.caption || 'Photo ' + (idx + 1)}" onclick="openLightbox('${photo.url}')" style="cursor: zoom-in;">
         ${tagsHtml}
         <span class="photo-order">#${idx + 1} ${primaryBadge}</span>
         <button type="button" class="btn-remove-photo" onclick="event.preventDefault(); event.stopPropagation(); removePhotoFromSpace('${space.id}', '${photo.id}')" title="Remove">×</button>
@@ -1882,3 +1909,4 @@ window.updateFileCaption = updateFileCaption;
 window.showAddTagForm = showAddTagForm;
 window.hideAddTagForm = hideAddTagForm;
 window.createNewTag = createNewTag;
+window.openLightbox = openLightbox;
