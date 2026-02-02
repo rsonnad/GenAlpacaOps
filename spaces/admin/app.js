@@ -468,18 +468,18 @@ function getFilteredSpaces() {
     filtered = filtered.filter(s => s.is_secret);
   }
 
-  // Sort
+  // Sort: always put available spaces first, then apply selected sort
   filtered.sort((a, b) => {
+    // Primary sort: available spaces first (same as public view)
+    const aAvailable = !a.currentAssignment;
+    const bAvailable = !b.currentAssignment;
+    if (aAvailable && !bAvailable) return -1;
+    if (!aAvailable && bAvailable) return 1;
+
+    // Secondary sort based on currentSort column
     if (currentSort.column === 'availability') {
       const aEndDate = a.currentAssignment?.end_date ? new Date(a.currentAssignment.end_date) : null;
       const bEndDate = b.currentAssignment?.end_date ? new Date(b.currentAssignment.end_date) : null;
-      const aOccupied = !!a.currentAssignment;
-      const bOccupied = !!b.currentAssignment;
-
-      if (!aOccupied && bOccupied) return currentSort.direction === 'asc' ? -1 : 1;
-      if (aOccupied && !bOccupied) return currentSort.direction === 'asc' ? 1 : -1;
-
-      if (!aOccupied && !bOccupied) return a.name.localeCompare(b.name);
 
       if (aEndDate && bEndDate) {
         if (aEndDate < bEndDate) return currentSort.direction === 'asc' ? -1 : 1;
