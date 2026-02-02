@@ -1,0 +1,273 @@
+/**
+ * Austin Alpaca Playhouse - Site Components
+ *
+ * Shared components for the main AAP website.
+ * These components generate the header, navigation, and footer.
+ */
+
+// =============================================
+// CONFIGURATION
+// =============================================
+
+// Image URLs - currently using original sources, will be updated to Supabase URLs
+const IMAGES = {
+  logo: 'https://images.squarespace-cdn.com/content/v1/6213d804273001551ffe5b8c/24787244-a26f-4ae0-8425-a9d8ccff06e6/playhouselogo_inverted.png?format=500w',
+  logoLight: 'https://images.squarespace-cdn.com/content/v1/6213d804273001551ffe5b8c/24787244-a26f-4ae0-8425-a9d8ccff06e6/playhouselogo_inverted.png?format=500w',
+  heroAlpacas: 'https://images.squarespace-cdn.com/content/v1/6213d804273001551ffe5b8c/4e23696e-623b-4621-8f3a-c223a521131b/P1020387.jpeg',
+};
+
+// Base path for links (for GitHub Pages deployment)
+// Change this if deploying to a different subdirectory
+const BASE_PATH = '/GenAlpacaOps';
+
+// Navigation links
+const NAV_LINKS = [
+  { text: 'Home', href: `${BASE_PATH}/` },
+  { text: 'Visiting', href: `${BASE_PATH}/visiting/` },
+  { text: 'Orientation', href: `${BASE_PATH}/orientation/` },
+  { text: 'Overnighters', href: `${BASE_PATH}/overnight/` },
+  { text: 'Work Trade', href: `${BASE_PATH}/worktrade/` },
+  { text: 'Contact Us', href: `${BASE_PATH}/contact/` },
+];
+
+// =============================================
+// HEADER COMPONENT
+// =============================================
+
+/**
+ * Generate the site header HTML
+ * @param {Object} options - Header options
+ * @param {boolean} options.transparent - Start with transparent background (for hero pages)
+ * @param {boolean} options.light - Use light (white) text/logo
+ * @param {string} options.activePage - Current page identifier for nav highlighting
+ */
+function renderHeader(options = {}) {
+  const { transparent = false, light = true, activePage = '' } = options;
+
+  const headerClass = transparent ? 'aap-header--transparent' : 'aap-header--solid';
+  const colorClass = light ? 'aap-header--light' : 'aap-header--dark';
+
+  const navItems = NAV_LINKS.map(link => {
+    const isActive = link.href.includes(activePage) && activePage !== '';
+    const activeClass = isActive ? 'aap-nav__link--active' : '';
+    return `<li><a href="${link.href}" class="aap-nav__link ${activeClass}">${link.text}</a></li>`;
+  }).join('');
+
+  return `
+    <header class="aap-header ${headerClass} ${colorClass}" id="aap-header">
+      <div class="aap-header__inner">
+        <a href="${BASE_PATH}/" class="aap-header__logo">
+          <img src="${IMAGES.logo}" alt="Austin Alpaca Playhouse">
+          <span class="aap-header__logo-text">Austin Alpaca Playhouse</span>
+        </a>
+
+        <nav class="aap-nav" id="aap-nav">
+          <ul class="aap-nav__list">
+            ${navItems}
+          </ul>
+        </nav>
+
+        <button class="aap-menu-toggle" id="aap-menu-toggle" aria-label="Toggle menu">
+          <span class="aap-menu-toggle__bar"></span>
+          <span class="aap-menu-toggle__bar"></span>
+          <span class="aap-menu-toggle__bar"></span>
+        </button>
+      </div>
+    </header>
+
+    ${renderMobileNav(activePage)}
+  `;
+}
+
+/**
+ * Generate mobile navigation overlay
+ */
+function renderMobileNav(activePage = '') {
+  const navItems = NAV_LINKS.map(link => {
+    const isActive = link.href.includes(activePage) && activePage !== '';
+    const activeClass = isActive ? 'aap-mobile-nav__link--active' : '';
+    return `
+      <li class="aap-mobile-nav__item">
+        <a href="${link.href}" class="aap-mobile-nav__link ${activeClass}">${link.text}</a>
+      </li>
+    `;
+  }).join('');
+
+  return `
+    <div class="aap-mobile-nav" id="aap-mobile-nav">
+      <button class="aap-mobile-nav__close" id="aap-mobile-nav-close" aria-label="Close menu">×</button>
+      <ul class="aap-mobile-nav__list">
+        ${navItems}
+      </ul>
+    </div>
+  `;
+}
+
+// =============================================
+// FOOTER COMPONENT
+// =============================================
+
+/**
+ * Generate the site footer HTML
+ */
+function renderFooter() {
+  const currentYear = new Date().getFullYear();
+
+  return `
+    <footer class="aap-footer">
+      <div class="aap-footer__content">
+        <div class="aap-footer__logo">
+          <img src="${IMAGES.logo}" alt="Austin Alpaca Playhouse">
+        </div>
+
+        <div class="aap-footer__social">
+          <a href="https://www.facebook.com/alpacaplayhouse" target="_blank" rel="noopener" aria-label="Facebook">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+            </svg>
+          </a>
+          <a href="https://instagram.com/alpacaplayhouseatx" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
+              <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+              <circle cx="18" cy="6" r="1"/>
+            </svg>
+          </a>
+        </div>
+
+        <p class="aap-footer__copyright">
+          © ${currentYear} Austin Alpaca Playhouse. All rights reserved.<br>
+          160 Still Forest Drive, Cedar Creek, TX 78612
+        </p>
+      </div>
+    </footer>
+  `;
+}
+
+// =============================================
+// HERO COMPONENT
+// =============================================
+
+/**
+ * Generate a hero section
+ * @param {Object} options - Hero options
+ * @param {string} options.image - Background image URL
+ * @param {string} options.title - Hero title
+ * @param {string} options.subtitle - Hero subtitle
+ * @param {string} options.height - 'full' (100vh), 'medium' (70vh), or 'short' (50vh)
+ * @param {string} options.buttonText - Optional CTA button text
+ * @param {string} options.buttonLink - Optional CTA button link
+ */
+function renderHero(options = {}) {
+  const {
+    image = IMAGES.heroAlpacas,
+    title = '',
+    subtitle = '',
+    height = 'full',
+    buttonText = '',
+    buttonLink = '',
+  } = options;
+
+  const heightClass = height === 'full' ? '' :
+                      height === 'medium' ? 'aap-hero--medium' :
+                      'aap-hero--short';
+
+  const button = buttonText && buttonLink ?
+    `<a href="${buttonLink}" class="aap-btn aap-btn--outline aap-btn--light">${buttonText}</a>` : '';
+
+  return `
+    <section class="aap-hero ${heightClass}" style="background-image: url('${image}')">
+      <div class="aap-hero__content">
+        ${title ? `<h1 class="aap-hero__title">${title}</h1>` : ''}
+        ${subtitle ? `<p class="aap-hero__subtitle">${subtitle}</p>` : ''}
+        ${button}
+      </div>
+    </section>
+  `;
+}
+
+// =============================================
+// INITIALIZATION
+// =============================================
+
+/**
+ * Initialize site components
+ * Call this after the DOM is ready
+ */
+function initSiteComponents() {
+  // Header scroll behavior
+  const header = document.getElementById('aap-header');
+  if (header && header.classList.contains('aap-header--transparent')) {
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 50) {
+        header.classList.remove('aap-header--transparent');
+        header.classList.add('aap-header--solid');
+        header.classList.remove('aap-header--light');
+        header.classList.add('aap-header--dark');
+      } else {
+        header.classList.add('aap-header--transparent');
+        header.classList.remove('aap-header--solid');
+        header.classList.add('aap-header--light');
+        header.classList.remove('aap-header--dark');
+      }
+    });
+  }
+
+  // Mobile menu toggle
+  const menuToggle = document.getElementById('aap-menu-toggle');
+  const mobileNav = document.getElementById('aap-mobile-nav');
+  const mobileNavClose = document.getElementById('aap-mobile-nav-close');
+
+  if (menuToggle && mobileNav) {
+    menuToggle.addEventListener('click', () => {
+      mobileNav.classList.add('aap-mobile-nav--open');
+      document.body.style.overflow = 'hidden';
+    });
+  }
+
+  if (mobileNavClose && mobileNav) {
+    mobileNavClose.addEventListener('click', () => {
+      mobileNav.classList.remove('aap-mobile-nav--open');
+      document.body.style.overflow = '';
+    });
+  }
+
+  // Close mobile nav when clicking a link
+  if (mobileNav) {
+    mobileNav.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        mobileNav.classList.remove('aap-mobile-nav--open');
+        document.body.style.overflow = '';
+      });
+    });
+  }
+}
+
+// =============================================
+// EXPORTS
+// =============================================
+
+export {
+  IMAGES,
+  BASE_PATH,
+  NAV_LINKS,
+  renderHeader,
+  renderMobileNav,
+  renderFooter,
+  renderHero,
+  initSiteComponents,
+};
+
+// Also make available globally for non-module scripts
+if (typeof window !== 'undefined') {
+  window.aapSite = {
+    IMAGES,
+    BASE_PATH,
+    NAV_LINKS,
+    renderHeader,
+    renderMobileNav,
+    renderFooter,
+    renderHero,
+    initSiteComponents,
+  };
+}
