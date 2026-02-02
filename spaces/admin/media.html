@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Media Library - GenAlpaca Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="media.css">
+</head>
+<body>
+  <!-- Loading overlay shown while checking auth -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <!-- Unauthorized message -->
+  <div id="unauthorizedOverlay" class="loading-overlay hidden">
+    <div class="unauthorized-card">
+      <h2>Access Denied</h2>
+      <p>Your account is not authorized to access admin features.</p>
+      <div class="unauthorized-actions">
+        <a href="/GenAlpacaOps/spaces/" class="btn-secondary">View Public Spaces</a>
+        <button id="signOutBtn" class="btn-secondary">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main app content -->
+  <div id="appContent" class="hidden">
+    <header>
+      <div class="header-left">
+        <h1>&#129433; Media Library</h1>
+        <span id="roleBadge" class="role-badge">Admin</span>
+      </div>
+      <div class="header-controls">
+        <a href="/GenAlpacaOps/spaces/admin/" class="btn-small">Back to Spaces</a>
+        <span id="userInfo" class="user-info"></span>
+        <button id="headerSignOutBtn" class="btn-secondary">Sign Out</button>
+      </div>
+    </header>
+
+    <!-- Storage indicator -->
+    <div class="storage-banner">
+      <div id="storageIndicator" class="storage-indicator-inline"></div>
+    </div>
+
+    <!-- Filters and actions bar -->
+    <div class="media-toolbar">
+      <div class="toolbar-left">
+        <div class="filter-group">
+          <label>Category:</label>
+          <select id="categoryFilter">
+            <option value="">All</option>
+            <option value="mktg">Marketing</option>
+            <option value="projects">Projects</option>
+            <option value="archive">Archive</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Tags:</label>
+          <div id="tagFilterChips" class="tag-filter-chips"></div>
+        </div>
+        <button id="clearFilters" class="btn-small">Clear Filters</button>
+      </div>
+      <div class="toolbar-right">
+        <span id="mediaCount" class="media-count">0 items</span>
+        <button id="bulkTagBtn" class="btn-small" disabled>Edit Tags (<span id="selectedCount">0</span>)</button>
+        <button id="selectAllBtn" class="btn-small">Select All</button>
+        <button id="deselectAllBtn" class="btn-small hidden">Deselect All</button>
+      </div>
+    </div>
+
+    <!-- Media grid -->
+    <main>
+      <div id="mediaGrid" class="media-library-grid">
+        <!-- Media items populated by JS -->
+      </div>
+
+      <div id="emptyState" class="empty-state hidden">
+        <p>No media found.</p>
+        <p class="hint">Upload some images from a space's edit page.</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- Media Detail/Edit Modal -->
+  <div id="mediaDetailModal" class="modal hidden">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h2>Media Details</h2>
+        <button class="modal-close" id="closeMediaDetail">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="media-detail-layout">
+          <!-- Image preview -->
+          <div class="media-preview">
+            <img id="detailImage" src="" alt="Media preview">
+          </div>
+
+          <!-- Details and editing -->
+          <div class="media-details">
+            <div class="form-group">
+              <label for="detailCaption">Caption</label>
+              <input type="text" id="detailCaption" placeholder="Add a caption...">
+            </div>
+
+            <div class="form-group">
+              <label for="detailCategory">Category</label>
+              <select id="detailCategory">
+                <option value="mktg">Marketing</option>
+                <option value="projects">Projects</option>
+                <option value="archive">Archive</option>
+              </select>
+            </div>
+
+            <fieldset class="form-fieldset">
+              <legend>Tags</legend>
+              <div id="detailTagsContainer" class="tags-container"></div>
+            </fieldset>
+
+            <div class="media-meta">
+              <p><strong>Size:</strong> <span id="detailSize">-</span></p>
+              <p><strong>Dimensions:</strong> <span id="detailDimensions">-</span></p>
+              <p><strong>Uploaded:</strong> <span id="detailDate">-</span></p>
+              <p><strong>Used in:</strong> <span id="detailSpaces">-</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="deleteMediaBtn" class="btn-danger">Delete Permanently</button>
+        <div class="footer-right">
+          <button id="cancelMediaDetail" class="btn-secondary">Cancel</button>
+          <button id="saveMediaDetail" class="btn-primary">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Tag Edit Modal -->
+  <div id="bulkTagModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Edit Tags for <span id="bulkCount">0</span> Items</h2>
+        <button class="modal-close" id="closeBulkTag">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="form-hint" style="margin-bottom: 1rem;">
+          Select tags to add or remove from all selected items.
+        </p>
+
+        <div class="bulk-tag-actions">
+          <div class="bulk-action-group">
+            <h4>Add Tags</h4>
+            <div id="bulkAddTags" class="tags-container"></div>
+          </div>
+          <div class="bulk-action-group">
+            <h4>Remove Tags</h4>
+            <div id="bulkRemoveTags" class="tags-container"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelBulkTag" class="btn-secondary">Cancel</button>
+        <button id="applyBulkTags" class="btn-primary">Apply Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script type="module" src="media.js"></script>
+</body>
+</html>

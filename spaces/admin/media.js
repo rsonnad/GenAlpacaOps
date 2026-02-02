@@ -1,0 +1,581 @@
+/**
+ * Media Library - Browse, filter, and manage all media
+ */
+
+import { supabase, checkAuth } from '../../shared/supabase.js';
+import { mediaService } from '../../shared/media-service.js';
+
+// =============================================
+// STATE
+// =============================================
+
+let allMedia = [];
+let allTags = [];
+let allSpaces = [];
+let selectedMediaIds = new Set();
+let currentFilters = {
+  category: '',
+  tags: [],
+};
+let currentMediaId = null;
+
+// =============================================
+// INITIALIZATION
+// =============================================
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const authState = await checkAuth();
+
+  if (!authState.authenticated) {
+    window.location.href = '/GenAlpacaOps/login/';
+    return;
+  }
+
+  if (!authState.isAdmin && !authState.isStaff) {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    document.getElementById('unauthorizedOverlay').classList.remove('hidden');
+    return;
+  }
+
+  // Update UI with user info
+  document.getElementById('userInfo').textContent = authState.user?.email || '';
+  const roleBadge = document.getElementById('roleBadge');
+  roleBadge.textContent = authState.role || 'Staff';
+  roleBadge.className = `role-badge ${authState.role}`;
+
+  // Show app content
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  document.getElementById('appContent').classList.remove('hidden');
+
+  // Load initial data
+  await Promise.all([
+    loadStorageUsage(),
+    loadTags(),
+    loadSpaces(),
+    loadMedia(),
+  ]);
+
+  // Set up event listeners
+  setupEventListeners();
+});
+
+// =============================================
+// DATA LOADING
+// =============================================
+
+async function loadStorageUsage() {
+  const usage = await mediaService.getStorageUsage();
+  if (!usage) return;
+
+  const indicator = document.getElementById('storageIndicator');
+  const percent = usage.percent_used;
+  let statusClass = 'storage-ok';
+  if (percent >= 90) statusClass = 'storage-critical';
+  else if (percent >= 70) statusClass = 'storage-warning';
+
+  indicator.className = `storage-indicator-inline ${statusClass}`;
+  indicator.innerHTML = `
+    <div class="storage-bar">
+      <div class="storage-fill" style="width: ${Math.min(percent, 100)}%"></div>
+    </div>
+    <span class="storage-text">
+      ${mediaService.formatBytes(usage.current_bytes)} / ${mediaService.formatBytes(usage.limit_bytes)}
+      (${percent.toFixed(1)}%)
+    </span>
+  `;
+}
+
+async function loadTags() {
+  allTags = await mediaService.getTags();
+  renderTagFilters();
+}
+
+async function loadSpaces() {
+  const { data, error } = await supabase
+    .from('spaces')
+    .select('id, name')
+    .order('name');
+
+  if (!error) {
+    allSpaces = data || [];
+  }
+}
+
+async function loadMedia() {
+  const media = await mediaService.search({
+    category: currentFilters.category || null,
+    tags: currentFilters.tags,
+    limit: 200,
+  });
+
+  allMedia = media;
+  renderMediaGrid();
+  updateMediaCount();
+}
+
+// =============================================
+// RENDERING
+// =============================================
+
+function renderTagFilters() {
+  const container = document.getElementById('tagFilterChips');
+  container.innerHTML = allTags.map(tag => `
+    <button
+      type="button"
+      class="tag-filter-chip ${currentFilters.tags.includes(tag.name) ? 'active' : ''}"
+      data-tag="${tag.name}"
+      style="${tag.color ? `--tag-color: ${tag.color}` : ''}"
+    >
+      ${tag.name}
+    </button>
+  `).join('');
+
+  // Add click handlers
+  container.querySelectorAll('.tag-filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const tagName = chip.dataset.tag;
+      if (currentFilters.tags.includes(tagName)) {
+        currentFilters.tags = currentFilters.tags.filter(t => t !== tagName);
+        chip.classList.remove('active');
+      } else {
+        currentFilters.tags.push(tagName);
+        chip.classList.add('active');
+      }
+      loadMedia();
+    });
+  });
+}
+
+function renderMediaGrid() {
+  const grid = document.getElementById('mediaGrid');
+  const emptyState = document.getElementById('emptyState');
+
+  if (allMedia.length === 0) {
+    grid.innerHTML = '';
+    emptyState.classList.remove('hidden');
+    return;
+  }
+
+  emptyState.classList.add('hidden');
+
+  grid.innerHTML = allMedia.map(media => {
+    const tags = media.tags || [];
+    const spacesLinked = media.spaces?.length || 0;
+    const isSelected = selectedMediaIds.has(media.id);
+
+    return `
+      <div class="media-grid-item ${isSelected ? 'selected' : ''}" data-id="${media.id}">
+        <div class="select-checkbox" data-action="select">✓</div>
+        <span class="category-badge">${media.category || 'mktg'}</span>
+        ${spacesLinked > 0 ? `<span class="spaces-count">${spacesLinked} space${spacesLinked > 1 ? 's' : ''}</span>` : ''}
+        <div class="media-thumb">
+          <img src="${media.url}" alt="${media.caption || 'Media'}" loading="lazy">
+        </div>
+        <div class="media-info">
+          <div class="media-caption ${!media.caption ? 'no-caption' : ''}">
+            ${media.caption || 'No caption'}
+          </div>
+          <div class="media-meta">
+            <span>${media.file_size_bytes ? mediaService.formatBytes(media.file_size_bytes) : '-'}</span>
+            <span>${formatDate(media.uploaded_at)}</span>
+          </div>
+          <div class="media-tags">
+            ${tags.slice(0, 4).map(t => `<span class="media-tag" style="${t.color ? `border-left: 2px solid ${t.color}` : ''}">${t.name}</span>`).join('')}
+            ${tags.length > 4 ? `<span class="media-tag">+${tags.length - 4}</span>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Add click handlers
+  grid.querySelectorAll('.media-grid-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      const mediaId = item.dataset.id;
+
+      // Check if clicking the select checkbox
+      if (e.target.closest('[data-action="select"]')) {
+        toggleSelection(mediaId);
+        return;
+      }
+
+      // Otherwise open detail modal
+      openMediaDetail(mediaId);
+    });
+  });
+}
+
+function updateMediaCount() {
+  document.getElementById('mediaCount').textContent = `${allMedia.length} items`;
+}
+
+function updateSelectionUI() {
+  const count = selectedMediaIds.size;
+  document.getElementById('selectedCount').textContent = count;
+  document.getElementById('bulkTagBtn').disabled = count === 0;
+
+  // Update select/deselect buttons
+  const selectAllBtn = document.getElementById('selectAllBtn');
+  const deselectAllBtn = document.getElementById('deselectAllBtn');
+
+  if (count > 0) {
+    selectAllBtn.classList.add('hidden');
+    deselectAllBtn.classList.remove('hidden');
+  } else {
+    selectAllBtn.classList.remove('hidden');
+    deselectAllBtn.classList.add('hidden');
+  }
+
+  // Update visual state of grid items
+  document.querySelectorAll('.media-grid-item').forEach(item => {
+    if (selectedMediaIds.has(item.dataset.id)) {
+      item.classList.add('selected');
+    } else {
+      item.classList.remove('selected');
+    }
+  });
+}
+
+// =============================================
+// SELECTION
+// =============================================
+
+function toggleSelection(mediaId) {
+  if (selectedMediaIds.has(mediaId)) {
+    selectedMediaIds.delete(mediaId);
+  } else {
+    selectedMediaIds.add(mediaId);
+  }
+  updateSelectionUI();
+}
+
+function selectAll() {
+  allMedia.forEach(m => selectedMediaIds.add(m.id));
+  updateSelectionUI();
+}
+
+function deselectAll() {
+  selectedMediaIds.clear();
+  updateSelectionUI();
+}
+
+// =============================================
+// MEDIA DETAIL MODAL
+// =============================================
+
+async function openMediaDetail(mediaId) {
+  const media = allMedia.find(m => m.id === mediaId);
+  if (!media) return;
+
+  currentMediaId = mediaId;
+
+  // Populate modal
+  document.getElementById('detailImage').src = media.url;
+  document.getElementById('detailCaption').value = media.caption || '';
+  document.getElementById('detailCategory').value = media.category || 'mktg';
+
+  // Metadata
+  document.getElementById('detailSize').textContent = media.file_size_bytes
+    ? mediaService.formatBytes(media.file_size_bytes)
+    : 'Unknown';
+  document.getElementById('detailDimensions').textContent = media.width && media.height
+    ? `${media.width} × ${media.height}`
+    : 'Unknown';
+  document.getElementById('detailDate').textContent = formatDate(media.uploaded_at, true);
+
+  // Spaces linked
+  const spacesLinked = media.spaces?.map(s => {
+    const space = allSpaces.find(sp => sp.id === s.space_id);
+    return space?.name || 'Unknown';
+  }).join(', ') || 'None';
+  document.getElementById('detailSpaces').textContent = spacesLinked;
+
+  // Render tags
+  const groupedTags = await mediaService.getTagsGrouped();
+  const mediaTags = media.tags?.map(t => t.name) || [];
+  renderDetailTags(groupedTags, mediaTags);
+
+  // Show modal
+  document.getElementById('mediaDetailModal').classList.remove('hidden');
+}
+
+function renderDetailTags(groupedTags, selectedTags) {
+  const container = document.getElementById('detailTagsContainer');
+
+  const groupNames = ['purpose', 'room', 'condition', 'project', 'other'];
+  const groupLabels = {
+    purpose: 'Purpose',
+    room: 'Room',
+    condition: 'Condition',
+    project: 'Project',
+    other: 'Other',
+  };
+
+  container.innerHTML = groupNames
+    .filter(g => groupedTags[g]?.length > 0)
+    .map(group => `
+      <div class="tag-group">
+        <span class="tag-group-label">${groupLabels[group] || group}</span>
+        <div class="tag-checkboxes">
+          ${groupedTags[group].map(tag => `
+            <label class="tag-checkbox">
+              <input type="checkbox" name="detailTag" value="${tag.name}"
+                ${selectedTags.includes(tag.name) ? 'checked' : ''}>
+              <span class="tag-chip" style="--tag-color: ${tag.color || 'var(--accent)'}">
+                ${tag.name}
+              </span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+}
+
+async function saveMediaDetail() {
+  if (!currentMediaId) return;
+
+  const caption = document.getElementById('detailCaption').value.trim();
+  const category = document.getElementById('detailCategory').value;
+
+  // Get selected tags
+  const selectedTags = Array.from(
+    document.querySelectorAll('#detailTagsContainer input[name="detailTag"]:checked')
+  ).map(cb => cb.value);
+
+  // Update media record
+  const { error } = await supabase
+    .from('media')
+    .update({ caption, category })
+    .eq('id', currentMediaId);
+
+  if (error) {
+    alert('Failed to save: ' + error.message);
+    return;
+  }
+
+  // Clear existing tags and reassign
+  await supabase
+    .from('media_tag_assignments')
+    .delete()
+    .eq('media_id', currentMediaId);
+
+  if (selectedTags.length > 0) {
+    await mediaService.assignTags(currentMediaId, selectedTags);
+  }
+
+  // Close modal and reload
+  closeMediaDetail();
+  await loadMedia();
+}
+
+function closeMediaDetail() {
+  document.getElementById('mediaDetailModal').classList.add('hidden');
+  currentMediaId = null;
+}
+
+async function deleteCurrentMedia() {
+  if (!currentMediaId) return;
+
+  const media = allMedia.find(m => m.id === currentMediaId);
+  const spacesCount = media?.spaces?.length || 0;
+
+  let confirmMsg = 'Are you sure you want to permanently delete this image?';
+  if (spacesCount > 0) {
+    confirmMsg = `This image is linked to ${spacesCount} space(s). Deleting it will remove it from all spaces.\n\nAre you sure you want to permanently delete it?`;
+  }
+
+  if (!confirm(confirmMsg)) return;
+
+  const result = await mediaService.delete(currentMediaId);
+
+  if (!result.success) {
+    alert('Failed to delete: ' + result.error);
+    return;
+  }
+
+  closeMediaDetail();
+  await loadMedia();
+  await loadStorageUsage();
+}
+
+// =============================================
+// BULK TAG MODAL
+// =============================================
+
+async function openBulkTagModal() {
+  if (selectedMediaIds.size === 0) return;
+
+  document.getElementById('bulkCount').textContent = selectedMediaIds.size;
+
+  // Render tag options
+  const groupedTags = await mediaService.getTagsGrouped();
+  renderBulkTags('bulkAddTags', groupedTags);
+  renderBulkTags('bulkRemoveTags', groupedTags);
+
+  document.getElementById('bulkTagModal').classList.remove('hidden');
+}
+
+function renderBulkTags(containerId, groupedTags) {
+  const container = document.getElementById(containerId);
+  const groupNames = ['purpose', 'room', 'condition', 'project'];
+  const groupLabels = {
+    purpose: 'Purpose',
+    room: 'Room',
+    condition: 'Condition',
+    project: 'Project',
+  };
+
+  container.innerHTML = groupNames
+    .filter(g => groupedTags[g]?.length > 0)
+    .map(group => `
+      <div class="tag-group">
+        <span class="tag-group-label">${groupLabels[group]}</span>
+        <div class="tag-checkboxes">
+          ${groupedTags[group].map(tag => `
+            <label class="tag-checkbox">
+              <input type="checkbox" name="${containerId}Tag" value="${tag.name}">
+              <span class="tag-chip" style="--tag-color: ${tag.color || 'var(--accent)'}">
+                ${tag.name}
+              </span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+}
+
+async function applyBulkTags() {
+  const tagsToAdd = Array.from(
+    document.querySelectorAll('#bulkAddTags input[name="bulkAddTagsTag"]:checked')
+  ).map(cb => cb.value);
+
+  const tagsToRemove = Array.from(
+    document.querySelectorAll('#bulkRemoveTags input[name="bulkRemoveTagsTag"]:checked')
+  ).map(cb => cb.value);
+
+  if (tagsToAdd.length === 0 && tagsToRemove.length === 0) {
+    alert('Please select at least one tag to add or remove.');
+    return;
+  }
+
+  // Get tag IDs for removal
+  const { data: tagRecords } = await supabase
+    .from('media_tags')
+    .select('id, name')
+    .in('name', tagsToRemove);
+
+  const tagIdMap = new Map(tagRecords?.map(t => [t.name, t.id]) || []);
+
+  // Process each selected media
+  for (const mediaId of selectedMediaIds) {
+    // Add tags
+    if (tagsToAdd.length > 0) {
+      await mediaService.assignTags(mediaId, tagsToAdd);
+    }
+
+    // Remove tags
+    for (const tagName of tagsToRemove) {
+      const tagId = tagIdMap.get(tagName);
+      if (tagId) {
+        await mediaService.removeTag(mediaId, tagId);
+      }
+    }
+  }
+
+  // Close modal and refresh
+  closeBulkTagModal();
+  deselectAll();
+  await loadMedia();
+}
+
+function closeBulkTagModal() {
+  document.getElementById('bulkTagModal').classList.add('hidden');
+}
+
+// =============================================
+// EVENT LISTENERS
+// =============================================
+
+function setupEventListeners() {
+  // Category filter
+  document.getElementById('categoryFilter').addEventListener('change', (e) => {
+    currentFilters.category = e.target.value;
+    loadMedia();
+  });
+
+  // Clear filters
+  document.getElementById('clearFilters').addEventListener('click', () => {
+    currentFilters = { category: '', tags: [] };
+    document.getElementById('categoryFilter').value = '';
+    document.querySelectorAll('.tag-filter-chip').forEach(c => c.classList.remove('active'));
+    loadMedia();
+  });
+
+  // Selection buttons
+  document.getElementById('selectAllBtn').addEventListener('click', selectAll);
+  document.getElementById('deselectAllBtn').addEventListener('click', deselectAll);
+  document.getElementById('bulkTagBtn').addEventListener('click', openBulkTagModal);
+
+  // Media detail modal
+  document.getElementById('closeMediaDetail').addEventListener('click', closeMediaDetail);
+  document.getElementById('cancelMediaDetail').addEventListener('click', closeMediaDetail);
+  document.getElementById('saveMediaDetail').addEventListener('click', saveMediaDetail);
+  document.getElementById('deleteMediaBtn').addEventListener('click', deleteCurrentMedia);
+
+  // Bulk tag modal
+  document.getElementById('closeBulkTag').addEventListener('click', closeBulkTagModal);
+  document.getElementById('cancelBulkTag').addEventListener('click', closeBulkTagModal);
+  document.getElementById('applyBulkTags').addEventListener('click', applyBulkTags);
+
+  // Sign out
+  document.getElementById('headerSignOutBtn')?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/GenAlpacaOps/login/';
+  });
+
+  document.getElementById('signOutBtn')?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/GenAlpacaOps/login/';
+  });
+
+  // Close modals on backdrop click
+  document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.add('hidden');
+      }
+    });
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeMediaDetail();
+      closeBulkTagModal();
+    }
+  });
+}
+
+// =============================================
+// UTILITIES
+// =============================================
+
+function formatDate(dateStr, full = false) {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+
+  if (full) {
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}

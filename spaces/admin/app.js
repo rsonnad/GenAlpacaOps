@@ -526,7 +526,7 @@ function renderCards(spacesToRender) {
             Edit
           </button>
           <button class="btn-small" onclick="event.stopPropagation(); openPhotoUpload('${space.id}', '${space.name.replace(/'/g, "\\'")}')">
-            Upload
+            Images
           </button>
           <button class="btn-small" onclick="event.stopPropagation(); openPhotoRequest('${space.id}', '${space.name.replace(/'/g, "\\'")}')">
             Request ${pendingRequests ? `(${pendingRequests})` : ''}
