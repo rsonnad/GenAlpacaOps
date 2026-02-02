@@ -97,6 +97,53 @@
       accent-color: var(--accent);
     }
 
+    .section-filters {
+      padding: 1rem 1.5rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .filter-row {
+      display: flex;
+      gap: 1.5rem;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .filter-group label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .filter-group input[type="text"],
+    .filter-group select {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 0.875rem;
+      min-width: 180px;
+    }
+
+    .filter-group input[type="text"]:focus,
+    .filter-group select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .filter-checkboxes-group .filter-checkboxes {
+      padding-top: 0.375rem;
+    }
+
     .section-body {
       padding: 1.5rem;
     }
@@ -300,15 +347,32 @@
           <div class="section-header">
             <h2>All Spaces</h2>
             <span id="spacesCount" class="text-muted"></span>
-            <div class="filter-checkboxes" style="margin-left: auto;">
-              <label class="checkbox-label">
-                <input type="checkbox" id="dwellingFilter" checked>
-                Dwelling
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" id="nonDwellingFilter">
-                Non-dwelling
-              </label>
+          </div>
+          <div class="section-filters">
+            <div class="filter-row">
+              <div class="filter-group">
+                <label for="searchFilter">Search</label>
+                <input type="text" id="searchFilter" placeholder="Search spaces...">
+              </div>
+              <div class="filter-group">
+                <label for="parentFilter">Parent Area</label>
+                <select id="parentFilter">
+                  <option value="">All areas</option>
+                </select>
+              </div>
+              <div class="filter-group filter-checkboxes-group">
+                <label>Type</label>
+                <div class="filter-checkboxes">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="dwellingFilter" checked>
+                    Dwelling
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="nonDwellingFilter">
+                    Non-dwelling
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
           <div class="section-body">
@@ -535,7 +599,9 @@
       // Add space form
       document.getElementById('addSpaceForm').addEventListener('submit', handleAddSpace);
 
-      // Dwelling filter checkboxes
+      // Space filters
+      document.getElementById('searchFilter').addEventListener('input', renderSpaces);
+      document.getElementById('parentFilter').addEventListener('change', renderSpaces);
       document.getElementById('dwellingFilter').addEventListener('change', renderSpaces);
       document.getElementById('nonDwellingFilter').addEventListener('change', renderSpaces);
 
@@ -583,19 +649,61 @@
       renderSpaces();
       renderArchivedSpaces();
       populateParentDropdown();
+      populateParentFilterDropdown();
     }
 
     function getFilteredSpaces() {
+      const searchTerm = document.getElementById('searchFilter').value.toLowerCase().trim();
+      const parentId = document.getElementById('parentFilter').value;
       const showDwelling = document.getElementById('dwellingFilter').checked;
       const showNonDwelling = document.getElementById('nonDwellingFilter').checked;
 
       return allSpaces.filter(space => {
-        if (showDwelling && showNonDwelling) return true;
-        if (showDwelling && space.can_be_dwelling) return true;
-        if (showNonDwelling && !space.can_be_dwelling) return true;
-        if (!showDwelling && !showNonDwelling) return false;
-        return false;
+        // Search filter
+        if (searchTerm && !space.name.toLowerCase().includes(searchTerm)) {
+          return false;
+        }
+
+        // Parent filter - match direct parent or any ancestor
+        if (parentId) {
+          if (!isDescendantOf(space, parentId)) {
+            return false;
+          }
+        }
+
+        // Dwelling filter
+        if (showDwelling && showNonDwelling) {
+          // Show all
+        } else if (showDwelling && !space.can_be_dwelling) {
+          return false;
+        } else if (showNonDwelling && space.can_be_dwelling) {
+          return false;
+        } else if (!showDwelling && !showNonDwelling) {
+          return false;
+        }
+
+        return true;
       });
+    }
+
+    // Check if a space is a descendant of a given parent
+    function isDescendantOf(space, parentId) {
+      if (space.parent_id === parentId) return true;
+      if (!space.parent_id) return false;
+      const parent = allSpaces.find(s => s.id === space.parent_id);
+      if (!parent) return false;
+      return isDescendantOf(parent, parentId);
+    }
+
+    function populateParentFilterDropdown() {
+      const select = document.getElementById('parentFilter');
+      // Get top-level spaces and major parent areas
+      const parentAreas = allSpaces
+        .filter(s => !s.parent_id || allSpaces.some(child => child.parent_id === s.id))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      select.innerHTML = '<option value="">All areas</option>' +
+        parentAreas.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
     }
 
     function renderSpaces() {
