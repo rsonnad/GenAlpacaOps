@@ -560,7 +560,12 @@ async function unlinkFromSpace(mediaId, spaceId) {
     .eq('media_id', mediaId)
     .eq('space_id', spaceId);
 
-  return !error;
+  if (error) {
+    console.error('Error unlinking from space:', error);
+    throw new Error(error.message || 'Failed to unlink media from space');
+  }
+
+  return true;
 }
 
 /**

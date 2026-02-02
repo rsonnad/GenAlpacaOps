@@ -1686,6 +1686,8 @@ async function movePhotoInEdit(spaceId, mediaId, direction) {
 
 // Remove photo from space (unlinks, doesn't delete the actual media file)
 async function removePhotoFromSpace(spaceId, mediaId) {
+  console.log('removePhotoFromSpace called:', { spaceId, mediaId, isAdmin: authState?.isAdmin });
+
   if (!authState?.isAdmin) {
     alert('Only admins can remove photos');
     return;
@@ -1694,12 +1696,17 @@ async function removePhotoFromSpace(spaceId, mediaId) {
   try {
     // Use media service to unlink
     await mediaService.unlinkFromSpace(mediaId, spaceId);
+    console.log('Successfully unlinked photo from space');
 
     // Update local data without full reload (keeps modal open)
     const space = spaces.find(s => s.id === spaceId);
     if (space) {
       space.photos = space.photos.filter(p => p.id !== mediaId);
       renderEditPhotos(space);
+      // Also refresh the detail view if open
+      if (document.getElementById('detailModal')?.style.display !== 'none') {
+        showSpaceDetail(spaceId);
+      }
     }
 
   } catch (error) {
