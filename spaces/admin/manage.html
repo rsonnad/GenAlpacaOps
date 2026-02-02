@@ -455,10 +455,17 @@
     let archivedSpaces = [];
 
     async function loadSpaces() {
-      // Load all spaces (filter archived client-side for compatibility)
+      // Load all spaces with primary media for thumbnails
       const { data, error } = await supabase
         .from('spaces')
-        .select('id, name, parent_id, can_be_dwelling, is_listed, monthly_rate, is_archived')
+        .select(`
+          id, name, parent_id, can_be_dwelling, is_listed, monthly_rate, is_archived,
+          media_spaces(
+            display_order,
+            is_primary,
+            media:media_id(url)
+          )
+        `)
         .order('name');
 
       if (error) {
@@ -466,7 +473,14 @@
         return;
       }
 
-      const allData = data || [];
+      const allData = (data || []).map(space => {
+        // Get the primary photo or first photo
+        const mediaSpaces = space.media_spaces || [];
+        const primaryMedia = mediaSpaces.find(ms => ms.is_primary) ||
+                            mediaSpaces.sort((a, b) => (a.display_order || 0) - (b.display_order || 0))[0];
+        space.thumbnail = primaryMedia?.media?.url || null;
+        return space;
+      });
 
       // Split into active and archived (is_archived column may not exist yet)
       allSpaces = allData.filter(s => !s.is_archived);
@@ -488,10 +502,13 @@
 
       container.innerHTML = allSpaces.map(space => {
         const parent = allSpaces.find(s => s.id === space.parent_id);
+        const thumbHtml = space.thumbnail
+          ? `<img src="${space.thumbnail}" alt="${space.name}" class="space-item-thumb">`
+          : `<div class="space-item-thumb-placeholder"></div>`;
         return `
           <div class="space-item">
             <div class="space-item-info">
-              <div class="space-item-thumb-placeholder"></div>
+              ${thumbHtml}
               <div class="space-item-details">
                 <h3>${space.name}</h3>
                 <small>
@@ -522,20 +539,25 @@
       section.style.display = 'block';
       countEl.textContent = `${archivedSpaces.length} archived`;
 
-      container.innerHTML = archivedSpaces.map(space => `
-        <div class="space-item" style="opacity: 0.7;">
-          <div class="space-item-info">
-            <div class="space-item-thumb-placeholder"></div>
-            <div class="space-item-details">
-              <h3>${space.name}</h3>
-              <small>Archived</small>
+      container.innerHTML = archivedSpaces.map(space => {
+        const thumbHtml = space.thumbnail
+          ? `<img src="${space.thumbnail}" alt="${space.name}" class="space-item-thumb">`
+          : `<div class="space-item-thumb-placeholder"></div>`;
+        return `
+          <div class="space-item" style="opacity: 0.7;">
+            <div class="space-item-info">
+              ${thumbHtml}
+              <div class="space-item-details">
+                <h3>${space.name}</h3>
+                <small>Archived</small>
+              </div>
+            </div>
+            <div class="space-item-actions">
+              <button class="btn-small btn-primary" onclick="unarchiveSpace('${space.id}', '${space.name.replace(/'/g, "\\'")}')">Restore</button>
             </div>
           </div>
-          <div class="space-item-actions">
-            <button class="btn-small btn-primary" onclick="unarchiveSpace('${space.id}', '${space.name.replace(/'/g, "\\'")}')">Restore</button>
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     function populateParentDropdown() {
