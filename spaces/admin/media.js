@@ -683,7 +683,7 @@ function renderUploadTags() {
       <select data-quick-group class="quick-tag-select">
         <option value="">Category</option>
         ${[...new Set(allTags.map(t => t.tag_group).filter(Boolean))].sort().map(g =>
-          `<option value="${g}">${g}</option>`
+          `<option value="${g}" ${g === 'space' ? 'selected' : ''}>${g}</option>`
         ).join('')}
         <option value="__new__">+ New...</option>
       </select>
@@ -948,6 +948,8 @@ function updateFileCaption(fileId, caption) {
 }
 
 async function handleUpload() {
+  console.log('handleUpload called');
+
   if (!authState?.isAdmin && !authState?.isStaff) {
     showToast('You do not have permission to upload', 'warning');
     return;
@@ -972,8 +974,10 @@ async function handleUpload() {
   const progressFill = document.getElementById('uploadProgressFill');
   const progressText = document.getElementById('uploadProgressText');
 
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Uploading...';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Uploading...';
+  }
 
   // Show progress for multiple files
   if (selectedUploadFiles.length > 1 && progressContainer) {
@@ -1042,8 +1046,10 @@ async function handleUpload() {
     console.error('Error during upload:', error);
     showToast('Upload failed: ' + error.message, 'error');
   } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = selectedUploadFiles.length > 1 ? `Upload All (${selectedUploadFiles.length})` : 'Upload';
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = selectedUploadFiles.length > 1 ? `Upload All (${selectedUploadFiles.length})` : 'Upload';
+    }
     if (progressContainer) progressContainer.classList.add('hidden');
   }
 }

@@ -362,6 +362,142 @@ Pro tier: Much higher, usually not a concern
 
 ---
 
+## Smart Payment Recording (Edge Functions)
+
+These Edge Functions use AI to intelligently match payments to tenants. The system learns sender names over time, so subsequent payments from the same sender skip AI matching.
+
+### Record Payment with Auto-Matching
+
+**Endpoint:**
+```
+POST https://aphrrfprbixmhissnjfn.supabase.co/functions/v1/record-payment
+Content-Type: application/json
+```
+
+**Request:**
+```json
+{
+  "name": "KYMBERLY DELIOU",
+  "payment_string": "02/02/2026\nCREDIT\nZELLE FROM KYMBERLY DELIOU$1,195.00$7,965.45",
+  "source": "openclaw",
+  "force_gemini": false
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| name | string | No | Sender name (extracted from payment_string if not provided) |
+| payment_string | string | Yes | Raw bank transaction text |
+| source | string | No | Source identifier (default: "openclaw") |
+| force_gemini | boolean | No | Skip cache and force AI matching (default: false) |
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "payment_id": "uuid",
+  "match_method": "cached|exact|gemini",
+  "matched_tenant": {
+    "id": "person-uuid",
+    "name": "Kymberly Deliou"
+  },
+  "parsed_payment": {
+    "amount": 1195.00,
+    "date": "2026-02-02",
+    "method": "zelle"
+  }
+}
+```
+
+**Needs Review Response (200):**
+```json
+{
+  "success": false,
+  "requires_review": true,
+  "pending_id": "uuid",
+  "parsed_payment": {
+    "amount": 1195.00,
+    "date": "2026-02-02",
+    "method": "zelle"
+  },
+  "suggestions": [
+    {
+      "person_id": "uuid",
+      "name": "Kym Deliou",
+      "confidence": 0.72,
+      "reasoning": "Similar first name, matching rent amount"
+    }
+  ],
+  "reasoning": "Low confidence match, requires manual review"
+}
+```
+
+**Match Methods:**
+- `cached` - Found in saved sender mappings (instant, no AI)
+- `exact` - Exact name match with tenant (instant, no AI)
+- `gemini` - AI matched with ≥85% confidence
+
+### Resolve Pending Payment
+
+**Endpoint:**
+```
+POST https://aphrrfprbixmhissnjfn.supabase.co/functions/v1/resolve-payment
+Content-Type: application/json
+```
+
+**Request (Match):**
+```json
+{
+  "pending_id": "uuid",
+  "person_id": "person-uuid",
+  "assignment_id": "assignment-uuid",
+  "action": "match",
+  "save_mapping": true,
+  "resolved_by": "admin"
+}
+```
+
+**Request (Ignore):**
+```json
+{
+  "pending_id": "uuid",
+  "action": "ignore",
+  "resolved_by": "admin"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| pending_id | string | Yes | ID of pending payment to resolve |
+| action | string | Yes | "match" or "ignore" |
+| person_id | string | For match | Tenant to match payment to |
+| assignment_id | string | For match | Assignment to record payment against |
+| save_mapping | boolean | No | Save name mapping for future (default: true) |
+| resolved_by | string | No | Who resolved it (default: "admin") |
+
+**Success Response:**
+```json
+{
+  "success": true,
+  "payment_id": "uuid",
+  "mapping_saved": true
+}
+```
+
+### List Pending Payments
+
+```
+GET https://aphrrfprbixmhissnjfn.supabase.co/rest/v1/pending_payments?resolved_at=is.null&select=*
+```
+
+### List Sender Mappings
+
+```
+GET https://aphrrfprbixmhissnjfn.supabase.co/rest/v1/payment_sender_mappings?select=*,person:person_id(first_name,last_name)
+```
+
+---
+
 ## Web UI
 
 Admin interface: https://rsonnad.github.io/GenAlpacaOps/

@@ -123,7 +123,7 @@ POST /rest/v1/assignment_spaces
 GET /rest/v1/photo_requests?status=eq.pending&select=*,space:space_id(name)
 ```
 
-### "Record payment of $X from [person]"
+### "Record payment of $X from [person]" (Simple Method)
 
 1. Find person's active assignment:
 ```
@@ -135,6 +135,73 @@ GET /rest/v1/assignments?person_id=eq.{id}&status=eq.active&select=id
 ```
 POST /rest/v1/payments
 {"assignment_id": "{id}", "amount": {amount}, "payment_date": "{today}", "payment_method": "venmo"}
+```
+
+### "Record payment from bank notification" (RECOMMENDED - Smart Auto-Matching)
+
+Use this when you receive raw bank transaction text. The system uses AI to match the sender to a tenant automatically, and learns for future payments.
+
+**Send bank transaction to Edge Function:**
+```
+POST https://aphrrfprbixmhissnjfn.supabase.co/functions/v1/record-payment
+Content-Type: application/json
+
+{
+  "name": "KYMBERLY DELIOU",
+  "payment_string": "02/02/2026\nCREDIT\nZELLE FROM KYMBERLY DELIOU$1,195.00$7,965.45",
+  "source": "openclaw"
+}
+```
+
+**Possible responses:**
+
+1. **Success** - Payment recorded automatically:
+```json
+{
+  "success": true,
+  "payment_id": "uuid",
+  "match_method": "cached",
+  "matched_tenant": {"id": "uuid", "name": "Kymberly Deliou"},
+  "parsed_payment": {"amount": 1195.00, "date": "2026-02-02", "method": "zelle"}
+}
+```
+
+2. **Needs Review** - AI couldn't confidently match:
+```json
+{
+  "success": false,
+  "requires_review": true,
+  "pending_id": "uuid",
+  "suggestions": [
+    {"person_id": "uuid", "name": "Kym Deliou", "confidence": 0.72, "reasoning": "..."}
+  ]
+}
+```
+
+If `requires_review: true`, notify the admin to manually match at the web UI.
+
+**Match methods explained:**
+- `cached` - Sender was previously matched, instant lookup (no AI used)
+- `exact` - Sender name exactly matches tenant name (no AI used)
+- `gemini` - AI matched with high confidence (≥85%)
+
+### "Check pending payments that need review"
+```
+GET /rest/v1/pending_payments?resolved_at=is.null&select=*
+```
+
+### "Resolve a pending payment manually"
+```
+POST https://aphrrfprbixmhissnjfn.supabase.co/functions/v1/resolve-payment
+Content-Type: application/json
+
+{
+  "pending_id": "{pending_id}",
+  "person_id": "{person_id}",
+  "assignment_id": "{assignment_id}",
+  "action": "match",
+  "save_mapping": true
+}
 ```
 
 ## Database Schema Reference

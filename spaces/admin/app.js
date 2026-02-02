@@ -382,10 +382,12 @@ function setupEventListeners() {
   });
   document.getElementById('submitEditSpace').addEventListener('click', handleEditSpaceSubmit);
   document.getElementById('archiveSpaceBtn')?.addEventListener('click', handleArchiveSpace);
-  // Prevent form from submitting naturally
+  // Prevent form from submitting naturally (Enter key) - don't call handleEditSpaceSubmit
+  // since the button click handler already handles it
   document.getElementById('editSpaceForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    handleEditSpaceSubmit();
+    // Don't call handleEditSpaceSubmit here - the button click handler does that
+    // This prevents double-submission when pressing Enter
   });
   editSpaceModal.addEventListener('click', (e) => {
     if (e.target === editSpaceModal) editSpaceModal.classList.add('hidden');
@@ -675,6 +677,7 @@ function renderCards(spacesToRender) {
             <div>
               <div class="card-title">${space.name}</div>
               ${locationText ? `<div class="card-subtitle">in ${locationText}</div>` : ''}
+              ${space.description ? `<div class="card-description">${space.description}</div>` : ''}
             </div>
           </div>
           <div class="card-details">
@@ -732,10 +735,15 @@ function renderTable(spacesToRender) {
       ? `<img src="${space.photos[0].url}" alt="" class="table-thumbnail" onclick="event.stopPropagation(); openLightbox('${space.photos[0].url}')" style="cursor: zoom-in;">`
       : `<div class="table-thumbnail-placeholder"></div>`;
 
+    // Description (truncated)
+    const description = space.description
+      ? (space.description.length > 60 ? space.description.substring(0, 60) + '...' : space.description)
+      : '';
+
     return `
       <tr onclick="showSpaceDetail('${space.id}')" style="cursor:pointer;">
         <td class="td-thumbnail">${thumbnail}</td>
-        <td><strong>${space.name}</strong>${space.location ? `<br><small style="color:var(--text-muted)">in ${space.location}</small>` : (space.parent ? `<br><small style="color:var(--text-muted)">in ${space.parent.name}</small>` : '')}</td>
+        <td><strong>${space.name}</strong>${space.location ? `<br><small style="color:var(--text-muted)">in ${space.location}</small>` : (space.parent ? `<br><small style="color:var(--text-muted)">in ${space.parent.name}</small>` : '')}${description ? `<br><small class="td-description-inline">${description}</small>` : ''}</td>
         <td>${space.monthly_rate ? `$${space.monthly_rate}/mo` : '-'}</td>
         <td>${space.sq_footage || '-'}</td>
         <td>${beds || '-'}</td>
@@ -759,7 +767,6 @@ function getBedSummary(space) {
   if (space.beds_double) beds.push(`${space.beds_double} double`);
   if (space.beds_twin) beds.push(`${space.beds_twin} twin`);
   if (space.beds_folding) beds.push(`${space.beds_folding} folding`);
-  if (space.beds_trifold) beds.push(`${space.beds_trifold} trifold`);
   return beds.join(', ');
 }
 
@@ -1811,7 +1818,6 @@ function openEditSpace(spaceId) {
   document.getElementById('editBedsDouble').value = space.beds_double || 0;
   document.getElementById('editBedsTwin').value = space.beds_twin || 0;
   document.getElementById('editBedsFolding').value = space.beds_folding || 0;
-  document.getElementById('editBedsTrifold').value = space.beds_trifold || 0;
   document.getElementById('editIsListed').checked = space.is_listed || false;
   document.getElementById('editIsSecret').checked = space.is_secret || false;
   document.getElementById('editCanBeDwelling').checked = space.can_be_dwelling !== false;
@@ -1931,8 +1937,17 @@ async function savePhotoOrder(spaceId, mediaIds) {
   }
 }
 
+// Guard against concurrent saves
+let isSavingSpace = false;
+
 async function handleEditSpaceSubmit() {
   console.log('handleEditSpaceSubmit called');
+
+  // Guard against double-click or Enter key while already saving
+  if (isSavingSpace) {
+    console.log('Already saving, ignoring duplicate call');
+    return;
+  }
 
   if (!authState?.isAdmin) {
     showToast('Only admins can edit spaces', 'warning');
@@ -1950,6 +1965,9 @@ async function handleEditSpaceSubmit() {
   }
 
   const submitBtn = document.getElementById('submitEditSpace');
+
+  // Set guard BEFORE any async work
+  isSavingSpace = true;
   submitBtn.disabled = true;
   submitBtn.textContent = 'Saving...';
 
@@ -1982,7 +2000,6 @@ async function handleEditSpaceSubmit() {
       beds_double: getIntOrZero('editBedsDouble'),
       beds_twin: getIntOrZero('editBedsTwin'),
       beds_folding: getIntOrZero('editBedsFolding'),
-      beds_trifold: getIntOrZero('editBedsTrifold'),
       is_listed: getChecked('editIsListed'),
       is_secret: getChecked('editIsSecret'),
       can_be_dwelling: getChecked('editCanBeDwelling'),
@@ -1990,26 +2007,46 @@ async function handleEditSpaceSubmit() {
 
     console.log('Updating space with:', updates);
 
-    const { data, error } = await supabase
+    // Wrap Supabase call with timeout to prevent indefinite hangs
+    const timeoutMs = 15000; // 15 second timeout
+    const updatePromise = supabase
       .from('spaces')
       .update(updates)
       .eq('id', spaceId)
       .select();
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timed out. Please check your connection and try again.')), timeoutMs)
+    );
+
+    const { data, error } = await Promise.race([updatePromise, timeoutPromise]);
 
     console.log('Update result:', { data, error });
 
     if (error) throw error;
 
     showToast('Space updated successfully!', 'success');
-    editSpaceModal.classList.add('hidden');
 
-    await loadData();
-    render();
+    // Close modal and reset button state IMMEDIATELY after save succeeds
+    // Don't wait for loadData() - that can be slow
+    editSpaceModal.classList.add('hidden');
+    isSavingSpace = false;
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Save Changes';
+
+    // Refresh data in background - don't block UI
+    loadData().then(() => render()).catch(err => {
+      console.error('Error refreshing data:', err);
+      // Non-critical - data will refresh on next page load
+    });
+
+    return; // Exit early - cleanup already done
 
   } catch (error) {
     console.error('Error updating space:', error);
     showToast('Failed to update space: ' + error.message, 'error');
-  } finally {
+    // Only reset on error - success case already handled above
+    isSavingSpace = false;
     submitBtn.disabled = false;
     submitBtn.textContent = 'Save Changes';
   }

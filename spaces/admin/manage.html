@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="styles.css?v=4">
   <link rel="stylesheet" href="media.css?v=4">
   <link rel="stylesheet" href="rentals.css?v=1">
+  <link rel="stylesheet" href="events.css?v=1">
   <style>
     .manage-container {
       max-width: 1200px;
@@ -342,6 +343,155 @@
         grid-template-columns: 1fr;
       }
     }
+
+    /* User Management Styles */
+    .invite-form {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .invite-form input[type="email"] {
+      flex: 1;
+      min-width: 200px;
+      padding: 0.625rem 0.875rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 0.875rem;
+    }
+
+    .invite-form input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .invite-form select {
+      padding: 0.625rem 0.875rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 0.875rem;
+      background: var(--bg-card);
+    }
+
+    .users-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .users-table th,
+    .users-table td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .users-table th {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      background: var(--bg);
+    }
+
+    .users-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .users-table tr:hover td {
+      background: var(--bg);
+    }
+
+    .role-select {
+      padding: 0.375rem 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.875rem;
+      background: var(--bg-card);
+    }
+
+    .role-select:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .you-tag {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      background: var(--accent-light);
+      color: var(--accent);
+      border-radius: 4px;
+      margin-left: 0.5rem;
+    }
+
+    .btn-danger {
+      padding: 0.375rem 0.75rem;
+      border: 1px solid var(--occupied);
+      background: var(--bg-card);
+      color: var(--occupied);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-danger:hover {
+      background: var(--occupied);
+      color: white;
+    }
+
+    .users-empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+    }
+
+    .invite-note {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.75rem;
+    }
+
+    .role-badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .role-badge.admin {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .role-badge.staff {
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+
+    .admin-only-notice {
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      border-radius: var(--radius);
+      padding: 1rem 1.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: #92400e;
+    }
+
+    .admin-only-notice svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -388,6 +538,7 @@
       <div class="manage-tabs">
         <button class="manage-tab active" data-tab="spaces">Spaces</button>
         <button class="manage-tab" data-tab="rentals">Rentals</button>
+        <button class="manage-tab" data-tab="events">Events</button>
         <button class="manage-tab" data-tab="media">Media</button>
         <button class="manage-tab" data-tab="users">Users</button>
         <button class="manage-tab" data-tab="settings">Settings</button>
@@ -552,6 +703,125 @@
         </div>
       </div>
 
+      <!-- Events Panel -->
+      <div id="eventsPanel" class="manage-panel">
+        <!-- Pipeline View -->
+        <div class="event-pipeline" id="eventPipeline">
+          <div class="pipeline-column" data-stage="requests">
+            <div class="pipeline-header">
+              <h3>Requests</h3>
+              <span class="pipeline-count" id="eventRequestsCount">0</span>
+            </div>
+            <div class="pipeline-cards" id="eventRequestsCards"></div>
+          </div>
+          <div class="pipeline-column" data-stage="approved">
+            <div class="pipeline-header">
+              <h3>Approved</h3>
+              <span class="pipeline-count" id="eventApprovedCount">0</span>
+            </div>
+            <div class="pipeline-cards" id="eventApprovedCards"></div>
+          </div>
+          <div class="pipeline-column" data-stage="contract">
+            <div class="pipeline-header">
+              <h3>Contract</h3>
+              <span class="pipeline-count" id="eventContractCount">0</span>
+            </div>
+            <div class="pipeline-cards" id="eventContractCards"></div>
+          </div>
+          <div class="pipeline-column" data-stage="deposit">
+            <div class="pipeline-header">
+              <h3>Deposit</h3>
+              <span class="pipeline-count" id="eventDepositCount">0</span>
+            </div>
+            <div class="pipeline-cards" id="eventDepositCards"></div>
+          </div>
+          <div class="pipeline-column" data-stage="ready">
+            <div class="pipeline-header">
+              <h3>Ready</h3>
+              <span class="pipeline-count" id="eventReadyCount">0</span>
+            </div>
+            <div class="pipeline-cards" id="eventReadyCards"></div>
+          </div>
+        </div>
+
+        <!-- Denied/Delayed Section (collapsible) -->
+        <details class="section" id="eventDeniedDelayedSection" style="margin-top: 1.5rem;">
+          <summary class="section-header" style="cursor: pointer;">
+            <h2>Denied & Delayed</h2>
+            <span id="eventDeniedDelayedCount" class="text-muted">0</span>
+          </summary>
+          <div class="section-body">
+            <div id="eventDeniedDelayedList" class="spaces-list"></div>
+          </div>
+        </details>
+
+        <!-- Create Event Request Section -->
+        <div class="section" style="margin-top: 1.5rem;">
+          <div class="section-header">
+            <h2>Create Event Request</h2>
+          </div>
+          <div class="section-body">
+            <form id="createEventRequestForm" class="add-space-form">
+              <div class="event-form-grid">
+                <div class="form-group">
+                  <label for="newEventPersonId">Client</label>
+                  <select id="newEventPersonId" required>
+                    <option value="">Select a person...</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="newEventOrgName">Organization (optional)</label>
+                  <input type="text" id="newEventOrgName" placeholder="If hosting for an org...">
+                </div>
+                <div class="form-group">
+                  <label for="newEventName">Event Name</label>
+                  <input type="text" id="newEventName" required placeholder="e.g., Birthday Party">
+                </div>
+                <div class="form-group">
+                  <label for="newEventType">Event Type</label>
+                  <select id="newEventType">
+                    <option value="party">Party</option>
+                    <option value="workshop">Workshop</option>
+                    <option value="retreat">Retreat</option>
+                    <option value="ceremony">Ceremony</option>
+                    <option value="meeting">Meeting</option>
+                    <option value="photoshoot">Photoshoot</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="newEventDate">Event Date</label>
+                  <input type="date" id="newEventDate" required>
+                </div>
+                <div class="form-group">
+                  <label>Event Time</label>
+                  <div class="time-inputs">
+                    <input type="time" id="newEventStartTime" required>
+                    <span>to</span>
+                    <input type="time" id="newEventEndTime" required>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="newEventGuests">Expected Guests</label>
+                  <input type="number" id="newEventGuests" required min="1" max="100" value="25">
+                </div>
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" id="newEventHostedBefore">
+                    Has hosted at venue before
+                  </label>
+                </div>
+                <div class="form-group full-width">
+                  <label for="newEventDescription">Event Description</label>
+                  <textarea id="newEventDescription" rows="2" placeholder="Brief description of the event..."></textarea>
+                </div>
+              </div>
+              <button type="submit" class="btn-primary" style="margin-top: 1rem;">Create Event Request</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
       <!-- Media Panel -->
       <div id="mediaPanel" class="manage-panel">
         <!-- Storage indicator -->
@@ -662,12 +932,53 @@
 
       <!-- Users Panel -->
       <div id="usersPanel" class="manage-panel">
-        <div class="section">
+        <!-- Admin-only notice (shown to non-admins) -->
+        <div id="usersAdminNotice" class="admin-only-notice hidden">
+          <svg viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          <span>Only administrators can manage users. You have read-only access.</span>
+        </div>
+
+        <!-- Invite Section (admin only) -->
+        <div id="usersInviteSection" class="section">
           <div class="section-header">
-            <h2>User Management</h2>
+            <h2>Invite New User</h2>
           </div>
           <div class="section-body">
-            <p>Go to <a href="users.html">User Management</a> to invite users and manage roles.</p>
+            <form id="inviteForm" class="invite-form">
+              <input type="email" id="inviteEmail" placeholder="user@gmail.com" required>
+              <select id="inviteRole">
+                <option value="staff">Staff (read-only)</option>
+                <option value="admin">Admin (full access)</option>
+              </select>
+              <button type="submit" class="btn-primary">Send Invitation</button>
+            </form>
+            <p class="invite-note">
+              Users must sign in with the exact email address you invite.
+            </p>
+          </div>
+        </div>
+
+        <!-- Pending Invitations -->
+        <div class="section">
+          <div class="section-header">
+            <h2>Pending Invitations</h2>
+            <span id="pendingCount" class="role-badge staff">0</span>
+          </div>
+          <div id="pendingSection">
+            <div class="users-empty-state">Loading...</div>
+          </div>
+        </div>
+
+        <!-- Active Users -->
+        <div class="section">
+          <div class="section-header">
+            <h2>Active Users</h2>
+            <span id="usersCount" class="role-badge staff">0</span>
+          </div>
+          <div id="usersSection">
+            <div class="users-empty-state">Loading...</div>
           </div>
         </div>
       </div>
@@ -759,6 +1070,69 @@
               </label>
             </div>
             <button type="button" id="saveSignwellConfigBtn" class="btn-small btn-primary">Save SignWell Config</button>
+          </div>
+        </div>
+
+        <!-- Event Agreement Template Section -->
+        <div class="section" style="margin-top: 1.5rem;">
+          <div class="section-header">
+            <h2>Event Agreement Template</h2>
+            <div class="header-actions">
+              <button type="button" id="loadDefaultEventTemplateBtn" class="btn-small">Load Default</button>
+              <button type="button" id="saveEventTemplateBtn" class="btn-small btn-primary">Save Template</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <p class="text-muted" style="margin-bottom: 1rem;">
+              Edit the event hosting agreement template. Use <code>{{placeholder}}</code> syntax for dynamic fields.
+            </p>
+
+            <div class="template-editor-container">
+              <div class="template-editor">
+                <label for="eventTemplateName">Template Name</label>
+                <input type="text" id="eventTemplateName" value="Standard Event Agreement" style="margin-bottom: 1rem;">
+
+                <label for="eventTemplateContent">Template Content</label>
+                <textarea id="eventTemplateContent" class="template-textarea" rows="20" placeholder="Enter event agreement template content..."></textarea>
+              </div>
+
+              <div class="placeholder-reference">
+                <h4>Available Placeholders</h4>
+                <div id="eventPlaceholderList" class="placeholder-list"></div>
+              </div>
+            </div>
+
+            <div class="template-actions" style="margin-top: 1rem;">
+              <label class="checkbox-label">
+                <input type="checkbox" id="eventTemplateMakeActive" checked>
+                Set as active template
+              </label>
+            </div>
+
+            <div id="eventTemplateValidation" class="template-validation" style="display: none; margin-top: 1rem;"></div>
+          </div>
+        </div>
+
+        <!-- Event Template History Section -->
+        <div class="section">
+          <div class="section-header">
+            <h2>Event Template History</h2>
+          </div>
+          <div class="section-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Version</th>
+                  <th>Created</th>
+                  <th>Active</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="eventTemplateHistoryBody">
+                <tr><td colspan="5" class="text-muted">No templates saved yet</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -1172,14 +1546,38 @@
     </div>
   </div>
 
+  <!-- Invitation Text Modal -->
+  <div id="inviteTextModal" class="modal hidden">
+    <div class="modal-content" style="max-width: 550px;">
+      <div class="modal-header">
+        <h2>Invitation Ready</h2>
+        <button class="modal-close" id="closeInviteModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 1rem; color: var(--text-muted);">
+          The invitation has been created. Copy the text below and send it via email or message:
+        </p>
+        <textarea id="inviteTextContent" readonly style="width: 100%; height: 250px; padding: 1rem; font-family: inherit; font-size: 0.875rem; border: 1px solid var(--border); border-radius: var(--radius); resize: none; background: var(--bg);"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="closeInviteModalBtn">Close</button>
+        <button class="btn-primary" id="copyInviteTextBtn">Copy to Clipboard</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/@supabase/supabase-js@2.39.3"></script>
   <script type="module">
     import { supabase } from '../../shared/supabase.js';
     import { initAuth, getAuthState, signOut, onAuthStateChange } from '../../shared/auth.js';
     import { mediaService } from '../../shared/media-service.js';
     import { rentalService } from '../../shared/rental-service.js';
+    import { eventService } from '../../shared/event-service.js';
     import { leaseTemplateService } from '../../shared/lease-template-service.js';
+    import { eventTemplateService } from '../../shared/event-template-service.js';
     import { pdfService } from '../../shared/pdf-service.js';
+    import { emailService } from '../../shared/email-service.js';
+    import { signwellService } from '../../shared/signwell-service.js';
 
     // =============================================
     // TOAST NOTIFICATIONS
@@ -1234,6 +1632,16 @@
     let currentApplicationId = null;
     let rentalsLoaded = false;
 
+    // Events state
+    let allEventRequests = [];
+    let currentEventRequestId = null;
+    let eventsLoaded = false;
+
+    // Users state
+    let allUsers = [];
+    let allInvitations = [];
+    let usersLoaded = false;
+
     // =============================================
     // AUTH HANDLING
     // =============================================
@@ -1286,9 +1694,19 @@
             loadRentals();
           }
 
+          // Load events when switching to Events tab
+          if (tab.dataset.tab === 'events' && !eventsLoaded) {
+            loadEvents();
+          }
+
           // Load settings when switching to Settings tab
           if (tab.dataset.tab === 'settings') {
             loadSettingsPanel();
+          }
+
+          // Load users when switching to Users tab
+          if (tab.dataset.tab === 'users' && !usersLoaded) {
+            loadUsersPanel();
           }
         });
       });
@@ -1931,7 +2349,7 @@
           <select data-quick-group class="quick-tag-select">
             <option value="">Category</option>
             ${[...new Set(allTags.map(t => t.tag_group).filter(Boolean))].sort().map(g =>
-              `<option value="${g}">${g}</option>`
+              `<option value="${g}" ${g === 'space' ? 'selected' : ''}>${g}</option>`
             ).join('')}
             <option value="__new__">+ New...</option>
           </select>
@@ -2183,6 +2601,8 @@
     }
 
     async function handleMediaUpload() {
+      console.log('handleMediaUpload called');
+
       if (!authState?.isAdmin && !authState?.isStaff) {
         showToast('You do not have permission to upload', 'warning');
         return;
@@ -2206,8 +2626,10 @@
       const progressFill = document.getElementById('mediaUploadProgressFill');
       const progressText = document.getElementById('mediaUploadProgressText');
 
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Uploading...';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Uploading...';
+      }
 
       if (mediaUploadFiles.length > 1 && progressContainer) {
         progressContainer.classList.remove('hidden');
@@ -2269,8 +2691,10 @@
         console.error('Error during upload:', error);
         showToast('Upload failed: ' + error.message, 'error');
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = mediaUploadFiles.length > 1 ? `Upload All (${mediaUploadFiles.length})` : 'Upload';
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = mediaUploadFiles.length > 1 ? `Upload All (${mediaUploadFiles.length})` : 'Upload';
+        }
         if (progressContainer) progressContainer.classList.add('hidden');
       }
     }
@@ -2816,8 +3240,28 @@
           additionalTerms,
         });
         await loadApplications();
+
+        // Send approval email
+        const app = allApplications.find(a => a.id === currentApplicationId);
+        if (app?.person?.email) {
+          const space = allSpaces.find(s => s.id === spaceId);
+          const emailResult = await emailService.sendApplicationApproved({
+            person: app.person,
+            space: { name: space?.name },
+            approved_rate: rate,
+            approved_move_in_date: moveInDate,
+            approved_end_date: leaseEndDate,
+          });
+          if (emailResult.success) {
+            showToast('Application approved & email sent', 'success');
+          } else {
+            showToast('Application approved (email failed to send)', 'warning');
+          }
+        } else {
+          showToast('Application approved (no email on file)', 'success');
+        }
+
         openRentalDetail(currentApplicationId);
-        showToast('Application approved', 'success');
       } catch (error) {
         showToast('Error: ' + error.message, 'error');
       }
@@ -2825,12 +3269,25 @@
 
     window.denyApplication = async function() {
       if (!currentApplicationId) return;
+      const app = allApplications.find(a => a.id === currentApplicationId);
       const reason = prompt('Reason for denial (optional):');
       try {
         await rentalService.denyApplication(currentApplicationId, reason);
         await loadApplications();
+
+        // Send denial email
+        if (app?.person?.email) {
+          const emailResult = await emailService.sendApplicationDenied(app, reason);
+          if (emailResult.success) {
+            showToast('Application denied & email sent', 'success');
+          } else {
+            showToast('Application denied (email failed to send)', 'warning');
+          }
+        } else {
+          showToast('Application denied (no email on file)', 'success');
+        }
+
         closeRentalDetail();
-        showToast('Application denied', 'success');
       } catch (error) {
         showToast('Error: ' + error.message, 'error');
       }
@@ -2964,8 +3421,21 @@
       try {
         await rentalService.updateAgreementStatus(currentApplicationId, 'signed');
         await loadApplications();
+
+        // Send lease signed email
+        const app = allApplications.find(a => a.id === currentApplicationId);
+        if (app?.person?.email) {
+          const emailResult = await emailService.sendLeaseSigned(app);
+          if (emailResult.success) {
+            showToast('Agreement marked as signed & email sent', 'success');
+          } else {
+            showToast('Agreement marked as signed (email failed to send)', 'warning');
+          }
+        } else {
+          showToast('Agreement marked as signed', 'success');
+        }
+
         openRentalDetail(currentApplicationId);
-        showToast('Agreement marked as signed', 'success');
       } catch (error) {
         showToast('Error: ' + error.message, 'error');
       }
@@ -2976,8 +3446,21 @@
       try {
         await rentalService.confirmDeposit(currentApplicationId);
         await loadApplications();
+
+        // Send deposits confirmed email
+        const app = allApplications.find(a => a.id === currentApplicationId);
+        if (app?.person?.email) {
+          const emailResult = await emailService.sendDepositsConfirmed(app);
+          if (emailResult.success) {
+            showToast('Deposit confirmed & email sent', 'success');
+          } else {
+            showToast('Deposit confirmed (email failed to send)', 'warning');
+          }
+        } else {
+          showToast('Deposit confirmed (no email on file)', 'success');
+        }
+
         openRentalDetail(currentApplicationId);
-        showToast('Deposit confirmed', 'success');
       } catch (error) {
         showToast('Error: ' + error.message, 'error');
       }
@@ -2986,11 +3469,30 @@
     window.confirmMoveIn = async function() {
       if (!currentApplicationId) return;
       if (!confirm('Confirm move-in? This will create an active assignment.')) return;
+      const app = allApplications.find(a => a.id === currentApplicationId);
       try {
         await rentalService.confirmMoveIn(currentApplicationId);
         await loadApplications();
+
+        // Send move-in confirmed email
+        if (app?.person?.email) {
+          const space = allSpaces.find(s => s.id === app.approved_space_id);
+          const emailResult = await emailService.sendMoveInConfirmed({
+            person: app.person,
+            space: { name: space?.name },
+            approved_move_in_date: app.approved_move_in_date,
+            approved_rate: app.approved_rate,
+          });
+          if (emailResult.success) {
+            showToast('Move-in confirmed & welcome email sent', 'success');
+          } else {
+            showToast('Move-in confirmed (email failed to send)', 'warning');
+          }
+        } else {
+          showToast('Move-in confirmed! Assignment created.', 'success');
+        }
+
         closeRentalDetail();
-        showToast('Move-in confirmed! Assignment created.', 'success');
       } catch (error) {
         showToast('Error: ' + error.message, 'error');
       }
@@ -3310,18 +3812,605 @@
 
 
     async function sendForSignature() {
-      showToast('SignWell integration coming soon. For now, send the PDF manually.', 'info');
-      // TODO: Integrate with SignWell API
-      // const app = allApplications.find(a => a.id === currentApplicationId);
-      // await signwellService.createDocument(app.generated_pdf_url, app.person.email, app.person.first_name + ' ' + app.person.last_name);
+      if (!currentApplicationId) return;
+
+      const app = allApplications.find(a => a.id === currentApplicationId);
+      if (!app) {
+        showToast('Application not found', 'error');
+        return;
+      }
+
+      if (!app.generated_pdf_url) {
+        showToast('Please generate a lease agreement PDF first', 'warning');
+        return;
+      }
+
+      if (!app.person?.email) {
+        showToast('Applicant has no email address on file', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('sendForSignatureBtn');
+      const originalText = btn.textContent;
+
+      try {
+        btn.textContent = 'Sending...';
+        btn.disabled = true;
+
+        // Send document to SignWell for signing
+        const recipientName = `${app.person.first_name} ${app.person.last_name}`;
+        const document = await signwellService.sendForSignature(
+          currentApplicationId,
+          app.generated_pdf_url,
+          app.person.email,
+          recipientName
+        );
+
+        // Also send a notification email via Resend
+        const emailResult = await emailService.sendLeaseSent({ person: app.person });
+
+        await loadApplications();
+        openRentalDetail(currentApplicationId);
+
+        if (emailResult.success) {
+          showToast('Lease sent for signature & notification email sent', 'success');
+        } else {
+          showToast('Lease sent for signature (notification email failed)', 'warning');
+        }
+      } catch (error) {
+        console.error('Error sending for signature:', error);
+        showToast('Error: ' + error.message, 'error');
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
     }
+
+    // =============================================
+    // EVENTS TAB
+    // =============================================
+
+    async function loadEvents() {
+      eventsLoaded = true;
+      try {
+        // Load event requests
+        allEventRequests = await eventService.getRequests();
+
+        // Load people if not already loaded
+        if (allPeople.length === 0) {
+          const { data: people } = await supabase
+            .from('people')
+            .select('id, first_name, last_name, email, phone')
+            .order('first_name');
+          allPeople = people || [];
+        }
+
+        // Populate person dropdown
+        const personSelect = document.getElementById('newEventPersonId');
+        personSelect.innerHTML = '<option value="">Select a person...</option>' +
+          allPeople.map(p => `<option value="${p.id}">${p.first_name} ${p.last_name}</option>`).join('');
+
+        renderEventPipeline();
+      } catch (error) {
+        console.error('Error loading events:', error);
+        showToast('Error loading events', 'error');
+      }
+    }
+
+    function renderEventPipeline() {
+      // Group requests by pipeline stage
+      const stages = {
+        requests: [],
+        approved: [],
+        contract: [],
+        deposit: [],
+        ready: [],
+        denied: [],
+        delayed: [],
+        complete: [],
+      };
+
+      allEventRequests.forEach(req => {
+        const stage = eventService.getPipelineStage(req);
+        if (stages[stage]) {
+          stages[stage].push(req);
+        }
+      });
+
+      // Render each column
+      ['requests', 'approved', 'contract', 'deposit', 'ready'].forEach(stage => {
+        const container = document.getElementById(`event${stage.charAt(0).toUpperCase() + stage.slice(1)}Cards`);
+        const countEl = document.getElementById(`event${stage.charAt(0).toUpperCase() + stage.slice(1)}Count`);
+
+        if (container) {
+          container.innerHTML = stages[stage].length === 0
+            ? '<div class="pipeline-empty">No requests</div>'
+            : stages[stage].map(req => renderEventCard(req)).join('');
+        }
+        if (countEl) {
+          countEl.textContent = stages[stage].length;
+        }
+      });
+
+      // Render denied/delayed section
+      const deniedDelayed = [...stages.denied, ...stages.delayed];
+      const deniedDelayedList = document.getElementById('eventDeniedDelayedList');
+      const deniedDelayedCount = document.getElementById('eventDeniedDelayedCount');
+
+      if (deniedDelayedList) {
+        deniedDelayedList.innerHTML = deniedDelayed.length === 0
+          ? '<p class="text-muted">No denied or delayed requests</p>'
+          : deniedDelayed.map(req => renderEventCard(req, true)).join('');
+      }
+      if (deniedDelayedCount) {
+        deniedDelayedCount.textContent = deniedDelayed.length;
+      }
+    }
+
+    function renderEventCard(req, isCompact = false) {
+      const person = req.person;
+      const clientName = person ? `${person.first_name || ''} ${person.last_name || ''}`.trim() : 'Unknown';
+
+      const eventDate = req.event_date
+        ? new Date(req.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        : '';
+
+      const formatTime = (timeStr) => {
+        if (!timeStr) return '';
+        const [hours, minutes] = timeStr.split(':');
+        const hour = parseInt(hours);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour % 12 || 12;
+        return `${hour12}:${minutes} ${ampm}`;
+      };
+
+      const timeDisplay = req.event_start_time ? formatTime(req.event_start_time) : '';
+
+      const rentalFee = parseFloat(req.rental_fee) || eventService.DEFAULT_FEES.RENTAL_FEE;
+      const feeDisplay = rentalFee === 0 ? 'Complementary' : `$${rentalFee}`;
+
+      const testBadge = req.is_test ? '<span class="test-badge">TEST</span>' : '';
+
+      return `
+        <div class="pipeline-card event-card" data-id="${req.id}" onclick="openEventDetail('${req.id}')">
+          <div class="card-header">
+            <div>
+              <div class="event-name">${req.event_name || 'Unnamed Event'}</div>
+              <div class="event-date">${eventDate} ${timeDisplay}</div>
+            </div>
+            ${testBadge}
+          </div>
+          <div class="card-body">
+            <div class="client-name">${clientName}</div>
+            ${req.organization_name ? `<div class="text-muted" style="font-size: 0.75rem;">${req.organization_name}</div>` : ''}
+          </div>
+          <div class="card-footer">
+            <span class="guest-count">${req.expected_guests || '?'} guests</span>
+            <span class="fee-display">${feeDisplay}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Make openEventDetail available globally
+    window.openEventDetail = async function(requestId) {
+      currentEventRequestId = requestId;
+      const req = allEventRequests.find(r => r.id === requestId);
+      if (!req) return;
+
+      // For now, show a simple alert with event details
+      // TODO: Implement full modal like rentals
+      const person = req.person;
+      const clientName = person ? `${person.first_name || ''} ${person.last_name || ''}`.trim() : 'Unknown';
+
+      const eventDate = req.event_date
+        ? new Date(req.event_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+        : 'No date';
+
+      const details = `
+Event: ${req.event_name}
+Client: ${clientName}
+Date: ${eventDate}
+Guests: ${req.expected_guests}
+Status: ${req.request_status}
+Agreement: ${req.agreement_status}
+Deposit: ${req.deposit_status}
+      `.trim();
+
+      showToast(`Event details loaded for: ${req.event_name}`, 'info');
+      console.log('Event Request:', req);
+    };
+
+    // Create event request form handler
+    document.getElementById('createEventRequestForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const personId = document.getElementById('newEventPersonId').value;
+      const eventData = {
+        organization_name: document.getElementById('newEventOrgName').value || null,
+        has_hosted_before: document.getElementById('newEventHostedBefore').checked,
+        event_name: document.getElementById('newEventName').value,
+        event_description: document.getElementById('newEventDescription').value || null,
+        event_type: document.getElementById('newEventType').value,
+        event_date: document.getElementById('newEventDate').value,
+        event_start_time: document.getElementById('newEventStartTime').value,
+        event_end_time: document.getElementById('newEventEndTime').value,
+        expected_guests: parseInt(document.getElementById('newEventGuests').value) || 25,
+      };
+
+      try {
+        await eventService.createRequest(personId, eventData);
+        showToast('Event request created', 'success');
+        e.target.reset();
+
+        // Reload events
+        allEventRequests = await eventService.getRequests();
+        renderEventPipeline();
+      } catch (error) {
+        console.error('Error creating event request:', error);
+        showToast('Error creating event request', 'error');
+      }
+    });
+
+    // =============================================
+    // USER MANAGEMENT
+    // =============================================
+
+    async function loadUsersPanel() {
+      usersLoaded = true;
+
+      // Check if user is admin
+      const isAdmin = authState?.isAdmin;
+
+      // Show/hide admin-only elements
+      const adminNotice = document.getElementById('usersAdminNotice');
+      const inviteSection = document.getElementById('usersInviteSection');
+
+      if (!isAdmin) {
+        adminNotice.classList.remove('hidden');
+        inviteSection.style.display = 'none';
+      } else {
+        adminNotice.classList.add('hidden');
+        inviteSection.style.display = 'block';
+      }
+
+      // Load data
+      await loadUsersData();
+      await loadInvitationsData();
+      renderUsersPanel();
+
+      // Setup event listeners for invite form (only once)
+      const inviteForm = document.getElementById('inviteForm');
+      if (inviteForm && !inviteForm.dataset.initialized) {
+        inviteForm.dataset.initialized = 'true';
+        inviteForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const email = document.getElementById('inviteEmail').value.trim().toLowerCase();
+          const role = document.getElementById('inviteRole').value;
+          await inviteUser(email, role);
+        });
+      }
+
+      // Setup invitation modal listeners (only once)
+      const closeInviteModalBtn = document.getElementById('closeInviteModalBtn');
+      const closeInviteModal = document.getElementById('closeInviteModal');
+      const copyInviteTextBtn = document.getElementById('copyInviteTextBtn');
+
+      if (closeInviteModalBtn && !closeInviteModalBtn.dataset.initialized) {
+        closeInviteModalBtn.dataset.initialized = 'true';
+        closeInviteModalBtn.addEventListener('click', closeInviteTextModal);
+      }
+      if (closeInviteModal && !closeInviteModal.dataset.initialized) {
+        closeInviteModal.dataset.initialized = 'true';
+        closeInviteModal.addEventListener('click', closeInviteTextModal);
+      }
+      if (copyInviteTextBtn && !copyInviteTextBtn.dataset.initialized) {
+        copyInviteTextBtn.dataset.initialized = 'true';
+        copyInviteTextBtn.addEventListener('click', copyInviteText);
+      }
+    }
+
+    async function loadUsersData() {
+      const { data, error } = await supabase
+        .from('app_users')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading users:', error);
+        return;
+      }
+
+      allUsers = data || [];
+    }
+
+    async function loadInvitationsData() {
+      const { data, error } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .eq('status', 'pending')
+        .order('invited_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading invitations:', error);
+        return;
+      }
+
+      allInvitations = data || [];
+    }
+
+    function renderUsersPanel() {
+      renderInvitations();
+      renderUsers();
+    }
+
+    function renderInvitations() {
+      const pendingCount = document.getElementById('pendingCount');
+      const pendingSection = document.getElementById('pendingSection');
+      const isAdmin = authState?.isAdmin;
+
+      pendingCount.textContent = allInvitations.length;
+
+      if (allInvitations.length === 0) {
+        pendingSection.innerHTML = `
+          <div class="users-empty-state">
+            No pending invitations
+          </div>
+        `;
+        return;
+      }
+
+      pendingSection.innerHTML = `
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Invited</th>
+              <th>Expires</th>
+              ${isAdmin ? '<th>Actions</th>' : ''}
+            </tr>
+          </thead>
+          <tbody>
+            ${allInvitations.map(inv => `
+              <tr>
+                <td>${inv.email}</td>
+                <td><span class="role-badge ${inv.role}">${inv.role}</span></td>
+                <td>${new Date(inv.invited_at).toLocaleDateString()}</td>
+                <td>${new Date(inv.expires_at).toLocaleDateString()}</td>
+                ${isAdmin ? `
+                  <td>
+                    <button class="btn-danger" onclick="revokeInvitation('${inv.id}')">Revoke</button>
+                  </td>
+                ` : ''}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderUsers() {
+      const usersCount = document.getElementById('usersCount');
+      const usersSection = document.getElementById('usersSection');
+      const isAdmin = authState?.isAdmin;
+      const currentUserId = authState?.appUser?.id;
+
+      usersCount.textContent = allUsers.length;
+
+      if (allUsers.length === 0) {
+        usersSection.innerHTML = `
+          <div class="users-empty-state">
+            No users yet
+          </div>
+        `;
+        return;
+      }
+
+      usersSection.innerHTML = `
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Last Login</th>
+              ${isAdmin ? '<th>Actions</th>' : ''}
+            </tr>
+          </thead>
+          <tbody>
+            ${allUsers.map(u => {
+              const isCurrentUser = u.id === currentUserId;
+              return `
+                <tr>
+                  <td>
+                    ${u.display_name || '-'}
+                    ${isCurrentUser ? '<span class="you-tag">You</span>' : ''}
+                  </td>
+                  <td>${u.email}</td>
+                  <td>
+                    ${isAdmin && !isCurrentUser ? `
+                      <select
+                        class="role-select"
+                        data-user-id="${u.id}"
+                        onchange="updateUserRole('${u.id}', this.value)"
+                      >
+                        <option value="staff" ${u.role === 'staff' ? 'selected' : ''}>Staff</option>
+                        <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+                      </select>
+                    ` : `
+                      <span class="role-badge ${u.role}">${u.role}</span>
+                    `}
+                  </td>
+                  <td>${u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : 'Never'}</td>
+                  ${isAdmin ? `
+                    <td>
+                      ${isCurrentUser
+                        ? '-'
+                        : `<button class="btn-danger" onclick="removeUser('${u.id}')">Remove</button>`
+                      }
+                    </td>
+                  ` : ''}
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    async function inviteUser(email, role) {
+      // Validate email
+      if (!email || !email.includes('@')) {
+        showToast('Please enter a valid email address', 'warning');
+        return;
+      }
+
+      // Check if user already exists
+      const existing = allUsers.find(u => u.email.toLowerCase() === email);
+      if (existing) {
+        showToast('This user already has an account', 'warning');
+        return;
+      }
+
+      // Check if invitation already pending
+      const pendingInvite = allInvitations.find(i => i.email.toLowerCase() === email);
+      if (pendingInvite) {
+        showToast('An invitation is already pending for this email', 'warning');
+        return;
+      }
+
+      try {
+        const { error } = await supabase
+          .from('user_invitations')
+          .insert({
+            email: email,
+            role: role,
+            invited_by: authState?.appUser?.id
+          });
+
+        if (error) throw error;
+
+        document.getElementById('inviteEmail').value = '';
+
+        await loadInvitationsData();
+        renderUsersPanel();
+
+        // Show invitation text modal
+        showInvitationModal(email, role);
+
+      } catch (error) {
+        console.error('Error inviting user:', error);
+        showToast('Failed to send invitation: ' + error.message, 'error');
+      }
+    }
+
+    function showInvitationModal(email, role) {
+      const roleDescription = role === 'admin'
+        ? 'full admin access (view all spaces, occupant details, edit spaces, manage photos, and invite users)'
+        : 'staff access (view all spaces and occupant details)';
+
+      const inviteText = `Hi,
+
+You've been invited to access GenAlpaca Spaces as ${role === 'admin' ? 'an admin' : 'a staff member'}.
+
+You will have ${roleDescription}.
+
+To get started:
+1. Go to: https://rsonnad.github.io/GenAlpacaOps/login/
+2. Click "Sign in with Google" using this email address (${email})
+
+Your access has already been pre-approved, so you'll have immediate access once you sign in.
+
+Let me know if you have any questions!`;
+
+      // Show modal
+      const modal = document.getElementById('inviteTextModal');
+      document.getElementById('inviteTextContent').value = inviteText;
+      modal.classList.remove('hidden');
+    }
+
+    function copyInviteText() {
+      const textarea = document.getElementById('inviteTextContent');
+      textarea.select();
+      document.execCommand('copy');
+      showToast('Invitation text copied to clipboard', 'success');
+    }
+
+    function closeInviteTextModal() {
+      document.getElementById('inviteTextModal').classList.add('hidden');
+    }
+
+    async function revokeInvitation(invitationId) {
+      try {
+        const { error } = await supabase
+          .from('user_invitations')
+          .update({ status: 'revoked' })
+          .eq('id', invitationId);
+
+        if (error) throw error;
+
+        await loadInvitationsData();
+        renderUsersPanel();
+        showToast('Invitation revoked', 'success');
+
+      } catch (error) {
+        console.error('Error revoking invitation:', error);
+        showToast('Failed to revoke: ' + error.message, 'error');
+      }
+    }
+
+    async function updateUserRole(userId, newRole) {
+      try {
+        const { error } = await supabase
+          .from('app_users')
+          .update({ role: newRole })
+          .eq('id', userId);
+
+        if (error) throw error;
+
+        await loadUsersData();
+        renderUsersPanel();
+        showToast('Role updated', 'success');
+
+      } catch (error) {
+        console.error('Error updating role:', error);
+        showToast('Failed to update role: ' + error.message, 'error');
+      }
+    }
+
+    async function removeUser(userId) {
+      if (!confirm('Remove this user? They will no longer be able to access admin features.')) return;
+
+      try {
+        const { error } = await supabase
+          .from('app_users')
+          .delete()
+          .eq('id', userId);
+
+        if (error) throw error;
+
+        await loadUsersData();
+        renderUsersPanel();
+        showToast('User removed', 'success');
+
+      } catch (error) {
+        console.error('Error removing user:', error);
+        showToast('Failed to remove user: ' + error.message, 'error');
+      }
+    }
+
+    // Make user management functions globally accessible
+    window.revokeInvitation = revokeInvitation;
+    window.updateUserRole = updateUserRole;
+    window.removeUser = removeUser;
 
     // =============================================
     // SETTINGS / TEMPLATE EDITOR
     // =============================================
 
     async function loadSettingsPanel() {
-      // Load placeholder reference
+      // Load lease placeholder reference
       const placeholders = leaseTemplateService.getAvailablePlaceholders();
       const placeholderList = document.getElementById('placeholderList');
       placeholderList.innerHTML = Object.entries(placeholders)
@@ -3332,7 +4421,7 @@
           </div>
         `).join('');
 
-      // Load active template
+      // Load active lease template
       try {
         const template = await leaseTemplateService.getActiveTemplate();
         if (template) {
@@ -3343,7 +4432,7 @@
           document.getElementById('templateContent').value = leaseTemplateService.getDefaultTemplate();
         }
       } catch (e) {
-        console.error('Error loading template:', e);
+        console.error('Error loading lease template:', e);
       }
 
       // Load template history
@@ -3351,6 +4440,36 @@
 
       // Load SignWell config
       await loadSignwellConfig();
+
+      // Load event placeholder reference
+      const eventPlaceholders = eventTemplateService.getAvailablePlaceholders();
+      const eventPlaceholderList = document.getElementById('eventPlaceholderList');
+      if (eventPlaceholderList) {
+        eventPlaceholderList.innerHTML = Object.entries(eventPlaceholders)
+          .map(([key, desc]) => `
+            <div class="placeholder-item">
+              <code>{{${key}}}</code>
+              <span class="placeholder-desc">${desc}</span>
+            </div>
+          `).join('');
+      }
+
+      // Load active event template
+      try {
+        const eventTemplate = await eventTemplateService.getActiveTemplate();
+        if (eventTemplate) {
+          document.getElementById('eventTemplateName').value = eventTemplate.name;
+          document.getElementById('eventTemplateContent').value = eventTemplate.content;
+        } else {
+          // Load default template
+          document.getElementById('eventTemplateContent').value = eventTemplateService.getDefaultTemplate();
+        }
+      } catch (e) {
+        console.error('Error loading event template:', e);
+      }
+
+      // Load event template history
+      await loadEventTemplateHistory();
     }
 
     async function loadTemplateHistory() {
@@ -3465,6 +4584,123 @@
       showToast('Default template loaded', 'info');
     }
 
+    // =============================================
+    // EVENT TEMPLATE FUNCTIONS
+    // =============================================
+
+    async function loadEventTemplateHistory() {
+      try {
+        const templates = await eventTemplateService.getAllTemplates();
+        const tbody = document.getElementById('eventTemplateHistoryBody');
+        if (!tbody) return;
+
+        if (templates.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="text-muted">No templates saved yet</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = templates.map(t => `
+          <tr>
+            <td>${t.name}</td>
+            <td>v${t.version}</td>
+            <td>${new Date(t.created_at).toLocaleDateString()}</td>
+            <td>${t.is_active ? '<span class="status-badge active">Active</span>' : ''}</td>
+            <td>
+              <button class="btn-small" onclick="loadEventTemplate('${t.id}')">Load</button>
+              ${!t.is_active ? `<button class="btn-small" onclick="setActiveEventTemplate('${t.id}')">Set Active</button>` : ''}
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        console.error('Error loading event template history:', e);
+      }
+    }
+
+    window.loadEventTemplate = async function(templateId) {
+      try {
+        const { data, error } = await supabase
+          .from('event_agreement_templates')
+          .select('*')
+          .eq('id', templateId)
+          .single();
+
+        if (error) throw error;
+
+        document.getElementById('eventTemplateName').value = data.name;
+        document.getElementById('eventTemplateContent').value = data.content;
+        showToast('Event template loaded', 'success');
+      } catch (e) {
+        showToast('Error loading event template: ' + e.message, 'error');
+      }
+    };
+
+    window.setActiveEventTemplate = async function(templateId) {
+      try {
+        await eventTemplateService.setActiveTemplate(templateId);
+        await loadEventTemplateHistory();
+        showToast('Event template set as active', 'success');
+      } catch (e) {
+        showToast('Error: ' + e.message, 'error');
+      }
+    };
+
+    async function saveEventTemplate() {
+      const name = document.getElementById('eventTemplateName').value.trim();
+      const content = document.getElementById('eventTemplateContent').value;
+      const makeActive = document.getElementById('eventTemplateMakeActive').checked;
+
+      if (!name) {
+        showToast('Please enter a template name', 'warning');
+        return;
+      }
+
+      if (!content.trim()) {
+        showToast('Template content cannot be empty', 'warning');
+        return;
+      }
+
+      // Validate template
+      const validation = eventTemplateService.validateTemplate(content);
+      const validationDiv = document.getElementById('eventTemplateValidation');
+
+      if (!validation.isValid) {
+        validationDiv.innerHTML = `
+          <div class="validation-error">
+            <strong>Validation Errors:</strong>
+            <ul>${validation.errors.map(e => `<li>${e}</li>`).join('')}</ul>
+          </div>
+        `;
+        validationDiv.style.display = 'block';
+        return;
+      }
+
+      if (validation.warnings.length > 0) {
+        validationDiv.innerHTML = `
+          <div class="validation-warning">
+            <strong>Warnings:</strong>
+            <ul>${validation.warnings.map(w => `<li>${w}</li>`).join('')}</ul>
+          </div>
+        `;
+        validationDiv.style.display = 'block';
+      } else {
+        validationDiv.style.display = 'none';
+      }
+
+      try {
+        await eventTemplateService.saveTemplate(content, name, makeActive);
+        await loadEventTemplateHistory();
+        showToast('Event template saved successfully!', 'success');
+      } catch (e) {
+        showToast('Error saving event template: ' + e.message, 'error');
+      }
+    }
+
+    function loadDefaultEventTemplate() {
+      document.getElementById('eventTemplateContent').value = eventTemplateService.getDefaultTemplate();
+      document.getElementById('eventTemplateName').value = 'Standard Event Agreement';
+      showToast('Default event template loaded', 'info');
+    }
+
     async function loadSignwellConfig() {
       try {
         const { data, error } = await supabase
@@ -3522,8 +4758,21 @@
       try {
         await rentalService.requestDeposit(currentApplicationId);
         await loadApplications();
+
+        // Send deposit request email
+        const app = allApplications.find(a => a.id === currentApplicationId);
+        if (app?.person?.email) {
+          const emailResult = await emailService.sendDepositRequested(app);
+          if (emailResult.success) {
+            showToast('Deposit requested & email sent', 'success');
+          } else {
+            showToast('Deposit requested (email failed to send)', 'warning');
+          }
+        } else {
+          showToast('Deposit requested (no email on file)', 'success');
+        }
+
         openRentalDetail(currentApplicationId);
-        showToast('Deposit requested', 'success');
       } catch (error) {
         showToast('Error: ' + error.message, 'error');
       }
@@ -3572,10 +4821,14 @@
         showToast('Create a lease template in the Settings tab', 'info');
       });
 
-      // Settings panel event listeners
+      // Settings panel event listeners - Lease templates
       document.getElementById('loadDefaultTemplateBtn')?.addEventListener('click', loadDefaultTemplate);
       document.getElementById('saveTemplateBtn')?.addEventListener('click', saveTemplate);
       document.getElementById('saveSignwellConfigBtn')?.addEventListener('click', saveSignwellConfig);
+
+      // Settings panel event listeners - Event templates
+      document.getElementById('loadDefaultEventTemplateBtn')?.addEventListener('click', loadDefaultEventTemplate);
+      document.getElementById('saveEventTemplateBtn')?.addEventListener('click', saveEventTemplate);
 
       // Legacy manual agreement actions (backwards compatibility)
       document.getElementById('markAgreementGenerated')?.addEventListener('click', async () => {

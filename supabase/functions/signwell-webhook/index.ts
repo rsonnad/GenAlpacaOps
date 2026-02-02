@@ -56,7 +56,18 @@ Deno.serve(async (req) => {
     // Find the rental application with this SignWell document ID
     const { data: application, error: findError } = await supabase
       .from('rental_applications')
-      .select('id, generated_pdf_url')
+      .select(`
+        id,
+        generated_pdf_url,
+        approved_rate,
+        security_deposit,
+        person:person_id (
+          id,
+          first_name,
+          last_name,
+          email
+        )
+      `)
       .eq('signwell_document_id', documentId)
       .single();
 
@@ -137,6 +148,54 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Document ${documentId} signed and processed successfully`);
+
+    // Send email notification via send-email function
+    const person = application.person as { id: string; first_name: string; last_name: string; email: string } | null;
+    if (person?.email) {
+      try {
+        const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+        if (RESEND_API_KEY) {
+          const emailResponse = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${RESEND_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: 'Alpaca Playhouse <noreply@alpacaplayhouse.com>',
+              to: [person.email],
+              reply_to: 'hello@alpacaplayhouse.com',
+              subject: 'Lease Signed Successfully - Alpaca Playhouse',
+              html: `
+                <h2>Lease Signing Complete!</h2>
+                <p>Hi ${person.first_name},</p>
+                <p>Your lease agreement has been successfully signed. A copy will be provided for your records.</p>
+                <p><strong>Next Steps:</strong></p>
+                <ul>
+                  <li>Submit your move-in deposit: <strong>$${application.approved_rate || 'TBD'}</strong></li>
+                  ${application.security_deposit ? `<li>Submit your security deposit: <strong>$${application.security_deposit}</strong></li>` : ''}
+                </ul>
+                <p>Once deposits are received, we'll confirm your move-in date.</p>
+                <p>Best regards,<br>Alpaca Playhouse</p>
+              `,
+              text: `Lease Signing Complete!\n\nHi ${person.first_name},\n\nYour lease agreement has been successfully signed. A copy will be provided for your records.\n\nNext Steps:\n- Submit your move-in deposit: $${application.approved_rate || 'TBD'}\n${application.security_deposit ? `- Submit your security deposit: $${application.security_deposit}` : ''}\n\nOnce deposits are received, we'll confirm your move-in date.\n\nBest regards,\nAlpaca Playhouse`,
+            }),
+          });
+
+          if (emailResponse.ok) {
+            console.log('Lease signed notification email sent to', person.email);
+          } else {
+            const emailError = await emailResponse.json();
+            console.error('Failed to send email:', emailError);
+          }
+        } else {
+          console.log('RESEND_API_KEY not configured, skipping email');
+        }
+      } catch (emailErr) {
+        console.error('Error sending email:', emailErr);
+        // Don't fail the webhook for email errors
+      }
+    }
 
     return new Response(
       JSON.stringify({

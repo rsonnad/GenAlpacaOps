@@ -74,7 +74,14 @@ GenAlpacaOps/
 │
 ├── supabase/               # Supabase Edge Functions
 │   └── functions/
-│       └── signwell-webhook/  # E-signature completion webhook
+│       ├── signwell-webhook/  # E-signature completion webhook
+│       │   └── index.ts
+│       ├── record-payment/    # Smart payment recording with AI matching
+│       │   ├── index.ts           # Main handler
+│       │   ├── payment-parser.ts  # Bank string parsing
+│       │   ├── tenant-matcher.ts  # Matching logic (cache → exact → AI)
+│       │   └── gemini-client.ts   # Google Gemini API integration
+│       └── resolve-payment/   # Manual payment resolution
 │           └── index.ts
 │
 ├── login/                  # Login page
@@ -105,7 +112,7 @@ GenAlpacaOps/
 - `type` (free-form text: "Dwelling", "Amenity", "Event", etc.)
 - `monthly_rate`, `weekly_rate`, `nightly_rate`
 - `sq_footage`, `bath_privacy` (private/shared), `bath_fixture`
-- `beds_king`, `beds_queen`, `beds_double`, `beds_twin`, `beds_folding`, `beds_trifold`
+- `beds_king`, `beds_queen`, `beds_double`, `beds_twin`, `beds_folding`
 - `min_residents`, `max_residents`, `gender_restriction`
 - `is_listed`, `is_secret`, `can_be_dwelling`, `can_be_event`, `is_archived`
 - `parent_id` (self-reference for nested spaces)
@@ -210,6 +217,37 @@ The system has migrated from the legacy `photos` table to a unified `media` syst
 - `assignment_id` (FK)
 - `amount`, `payment_date`, `payment_method`
 - `period_start`, `period_end`, `notes`
+
+### Payment Processing System (AI-Assisted)
+
+**payment_sender_mappings** - Cached sender name → tenant mappings (for auto-matching)
+- `id` (uuid, PK)
+- `sender_name` - Original name (e.g., "KYMBERLY DELIOU")
+- `sender_name_normalized` - Lowercase, trimmed (unique)
+- `person_id` (FK → people)
+- `confidence_score` - 0.00-1.00, from AI matching
+- `match_source` - 'gemini', 'manual', 'exact'
+- `created_at`, `updated_at`
+
+**payment_processing_log** - Audit trail for all payment processing
+- `id` (uuid, PK)
+- `raw_payment_string` - Original bank transaction text
+- `sender_name`, `parsed_amount`, `parsed_date`, `parsed_method`
+- `matched_person_id` (FK), `matched_assignment_id` (FK)
+- `match_method` - 'cached', 'gemini', 'exact', 'failed'
+- `gemini_response` (JSONB) - Full AI response for debugging
+- `payment_id` (FK → payments) - If payment was created
+- `status` - 'success', 'pending_review', 'failed'
+- `error_message`, `created_at`
+
+**pending_payments** - Queue for payments needing manual review
+- `id` (uuid, PK)
+- `raw_payment_string`, `sender_name`
+- `parsed_amount`, `parsed_date`, `parsed_method`
+- `gemini_suggestions` (JSONB) - Array of {person_id, confidence, reasoning}
+- `processing_log_id` (FK)
+- `resolved_at`, `resolved_by`, `resolution` ('matched', 'ignored')
+- `created_at`
 
 ## Authentication & Security
 
@@ -355,6 +393,14 @@ values ('New Space', 500, true, true, ...);
 - Separate system on DigitalOcean
 - Uses SKILL.md for API knowledge
 - Can query/update Supabase directly
+- Sends bank transaction text to `record-payment` Edge Function for AI-matched payment recording
+
+### Google Gemini (AI Matching)
+- Used by `record-payment` Edge Function
+- Matches payment sender names to tenants using fuzzy matching
+- Considers name variations, typos, and payment amounts
+- API key stored as Supabase secret: `GEMINI_API_KEY`
+- Model: `gemini-1.5-flash` (low temperature for consistency)
 
 ### Media Library
 - Centralized media management at `/spaces/admin/manage.html`
@@ -397,6 +443,23 @@ Located at `/spaces/admin/manage.html` with tabs for:
   - Lease Template Editor: Markdown with {{placeholders}}, validation, version history
   - SignWell Configuration: API key, test mode toggle
 
+### Smart Payment Recording (AI-Assisted)
+Intelligent payment matching using Google Gemini AI:
+1. OpenClaw receives bank notification text (e.g., "ZELLE FROM KYMBERLY DELIOU$1,195.00")
+2. Sends to `record-payment` Edge Function
+3. System checks cached sender mappings first (instant lookup)
+4. If no cache hit, tries exact name match against tenants
+5. If no exact match, calls Gemini AI for fuzzy matching:
+   - Handles name variations (Kym = Kymberly, Bob = Robert)
+   - Considers payment amount vs rent/deposit amounts
+   - Returns confidence score (0.00-1.00)
+6. High confidence (≥85%) → auto-records payment, saves mapping for future
+7. Low confidence → creates `pending_payment` for admin review
+8. Admin can manually match via `resolve-payment` Edge Function
+9. Manual matches are cached, so future payments auto-match
+
+**Key benefit:** First payment from a sender may need AI/manual matching. All subsequent payments from the same sender are instant (cached lookup, no AI cost).
+
 ### Lease Agreement System
 Database-driven lease generation replacing manual Claude Skill workflow:
 1. Templates stored in `lease_templates` table (Markdown with `{{placeholders}}`)
@@ -414,9 +477,25 @@ When a tenant wants to leave before their assignment ends:
 4. Only when `desired_departure_listed=true` does the date affect consumer availability
 5. Changing the date resets `desired_departure_listed` to false (requires re-listing)
 
+### Edge Function Deployment
+
+To deploy Supabase Edge Functions:
+```bash
+# Login (one-time)
+npx supabase login
+
+# Deploy functions
+npx supabase functions deploy record-payment --project-ref aphrrfprbixmhissnjfn
+npx supabase functions deploy resolve-payment --project-ref aphrrfprbixmhissnjfn
+npx supabase functions deploy signwell-webhook --project-ref aphrrfprbixmhissnjfn
+
+# Set secrets (one-time)
+npx supabase secrets set GEMINI_API_KEY=your_key_here --project-ref aphrrfprbixmhissnjfn
+```
+
 ## Related Documentation
 
 - `README.md` - Quick setup
-- `API.md` - Full REST API reference
+- `API.md` - Full REST API reference (includes Edge Function docs)
 - `SKILL.md` - OpenClaw integration
 - Supabase Dashboard - https://supabase.com/dashboard/project/aphrrfprbixmhissnjfn

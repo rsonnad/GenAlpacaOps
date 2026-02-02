@@ -504,7 +504,6 @@ function getBedSummary(space) {
   if (space.beds_double) beds.push(`${space.beds_double} double`);
   if (space.beds_twin) beds.push(`${space.beds_twin} twin`);
   if (space.beds_folding) beds.push(`${space.beds_folding} folding`);
-  if (space.beds_trifold) beds.push(`${space.beds_trifold} trifold`);
   return beds.join(', ');
 }
 

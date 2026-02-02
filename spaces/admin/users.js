@@ -1,6 +1,7 @@
 // User Management - Admin only
 import { supabase } from '../../shared/supabase.js';
 import { initAuth, getAuthState, signOut, onAuthStateChange } from '../../shared/auth.js';
+import { emailService } from '../../shared/email-service.js';
 
 // =============================================
 // TOAST NOTIFICATIONS
@@ -173,6 +174,7 @@ async function inviteUser(email, role) {
   }
 
   try {
+    // Create invitation record
     const { error } = await supabase
       .from('user_invitations')
       .insert({
@@ -185,11 +187,21 @@ async function inviteUser(email, role) {
 
     document.getElementById('inviteEmail').value = '';
 
+    // Send invitation email automatically
+    const loginUrl = 'https://rsonnad.github.io/GenAlpacaOps/login/';
+    const emailResult = await emailService.sendStaffInvitation(email, role, loginUrl);
+
+    if (emailResult.success) {
+      showToast('Invitation sent to ' + email, 'success');
+    } else {
+      console.error('Email send failed:', emailResult.error);
+      showToast('Invitation created but email failed to send. You may need to notify them manually.', 'warning');
+      // Still show the modal as fallback
+      showInvitationModal(email, role);
+    }
+
     await loadInvitations();
     render();
-
-    // Show invitation text modal
-    showInvitationModal(email, role);
 
   } catch (error) {
     console.error('Error inviting user:', error);
