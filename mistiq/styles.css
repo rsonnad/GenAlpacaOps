@@ -1,0 +1,651 @@
+/**
+ * Mistique Journey Styles
+ *
+ * A warm, spa-like aesthetic with beige/cream tones
+ */
+
+/* =============================================
+   CSS VARIABLES
+   ============================================= */
+
+:root {
+  /* Colors - Warm, earthy palette */
+  --mistiq-bg: #f9f6f1;
+  --mistiq-bg-alt: #f0ebe3;
+  --mistiq-text: #3d3d3d;
+  --mistiq-text-light: #6b6b6b;
+  --mistiq-accent: #8b7355;
+  --mistiq-accent-dark: #6d5a45;
+  --mistiq-gold: #c4a77d;
+  --mistiq-cream: #fdfbf7;
+  --mistiq-warm: #e8ddd0;
+
+  /* Typography */
+  --mistiq-font-heading: 'Cormorant Garamond', Georgia, serif;
+  --mistiq-font-body: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Spacing */
+  --mistiq-space-xs: 0.5rem;
+  --mistiq-space-sm: 1rem;
+  --mistiq-space-md: 2rem;
+  --mistiq-space-lg: 4rem;
+  --mistiq-space-xl: 6rem;
+
+  /* Sizing */
+  --mistiq-max-width: 1200px;
+  --mistiq-content-width: 800px;
+}
+
+/* =============================================
+   BASE STYLES
+   ============================================= */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--mistiq-font-body);
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--mistiq-text);
+  background: var(--mistiq-bg);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--mistiq-font-heading);
+  font-weight: 500;
+  line-height: 1.3;
+  margin: 0 0 1rem;
+  color: var(--mistiq-text);
+}
+
+h1 { font-size: 3rem; }
+h2 { font-size: 2.25rem; }
+h3 { font-size: 1.5rem; }
+
+p {
+  margin: 0 0 1rem;
+}
+
+a {
+  color: var(--mistiq-accent);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: var(--mistiq-accent-dark);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* =============================================
+   LAYOUT
+   ============================================= */
+
+.mistiq-container {
+  max-width: var(--mistiq-max-width);
+  margin: 0 auto;
+  padding: 0 var(--mistiq-space-md);
+}
+
+.mistiq-section {
+  padding: var(--mistiq-space-xl) 0;
+}
+
+.mistiq-section--alt {
+  background: var(--mistiq-bg-alt);
+}
+
+.mistiq-section--cta {
+  background: linear-gradient(135deg, var(--mistiq-accent), var(--mistiq-accent-dark));
+  color: white;
+  text-align: center;
+}
+
+.mistiq-section--cta h2,
+.mistiq-section--cta p {
+  color: white;
+}
+
+.mistiq-section__title {
+  text-align: center;
+  margin-bottom: var(--mistiq-space-sm);
+}
+
+.mistiq-section__subtitle {
+  text-align: center;
+  color: var(--mistiq-text-light);
+  max-width: 600px;
+  margin: 0 auto var(--mistiq-space-lg);
+  font-size: 1.1rem;
+}
+
+.mistiq-section--cta .mistiq-section__subtitle {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* =============================================
+   HEADER
+   ============================================= */
+
+.mistiq-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: transparent;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.mistiq-header--scrolled {
+  background: var(--mistiq-cream);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+}
+
+.mistiq-header__inner {
+  max-width: var(--mistiq-max-width);
+  margin: 0 auto;
+  padding: var(--mistiq-space-sm) var(--mistiq-space-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mistiq-header__logo {
+  text-decoration: none;
+}
+
+.mistiq-header__logo-text {
+  font-family: var(--mistiq-font-heading);
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: white;
+  transition: color 0.3s;
+}
+
+.mistiq-header--scrolled .mistiq-header__logo-text {
+  color: var(--mistiq-text);
+}
+
+.mistiq-nav__list {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: var(--mistiq-space-md);
+}
+
+.mistiq-nav__link {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 400;
+  transition: color 0.2s;
+}
+
+.mistiq-header--scrolled .mistiq-nav__link {
+  color: var(--mistiq-text);
+}
+
+.mistiq-nav__link:hover {
+  color: var(--mistiq-gold);
+}
+
+/* Mobile menu toggle */
+.mistiq-menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+.mistiq-menu-toggle__bar {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: white;
+  margin: 5px 0;
+  transition: background 0.3s;
+}
+
+.mistiq-header--scrolled .mistiq-menu-toggle__bar {
+  background: var(--mistiq-text);
+}
+
+@media (max-width: 768px) {
+  .mistiq-nav {
+    display: none;
+  }
+
+  .mistiq-menu-toggle {
+    display: block;
+  }
+}
+
+/* =============================================
+   MOBILE NAVIGATION
+   ============================================= */
+
+.mistiq-mobile-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--mistiq-cream);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+}
+
+.mistiq-mobile-nav--open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.mistiq-mobile-nav__close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: var(--mistiq-text);
+}
+
+.mistiq-mobile-nav__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: center;
+}
+
+.mistiq-mobile-nav__item {
+  margin: 1.5rem 0;
+}
+
+.mistiq-mobile-nav__link {
+  font-family: var(--mistiq-font-heading);
+  font-size: 1.75rem;
+  color: var(--mistiq-text);
+}
+
+/* =============================================
+   HERO SECTION
+   ============================================= */
+
+.mistiq-hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: linear-gradient(135deg, var(--mistiq-accent) 0%, var(--mistiq-accent-dark) 100%);
+  color: white;
+  padding: var(--mistiq-space-xl) var(--mistiq-space-md);
+}
+
+.mistiq-hero__content {
+  max-width: 700px;
+}
+
+.mistiq-hero__title {
+  font-size: 3.5rem;
+  color: white;
+  margin-bottom: var(--mistiq-space-sm);
+  font-weight: 400;
+}
+
+.mistiq-hero__subtitle {
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: var(--mistiq-space-md);
+  font-style: italic;
+}
+
+/* =============================================
+   BUTTONS
+   ============================================= */
+
+.mistiq-btn {
+  display: inline-block;
+  padding: 0.875rem 2rem;
+  border-radius: 4px;
+  font-family: var(--mistiq-font-body);
+  font-size: 1rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.mistiq-btn--primary {
+  background: white;
+  color: var(--mistiq-accent);
+}
+
+.mistiq-btn--primary:hover {
+  background: var(--mistiq-gold);
+  color: white;
+}
+
+.mistiq-btn--large {
+  padding: 1rem 2.5rem;
+  font-size: 1.1rem;
+}
+
+/* =============================================
+   INTRO SECTION
+   ============================================= */
+
+.mistiq-intro {
+  max-width: var(--mistiq-content-width);
+  margin: 0 auto;
+  text-align: center;
+}
+
+.mistiq-intro__text {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: var(--mistiq-text-light);
+}
+
+.mistiq-intro__text strong {
+  color: var(--mistiq-text);
+}
+
+/* =============================================
+   ELEMENTS GRID
+   ============================================= */
+
+.mistiq-elements-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--mistiq-space-md);
+}
+
+.mistiq-element-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.mistiq-element-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+}
+
+.mistiq-element-card__image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.mistiq-element-card__title {
+  font-size: 1.1rem;
+  padding: var(--mistiq-space-sm) var(--mistiq-space-sm) 0;
+  margin-bottom: 0.25rem;
+}
+
+.mistiq-element-card__desc {
+  padding: 0 var(--mistiq-space-sm) var(--mistiq-space-sm);
+  color: var(--mistiq-text-light);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* =============================================
+   TESTIMONIALS
+   ============================================= */
+
+.mistiq-testimonials {
+  max-width: var(--mistiq-content-width);
+  margin: 0 auto;
+}
+
+.mistiq-testimonial {
+  margin: 0 0 var(--mistiq-space-md);
+  padding: var(--mistiq-space-md);
+  background: var(--mistiq-bg-alt);
+  border-radius: 12px;
+  border-left: 4px solid var(--mistiq-gold);
+}
+
+.mistiq-testimonial p {
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.8;
+  margin-bottom: var(--mistiq-space-sm);
+}
+
+.mistiq-testimonial cite {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--mistiq-accent);
+}
+
+/* =============================================
+   PHASES
+   ============================================= */
+
+.mistiq-phases {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.mistiq-phase {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: var(--mistiq-space-md);
+  margin-bottom: var(--mistiq-space-lg);
+  align-items: start;
+}
+
+.mistiq-phase:nth-child(even) {
+  direction: rtl;
+}
+
+.mistiq-phase:nth-child(even) > * {
+  direction: ltr;
+}
+
+.mistiq-phase__image {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.mistiq-phase__content {
+  padding-top: var(--mistiq-space-sm);
+}
+
+.mistiq-phase__title {
+  color: var(--mistiq-accent);
+  margin-bottom: var(--mistiq-space-sm);
+}
+
+.mistiq-phase__content p {
+  color: var(--mistiq-text-light);
+}
+
+@media (max-width: 768px) {
+  .mistiq-phase {
+    grid-template-columns: 1fr;
+  }
+
+  .mistiq-phase:nth-child(even) {
+    direction: ltr;
+  }
+}
+
+/* =============================================
+   TECHNIQUES
+   ============================================= */
+
+.mistiq-techniques {
+  max-width: var(--mistiq-content-width);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--mistiq-space-md);
+}
+
+.mistiq-techniques__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.mistiq-techniques__list li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--mistiq-warm);
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.mistiq-techniques__list li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: var(--mistiq-gold);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.mistiq-techniques__note {
+  background: var(--mistiq-bg-alt);
+  padding: var(--mistiq-space-md);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.mistiq-techniques__note p {
+  margin: 0;
+  font-style: italic;
+  color: var(--mistiq-text-light);
+}
+
+@media (max-width: 768px) {
+  .mistiq-techniques {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mistiq-facility {
+  margin-top: var(--mistiq-space-lg);
+  text-align: center;
+}
+
+.mistiq-facility__image {
+  max-width: 600px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* =============================================
+   CTA
+   ============================================= */
+
+.mistiq-cta__contact {
+  margin-top: var(--mistiq-space-md);
+  opacity: 0.9;
+}
+
+.mistiq-cta__contact a {
+  color: white;
+  text-decoration: underline;
+}
+
+/* =============================================
+   FOOTER
+   ============================================= */
+
+.mistiq-footer {
+  background: var(--mistiq-text);
+  color: white;
+  padding: var(--mistiq-space-lg) var(--mistiq-space-md);
+  text-align: center;
+}
+
+.mistiq-footer__brand {
+  font-family: var(--mistiq-font-heading);
+  font-size: 1.5rem;
+  margin: 0 0 0.25rem;
+}
+
+.mistiq-footer__location {
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 var(--mistiq-space-sm);
+}
+
+.mistiq-footer__link {
+  color: var(--mistiq-gold);
+  display: inline-block;
+  margin-bottom: var(--mistiq-space-md);
+}
+
+.mistiq-footer__copyright {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* =============================================
+   RESPONSIVE
+   ============================================= */
+
+@media (max-width: 768px) {
+  h1 { font-size: 2.25rem; }
+  h2 { font-size: 1.75rem; }
+  h3 { font-size: 1.25rem; }
+
+  .mistiq-hero__title {
+    font-size: 2.5rem;
+  }
+
+  .mistiq-hero__subtitle {
+    font-size: 1.25rem;
+  }
+
+  .mistiq-section {
+    padding: var(--mistiq-space-lg) 0;
+  }
+
+  .mistiq-elements-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .mistiq-elements-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mistiq-hero__title {
+    font-size: 2rem;
+  }
+}

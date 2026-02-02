@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Intake Survey — Mistique Journey</title>
+  <meta name="description" content="Complete your intake survey to prepare for your Mistique Journey experience.">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Lato:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/GenAlpacaOps/mistiq/styles.css">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="https://images.squarespace-cdn.com/content/v1/6213d804273001551ffe5b8c/24787244-a26f-4ae0-8425-a9d8ccff06e6/playhouselogo_inverted.png?format=100w">
+</head>
+<body>
+  <!-- Header -->
+  <header class="mistiq-header mistiq-header--scrolled" id="mistiq-header">
+    <div class="mistiq-header__inner">
+      <a href="/GenAlpacaOps/mistiq/" class="mistiq-header__logo">
+        <span class="mistiq-header__logo-text">Mistique Journey</span>
+      </a>
+
+      <nav class="mistiq-nav" id="mistiq-nav">
+        <ul class="mistiq-nav__list">
+          <li><a href="/GenAlpacaOps/" class="mistiq-nav__link">Alpaca Playhouse</a></li>
+          <li><a href="/GenAlpacaOps/visiting/" class="mistiq-nav__link">Visiting</a></li>
+          <li><a href="/GenAlpacaOps/contact/" class="mistiq-nav__link">Contact</a></li>
+        </ul>
+      </nav>
+
+      <button class="mistiq-menu-toggle" id="mistiq-menu-toggle" aria-label="Toggle menu">
+        <span class="mistiq-menu-toggle__bar"></span>
+        <span class="mistiq-menu-toggle__bar"></span>
+        <span class="mistiq-menu-toggle__bar"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mobile Navigation -->
+  <div class="mistiq-mobile-nav" id="mistiq-mobile-nav">
+    <button class="mistiq-mobile-nav__close" id="mistiq-mobile-nav-close" aria-label="Close menu">×</button>
+    <ul class="mistiq-mobile-nav__list">
+      <li class="mistiq-mobile-nav__item"><a href="/GenAlpacaOps/mistiq/" class="mistiq-mobile-nav__link">Mistique Journey</a></li>
+      <li class="mistiq-mobile-nav__item"><a href="/GenAlpacaOps/" class="mistiq-mobile-nav__link">Alpaca Playhouse</a></li>
+      <li class="mistiq-mobile-nav__item"><a href="/GenAlpacaOps/visiting/" class="mistiq-mobile-nav__link">Visiting</a></li>
+      <li class="mistiq-mobile-nav__item"><a href="/GenAlpacaOps/contact/" class="mistiq-mobile-nav__link">Contact</a></li>
+    </ul>
+  </div>
+
+  <!-- Content -->
+  <div class="mistiq-page-content">
+    <div class="mistiq-container">
+      <div class="mistiq-form-wrapper">
+        <h1>Intake Survey</h1>
+        <p class="mistiq-form-intro">Please complete this form to help us prepare for your Mistique Journey experience. Your responses will help us personalize your session.</p>
+
+        <form id="intake-form" class="mistiq-form">
+          <div class="mistiq-form__section">
+            <h2>Personal Information</h2>
+
+            <div class="mistiq-form__group">
+              <label for="name" class="mistiq-form__label">Full Name *</label>
+              <input type="text" id="name" name="name" required class="mistiq-form__input">
+            </div>
+
+            <div class="mistiq-form__row">
+              <div class="mistiq-form__group">
+                <label for="email" class="mistiq-form__label">Email *</label>
+                <input type="email" id="email" name="email" required class="mistiq-form__input">
+              </div>
+
+              <div class="mistiq-form__group">
+                <label for="phone" class="mistiq-form__label">Phone Number *</label>
+                <input type="tel" id="phone" name="phone" required class="mistiq-form__input">
+              </div>
+            </div>
+
+            <div class="mistiq-form__group">
+              <label for="preferred-date" class="mistiq-form__label">Preferred Date</label>
+              <input type="date" id="preferred-date" name="preferred_date" class="mistiq-form__input">
+            </div>
+          </div>
+
+          <div class="mistiq-form__section">
+            <h2>Health & Wellness</h2>
+
+            <div class="mistiq-form__group">
+              <label for="health-conditions" class="mistiq-form__label">Do you have any health conditions we should be aware of?</label>
+              <textarea id="health-conditions" name="health_conditions" rows="3" class="mistiq-form__input" placeholder="Please list any conditions, injuries, or areas of concern..."></textarea>
+            </div>
+
+            <div class="mistiq-form__group">
+              <label for="medications" class="mistiq-form__label">Are you currently taking any medications?</label>
+              <textarea id="medications" name="medications" rows="2" class="mistiq-form__input" placeholder="List any medications or supplements..."></textarea>
+            </div>
+
+            <div class="mistiq-form__group">
+              <label class="mistiq-form__label">Have you experienced any of the following? (Check all that apply)</label>
+              <div class="mistiq-form__checkboxes">
+                <label class="mistiq-form__checkbox">
+                  <input type="checkbox" name="experience[]" value="massage">
+                  <span>Massage therapy</span>
+                </label>
+                <label class="mistiq-form__checkbox">
+                  <input type="checkbox" name="experience[]" value="yoga">
+                  <span>Yoga practice</span>
+                </label>
+                <label class="mistiq-form__checkbox">
+                  <input type="checkbox" name="experience[]" value="breathwork">
+                  <span>Breathwork</span>
+                </label>
+                <label class="mistiq-form__checkbox">
+                  <input type="checkbox" name="experience[]" value="meditation">
+                  <span>Meditation</span>
+                </label>
+                <label class="mistiq-form__checkbox">
+                  <input type="checkbox" name="experience[]" value="sauna">
+                  <span>Sauna / Heat therapy</span>
+                </label>
+                <label class="mistiq-form__checkbox">
+                  <input type="checkbox" name="experience[]" value="coldplunge">
+                  <span>Cold plunge / Ice bath</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="mistiq-form__section">
+            <h2>Your Intentions</h2>
+
+            <div class="mistiq-form__group">
+              <label for="intentions" class="mistiq-form__label">What are your intentions for this journey? *</label>
+              <textarea id="intentions" name="intentions" rows="4" required class="mistiq-form__input" placeholder="What would you like to achieve or explore during your session?"></textarea>
+            </div>
+
+            <div class="mistiq-form__group">
+              <label for="focus-areas" class="mistiq-form__label">Are there specific areas of your body you'd like us to focus on?</label>
+              <textarea id="focus-areas" name="focus_areas" rows="3" class="mistiq-form__input" placeholder="e.g., shoulders, lower back, hips..."></textarea>
+            </div>
+
+            <div class="mistiq-form__group">
+              <label for="pressure" class="mistiq-form__label">Preferred pressure level for bodywork</label>
+              <select id="pressure" name="pressure" class="mistiq-form__input">
+                <option value="">Select preference...</option>
+                <option value="light">Light / Gentle</option>
+                <option value="medium">Medium</option>
+                <option value="firm">Firm / Deep</option>
+                <option value="varies">Varies by area</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mistiq-form__section">
+            <h2>Additional Information</h2>
+
+            <div class="mistiq-form__group">
+              <label for="referral" class="mistiq-form__label">How did you hear about Mistique Journey?</label>
+              <input type="text" id="referral" name="referral" class="mistiq-form__input" placeholder="Friend, social media, event, etc.">
+            </div>
+
+            <div class="mistiq-form__group">
+              <label for="additional-notes" class="mistiq-form__label">Anything else you'd like us to know?</label>
+              <textarea id="additional-notes" name="additional_notes" rows="3" class="mistiq-form__input"></textarea>
+            </div>
+          </div>
+
+          <div class="mistiq-form__actions">
+            <button type="submit" class="mistiq-btn mistiq-btn--submit">Submit Intake Survey</button>
+          </div>
+        </form>
+
+        <div id="form-success" class="mistiq-form-success" style="display: none;">
+          <h2>Thank You!</h2>
+          <p>Your intake survey has been submitted. We'll be in touch soon to confirm your Mistique Journey session.</p>
+          <p>Questions? Contact us at <a href="mailto:alpacaplayhouse@gmail.com">alpacaplayhouse@gmail.com</a></p>
+          <a href="/GenAlpacaOps/mistiq/" class="mistiq-btn mistiq-btn--submit">Return to Mistique Journey</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="mistiq-footer">
+    <div class="mistiq-footer__content">
+      <p class="mistiq-footer__brand">Mistique Journey</p>
+      <p class="mistiq-footer__location">at The Austin Alpaca Playhouse</p>
+      <a href="/GenAlpacaOps/" class="mistiq-footer__link">Visit The Austin Alpaca Playhouse</a>
+      <p class="mistiq-footer__copyright">© 2025 Mistique Journey. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <style>
+    .mistiq-page-content {
+      padding-top: 100px;
+      padding-bottom: var(--mistiq-space-xl);
+      min-height: 100vh;
+    }
+
+    .mistiq-form-wrapper {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .mistiq-form-wrapper h1 {
+      text-align: center;
+      margin-bottom: var(--mistiq-space-sm);
+    }
+
+    .mistiq-form-intro {
+      text-align: center;
+      color: var(--mistiq-text-light);
+      margin-bottom: var(--mistiq-space-lg);
+    }
+
+    .mistiq-form__section {
+      background: white;
+      padding: var(--mistiq-space-md);
+      border-radius: 12px;
+      margin-bottom: var(--mistiq-space-md);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    }
+
+    .mistiq-form__section h2 {
+      font-size: 1.25rem;
+      color: var(--mistiq-accent);
+      margin-bottom: var(--mistiq-space-md);
+      padding-bottom: var(--mistiq-space-sm);
+      border-bottom: 1px solid var(--mistiq-warm);
+    }
+
+    .mistiq-form__group {
+      margin-bottom: var(--mistiq-space-md);
+    }
+
+    .mistiq-form__row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--mistiq-space-md);
+    }
+
+    @media (max-width: 600px) {
+      .mistiq-form__row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .mistiq-form__label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: var(--mistiq-text);
+    }
+
+    .mistiq-form__input {
+      width: 100%;
+      padding: 0.875rem 1rem;
+      border: 1px solid var(--mistiq-warm);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 1rem;
+      background: var(--mistiq-bg);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .mistiq-form__input:focus {
+      outline: none;
+      border-color: var(--mistiq-accent);
+      box-shadow: 0 0 0 3px rgba(139, 115, 85, 0.1);
+    }
+
+    textarea.mistiq-form__input {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .mistiq-form__checkboxes {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .mistiq-form__checkbox {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+    }
+
+    .mistiq-form__checkbox input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--mistiq-accent);
+    }
+
+    .mistiq-form__actions {
+      text-align: center;
+      padding-top: var(--mistiq-space-md);
+    }
+
+    .mistiq-btn--submit {
+      background: var(--mistiq-accent);
+      color: white;
+      padding: 1rem 3rem;
+      font-size: 1.1rem;
+    }
+
+    .mistiq-btn--submit:hover {
+      background: var(--mistiq-accent-dark);
+      color: white;
+    }
+
+    .mistiq-form-success {
+      background: white;
+      padding: var(--mistiq-space-lg);
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    .mistiq-form-success h2 {
+      color: var(--mistiq-accent);
+    }
+  </style>
+
+  <script>
+    // Mobile menu toggle
+    const menuToggle = document.getElementById('mistiq-menu-toggle');
+    const mobileNav = document.getElementById('mistiq-mobile-nav');
+    const mobileNavClose = document.getElementById('mistiq-mobile-nav-close');
+
+    menuToggle.addEventListener('click', () => {
+      mobileNav.classList.add('mistiq-mobile-nav--open');
+      document.body.style.overflow = 'hidden';
+    });
+
+    mobileNavClose.addEventListener('click', () => {
+      mobileNav.classList.remove('mistiq-mobile-nav--open');
+      document.body.style.overflow = '';
+    });
+
+    mobileNav.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        mobileNav.classList.remove('mistiq-mobile-nav--open');
+        document.body.style.overflow = '';
+      });
+    });
+
+    // Form handling
+    const form = document.getElementById('intake-form');
+    const successMsg = document.getElementById('form-success');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData.entries());
+
+      // Collect checkbox values
+      const experiences = formData.getAll('experience[]');
+      data.experiences = experiences.join(', ');
+
+      try {
+        // For now, use mailto fallback
+        const mailtoLink = `mailto:alpacaplayhouse@gmail.com?subject=${encodeURIComponent('Mistique Journey Intake Survey')}&body=${encodeURIComponent(`
+Name: ${data.name}
+Email: ${data.email}
+Phone: ${data.phone}
+Preferred Date: ${data.preferred_date || 'Not specified'}
+
+HEALTH & WELLNESS
+Health Conditions: ${data.health_conditions || 'None specified'}
+Medications: ${data.medications || 'None specified'}
+Previous Experiences: ${data.experiences || 'None selected'}
+
+INTENTIONS
+Intentions: ${data.intentions}
+Focus Areas: ${data.focus_areas || 'Not specified'}
+Pressure Preference: ${data.pressure || 'Not specified'}
+
+ADDITIONAL
+Referral: ${data.referral || 'Not specified'}
+Notes: ${data.additional_notes || 'None'}
+        `)}`;
+
+        window.location.href = mailtoLink;
+
+        // Show success message
+        form.style.display = 'none';
+        successMsg.style.display = 'block';
+      } catch (err) {
+        console.error('Form error:', err);
+        alert('There was an error submitting the form. Please email alpacaplayhouse@gmail.com directly.');
+      }
+    });
+  </script>
+</body>
+</html>
