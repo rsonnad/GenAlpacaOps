@@ -639,7 +639,7 @@ function renderCards(spacesToRender) {
       <div class="space-card" onclick="showSpaceDetail('${space.id}')">
         <div class="card-image">
           ${photo
-            ? `<img src="${photo.url}" alt="${space.name}">`
+            ? `<img src="${photo.url}" alt="${space.name}" onclick="event.stopPropagation(); openLightbox('${photo.url}')" style="cursor: zoom-in;">`
             : `<div class="no-photo">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
@@ -709,7 +709,7 @@ function renderTable(spacesToRender) {
     else if (!space.is_listed) statusBadge += ' <span class="badge unlisted">Unlisted</span>';
 
     const thumbnail = space.photos.length > 0
-      ? `<img src="${space.photos[0].url}" alt="" class="table-thumbnail">`
+      ? `<img src="${space.photos[0].url}" alt="" class="table-thumbnail" onclick="event.stopPropagation(); openLightbox('${space.photos[0].url}')" style="cursor: zoom-in;">`
       : `<div class="table-thumbnail-placeholder"></div>`;
 
     return `
