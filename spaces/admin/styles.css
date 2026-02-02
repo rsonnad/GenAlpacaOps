@@ -361,10 +361,15 @@ body.is-admin .admin-only {
 
 /* Tags Container */
 .tags-container {
-  display: grid;
-  grid-template-columns: 75px 1fr;
-  gap: 0.5rem 0.75rem;
-  align-items: baseline;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.tag-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
 }
 
 .tag-group-label {
@@ -373,7 +378,9 @@ body.is-admin .admin-only {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
-  line-height: 1.625rem;
+  min-width: 80px;
+  flex-shrink: 0;
+  padding-top: 0.3rem;
   white-space: nowrap;
 }
 
@@ -381,7 +388,7 @@ body.is-admin .admin-only {
   display: flex;
   flex-wrap: wrap;
   gap: 0.375rem;
-  align-items: center;
+  flex: 1;
 }
 
 .tag-checkbox {
@@ -926,19 +933,14 @@ body.is-admin .admin-only {
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   }
 
-  /* Tags - single column on mobile */
-  .tags-container {
-    grid-template-columns: 1fr;
-    gap: 0.25rem 0;
+  /* Tags - stack on mobile */
+  .tag-row {
+    flex-direction: column;
+    gap: 0.25rem;
   }
 
   .tag-group-label {
-    line-height: 1;
-    margin-top: 0.5rem;
-  }
-
-  .tag-group-label:first-child {
-    margin-top: 0;
+    padding-top: 0;
   }
 
   /* Modal tabs - smaller padding on mobile */
