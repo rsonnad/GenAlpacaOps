@@ -1792,12 +1792,12 @@
           dwellings.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
       }
 
-      // Populate space dropdown for terms (include rate for admin reference)
+      // Populate space dropdown for terms
       const termSpaceSelect = document.getElementById('termSpace');
       if (termSpaceSelect) {
         const dwellings = allSpaces.filter(s => s.can_be_dwelling);
         termSpaceSelect.innerHTML = '<option value="">Select space...</option>' +
-          dwellings.map(s => `<option value="${s.id}">${s.name}${s.monthly_rate ? ` - $${s.monthly_rate}/mo` : ''}</option>`).join('');
+          dwellings.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
       }
     }
 
