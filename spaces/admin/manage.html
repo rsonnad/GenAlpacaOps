@@ -1752,15 +1752,15 @@
           allPeople.map(p => `<option value="${p.id}">${p.first_name || ''} ${p.last_name || ''} (${p.email || 'no email'})</option>`).join('');
       }
 
-      // Populate space dropdown for new applications
+      // Populate space dropdown for new applications (no rate info - just space name)
       const spaceSelect = document.getElementById('newAppSpaceId');
       if (spaceSelect) {
         const dwellings = allSpaces.filter(s => s.can_be_dwelling);
         spaceSelect.innerHTML = '<option value="">Any / Flexible</option>' +
-          dwellings.map(s => `<option value="${s.id}">${s.name}${s.monthly_rate ? ` - $${s.monthly_rate}/mo` : ''}</option>`).join('');
+          dwellings.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
       }
 
-      // Populate space dropdown for terms
+      // Populate space dropdown for terms (include rate for admin reference)
       const termSpaceSelect = document.getElementById('termSpace');
       if (termSpaceSelect) {
         const dwellings = allSpaces.filter(s => s.can_be_dwelling);
