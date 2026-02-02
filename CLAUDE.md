@@ -173,6 +173,18 @@ git push
 - Storage bucket: `housephotos`
 - Anon key is in `shared/supabase.js` (safe to expose, RLS protects data)
 
+### Direct Database Access (for Claude)
+
+Claude can run SQL directly against the database using `psql` via the session pooler:
+
+```bash
+/opt/homebrew/opt/libpq/bin/psql "postgresql://postgres.aphrrfprbixmhissnjfn:[PASSWORD]@aws-1-us-east-2.pooler.supabase.com:5432/postgres" -c "SQL HERE"
+```
+
+- Password is stored separately (not in repo)
+- Use session pooler (IPv4 compatible), not direct connection
+- Claude Code's permission prompt will show the full command before execution
+
 ## External Systems
 
 ### OpenClaw (Discord Bot)
