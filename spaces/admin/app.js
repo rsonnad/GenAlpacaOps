@@ -58,6 +58,8 @@ const searchInput = document.getElementById('searchInput');
 const parentFilter = document.getElementById('parentFilter');
 const bathFilter = document.getElementById('bathFilter');
 const visibilityFilter = document.getElementById('visibilityFilter');
+const showDwellings = document.getElementById('showDwellings');
+const showNonDwellings = document.getElementById('showNonDwellings');
 const clearFilters = document.getElementById('clearFilters');
 const roleBadge = document.getElementById('roleBadge');
 const userInfo = document.getElementById('userInfo');
@@ -317,6 +319,8 @@ function setupEventListeners() {
   parentFilter.addEventListener('change', render);
   bathFilter.addEventListener('change', render);
   visibilityFilter.addEventListener('change', render);
+  showDwellings?.addEventListener('change', render);
+  showNonDwellings?.addEventListener('change', render);
   clearFilters.addEventListener('click', resetFilters);
 
   // Populate parent filter after data loads
@@ -391,8 +395,9 @@ function setupEventListeners() {
   document.getElementById('addMorePhotosLink')?.addEventListener('click', (e) => {
     e.preventDefault();
     const spaceId = document.getElementById('editSpaceId').value;
+    const spaceName = document.getElementById('editName').value;
     if (spaceId) {
-      openPhotoUpload(spaceId);
+      openPhotoUpload(spaceId, spaceName);
     }
   });
 
@@ -468,6 +473,18 @@ function getFilteredSpaces() {
     filtered = filtered.filter(s => s.is_secret);
   }
 
+  // Dwelling/Non-dwelling filter
+  const dwellingsChecked = showDwellings?.checked ?? true;
+  const nonDwellingsChecked = showNonDwellings?.checked ?? true;
+  if (!dwellingsChecked || !nonDwellingsChecked) {
+    filtered = filtered.filter(s => {
+      const isDwelling = s.can_be_dwelling === true;
+      if (dwellingsChecked && isDwelling) return true;
+      if (nonDwellingsChecked && !isDwelling) return true;
+      return false;
+    });
+  }
+
   // Sort: always put available spaces first, then apply selected sort
   filtered.sort((a, b) => {
     // Primary sort: available spaces first (same as public view)
@@ -524,6 +541,8 @@ function resetFilters() {
   parentFilter.value = '';
   bathFilter.value = '';
   visibilityFilter.value = '';
+  if (showDwellings) showDwellings.checked = true;
+  if (showNonDwellings) showNonDwellings.checked = true;
   render();
 }
 
