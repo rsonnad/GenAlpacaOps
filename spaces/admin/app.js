@@ -317,6 +317,11 @@ function setupEventListeners() {
     editSpaceModal.classList.add('hidden');
   });
   document.getElementById('submitEditSpace').addEventListener('click', handleEditSpaceSubmit);
+  // Prevent form from submitting naturally
+  document.getElementById('editSpaceForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    handleEditSpaceSubmit();
+  });
   editSpaceModal.addEventListener('click', (e) => {
     if (e.target === editSpaceModal) editSpaceModal.classList.add('hidden');
   });
@@ -1647,6 +1652,8 @@ async function savePhotoOrder(spaceId, mediaIds) {
 }
 
 async function handleEditSpaceSubmit() {
+  console.log('handleEditSpaceSubmit called');
+
   if (!authState?.isAdmin) {
     alert('Only admins can edit spaces');
     return;
@@ -1654,6 +1661,8 @@ async function handleEditSpaceSubmit() {
 
   const spaceId = document.getElementById('editSpaceId').value;
   const name = document.getElementById('editName').value.trim();
+
+  console.log('Saving space:', { spaceId, name });
 
   if (!name) {
     alert('Name is required');
