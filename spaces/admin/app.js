@@ -231,12 +231,21 @@ async function loadData() {
 
       const currentAssignment = spaceAssignments.find(a => {
         if (a.status !== 'active') return false;
-        if (!a.end_date) return true;
-        return new Date(a.end_date) >= today;
+        // Use desired_departure_date if set, otherwise end_date
+        const effectiveEndDate = a.desired_departure_date || a.end_date;
+        if (!effectiveEndDate) return true;
+        return new Date(effectiveEndDate) >= today;
       });
 
-      const availableFrom = currentAssignment?.end_date
-        ? new Date(currentAssignment.end_date)
+      // Get effective end date (desired_departure_date takes priority for availability display)
+      const getEffectiveEndDate = (assignment) => {
+        if (!assignment) return null;
+        return assignment.desired_departure_date || assignment.end_date;
+      };
+
+      const effectiveEndDate = getEffectiveEndDate(currentAssignment);
+      const availableFrom = effectiveEndDate
+        ? new Date(effectiveEndDate)
         : today;
 
       const nextAssignment = spaceAssignments.find(a => {
@@ -248,7 +257,7 @@ async function loadData() {
 
       space.currentAssignment = currentAssignment || null;
       space.nextAssignment = nextAssignment || null;
-      space.availableFrom = currentAssignment ? (currentAssignment.end_date ? new Date(currentAssignment.end_date) : null) : today;
+      space.availableFrom = currentAssignment ? (effectiveEndDate ? new Date(effectiveEndDate) : null) : today;
       space.availableUntil = nextAssignment?.start_date ? new Date(nextAssignment.start_date) : null;
 
       space.amenities = space.space_amenities?.map(sa => sa.amenity?.name).filter(Boolean) || [];
@@ -745,6 +754,12 @@ function showSpaceDetail(spaceId) {
   let occupantHtml = '';
   if (isOccupied && occupant) {
     const a = space.currentAssignment;
+    const desiredDepartureStr = a.desired_departure_date
+      ? new Date(a.desired_departure_date).toLocaleDateString()
+      : null;
+    const earlyExitHtml = desiredDepartureStr
+      ? `<p style="color: var(--accent);"><strong>Early Exit:</strong> ${desiredDepartureStr}</p>`
+      : '';
     occupantHtml = `
       <div class="detail-section">
         <h3>Current Occupant</h3>
@@ -754,6 +769,15 @@ function showSpaceDetail(spaceId) {
         <p>Rate: $${a.rate_amount}/${a.rate_term}</p>
         <p>Start: ${a.start_date ? new Date(a.start_date).toLocaleDateString() : 'N/A'}</p>
         <p>End: ${a.end_date ? new Date(a.end_date).toLocaleDateString() : 'No end date'}</p>
+        ${earlyExitHtml}
+        ${isAdmin ? `
+          <div style="margin-top: 0.75rem;">
+            <label style="font-size: 0.875rem; color: var(--text-muted);">Desired Departure (Early Exit):</label>
+            <input type="date" id="desiredDepartureDate" value="${a.desired_departure_date || ''}"
+              style="margin-left: 0.5rem; padding: 0.25rem 0.5rem; border: 1px solid var(--border); border-radius: var(--radius);"
+              onchange="updateDesiredDeparture('${a.id}', this.value)">
+          </div>
+        ` : ''}
       </div>
     `;
   }
@@ -2053,7 +2077,27 @@ async function deleteMedia(mediaId) {
   }
 }
 
+// Update desired departure date for early exit
+async function updateDesiredDeparture(assignmentId, dateValue) {
+  try {
+    const { error } = await supabase
+      .from('assignments')
+      .update({ desired_departure_date: dateValue || null })
+      .eq('id', assignmentId);
+
+    if (error) throw error;
+
+    showToast('Desired departure date updated', 'success');
+    await loadData();
+    render();
+  } catch (error) {
+    console.error('Error updating desired departure:', error);
+    showToast('Failed to update departure date', 'error');
+  }
+}
+
 // Make functions globally accessible for onclick handlers
+window.updateDesiredDeparture = updateDesiredDeparture;
 window.showSpaceDetail = showSpaceDetail;
 window.openPhotoRequest = openPhotoRequest;
 window.openPhotoUpload = openPhotoUpload;

@@ -180,6 +180,7 @@ git push
 2. **Media system migration** - Using `media`/`media_spaces` tables instead of `photos`/`photo_spaces`
 3. **Space archiving** - `is_archived` flag for soft deletes
 4. **Image compression** - Client-side compression for images > 500KB
+5. **Early exit feature** - `desired_departure_date` on assignments overrides `end_date` for availability display
 
 ## Testing Changes
 

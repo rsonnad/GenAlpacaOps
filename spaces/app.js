@@ -62,6 +62,7 @@ async function loadData() {
         id,
         start_date,
         end_date,
+        desired_departure_date,
         status,
         assignment_spaces(space_id)
       `)
@@ -95,13 +96,22 @@ async function loadData() {
       // Find current assignment (active and either no end date or end date >= today)
       const currentAssignment = spaceAssignments.find(a => {
         if (a.status !== 'active') return false;
-        if (!a.end_date) return true;
-        return new Date(a.end_date) >= today;
+        // Use desired_departure_date if set, otherwise end_date
+        const effectiveEndDate = a.desired_departure_date || a.end_date;
+        if (!effectiveEndDate) return true;
+        return new Date(effectiveEndDate) >= today;
       });
 
+      // Get effective end date (desired_departure_date takes priority)
+      const getEffectiveEndDate = (assignment) => {
+        if (!assignment) return null;
+        return assignment.desired_departure_date || assignment.end_date;
+      };
+
       // Find next assignment (starts after current ends)
-      const availableFrom = currentAssignment?.end_date
-        ? new Date(currentAssignment.end_date)
+      const effectiveEndDate = getEffectiveEndDate(currentAssignment);
+      const availableFrom = effectiveEndDate
+        ? new Date(effectiveEndDate)
         : today;
 
       const nextAssignment = spaceAssignments.find(a => {
@@ -113,7 +123,7 @@ async function loadData() {
 
       space.isAvailable = !currentAssignment;
       space.availableFrom = currentAssignment
-        ? (currentAssignment.end_date ? new Date(currentAssignment.end_date) : null)
+        ? (effectiveEndDate ? new Date(effectiveEndDate) : null)
         : today;
       space.availableUntil = nextAssignment?.start_date
         ? new Date(nextAssignment.start_date)
