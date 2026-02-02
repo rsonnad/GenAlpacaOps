@@ -922,25 +922,23 @@ function renderRequestTags() {
   });
   const sortedGroups = mediaService.sortTagGroups(grouped);
 
-  // Render grouped checkboxes with add button
+  // Render as CSS grid - label and checkboxes are direct children
   container.innerHTML = `
     ${Object.entries(sortedGroups).map(([group, tags]) => `
-      <div class="tag-group">
-        <div class="tag-group-label">${group}</div>
-        <div class="tag-checkboxes">
-          ${tags.map(tag => {
-            const isAuto = autoTags.includes(tag.name);
-            return `
-              <label class="tag-checkbox" style="--tag-color: ${tag.color || '#666'}">
-                <input type="checkbox" value="${tag.name}" ${isAuto ? 'checked' : ''}>
-                <span class="tag-chip">${tag.name}</span>
-              </label>
-            `;
-          }).join('')}
-        </div>
+      <div class="tag-group-label">${group}</div>
+      <div class="tag-checkboxes">
+        ${tags.map(tag => {
+          const isAuto = autoTags.includes(tag.name);
+          return `
+            <label class="tag-checkbox" style="--tag-color: ${tag.color || '#666'}">
+              <input type="checkbox" value="${tag.name}" ${isAuto ? 'checked' : ''}>
+              <span class="tag-chip">${tag.name}</span>
+            </label>
+          `;
+        }).join('')}
       </div>
     `).join('')}
-    <div class="add-tag-inline">
+    <div class="add-tag-row">
       <button type="button" class="btn-add-tag" onclick="showAddTagForm('requestTagsContainer')">+ Add Tag</button>
     </div>
   `;
@@ -1013,25 +1011,23 @@ function renderUploadTags() {
   });
   const sortedGroups = mediaService.sortTagGroups(grouped);
 
-  // Render grouped checkboxes with add button
+  // Render as CSS grid - label and checkboxes are direct children
   container.innerHTML = `
     ${Object.entries(sortedGroups).map(([group, tags]) => `
-      <div class="tag-group">
-        <div class="tag-group-label">${group}</div>
-        <div class="tag-checkboxes">
-          ${tags.map(tag => {
-            const isAuto = autoTags.includes(tag.name);
-            return `
-              <label class="tag-checkbox" style="--tag-color: ${tag.color || '#666'}">
-                <input type="checkbox" value="${tag.name}" ${isAuto ? 'checked' : ''}>
-                <span class="tag-chip">${tag.name}</span>
-              </label>
-            `;
-          }).join('')}
-        </div>
+      <div class="tag-group-label">${group}</div>
+      <div class="tag-checkboxes">
+        ${tags.map(tag => {
+          const isAuto = autoTags.includes(tag.name);
+          return `
+            <label class="tag-checkbox" style="--tag-color: ${tag.color || '#666'}">
+              <input type="checkbox" value="${tag.name}" ${isAuto ? 'checked' : ''}>
+              <span class="tag-chip">${tag.name}</span>
+            </label>
+          `;
+        }).join('')}
       </div>
     `).join('')}
-    <div class="add-tag-inline">
+    <div class="add-tag-row">
       <button type="button" class="btn-add-tag" onclick="showAddTagForm('uploadTagsContainer')">+ Add Tag</button>
     </div>
   `;
