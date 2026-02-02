@@ -158,6 +158,7 @@ function updateRoleUI() {
 async function loadData() {
   try {
     // Load spaces with all related data (using new media tables)
+    // Filter out archived spaces by default
     const { data: spacesData, error: spacesError } = await supabase
       .from('spaces')
       .select(`
@@ -179,6 +180,7 @@ async function loadData() {
           )
         )
       `)
+      .or('is_archived.is.null,is_archived.eq.false')
       .order('monthly_rate', { ascending: false, nullsFirst: false })
       .order('name');
 
@@ -350,6 +352,7 @@ function setupEventListeners() {
     editSpaceModal.classList.add('hidden');
   });
   document.getElementById('submitEditSpace').addEventListener('click', handleEditSpaceSubmit);
+  document.getElementById('archiveSpaceBtn')?.addEventListener('click', handleArchiveSpace);
   // Prevent form from submitting naturally
   document.getElementById('editSpaceForm').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -1910,6 +1913,40 @@ async function handleEditSpaceSubmit() {
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = 'Save Changes';
+  }
+}
+
+// Archive a space (soft delete)
+async function handleArchiveSpace() {
+  if (!authState?.isAdmin) {
+    showToast('Only admins can archive spaces', 'warning');
+    return;
+  }
+
+  const spaceId = document.getElementById('editSpaceId').value;
+  const space = spaces.find(s => s.id === spaceId);
+  if (!space) return;
+
+  const confirmMsg = `Archive "${space.name}"?\n\nThis will hide the space from all views but keep it in the database. You can restore it later from the Manage page.`;
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    const { error } = await supabase
+      .from('spaces')
+      .update({ is_archived: true })
+      .eq('id', spaceId);
+
+    if (error) throw error;
+
+    showToast(`"${space.name}" has been archived`, 'success');
+    editSpaceModal.classList.add('hidden');
+
+    await loadData();
+    render();
+
+  } catch (error) {
+    console.error('Error archiving space:', error);
+    showToast('Failed to archive space: ' + error.message, 'error');
   }
 }
 

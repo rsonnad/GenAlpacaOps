@@ -227,6 +227,19 @@
             </div>
           </div>
         </div>
+
+        <div class="section" id="archivedSection" style="display: none;">
+          <div class="section-header">
+            <h2>Archived Spaces</h2>
+            <span id="archivedCount" class="text-muted"></span>
+          </div>
+          <div class="section-body">
+            <p class="form-hint" style="margin-bottom: 1rem;">These spaces are hidden from all views but can be restored.</p>
+            <div id="archivedSpacesList" class="spaces-list">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Media Panel -->
@@ -439,10 +452,14 @@
     // =============================================
     // SPACES TAB
     // =============================================
+    let archivedSpaces = [];
+
     async function loadSpaces() {
+      // Load active spaces
       const { data, error } = await supabase
         .from('spaces')
-        .select('id, name, parent_id, can_be_dwelling, is_listed, monthly_rate')
+        .select('id, name, parent_id, can_be_dwelling, is_listed, monthly_rate, is_archived')
+        .or('is_archived.is.null,is_archived.eq.false')
         .order('name');
 
       if (error) {
@@ -451,7 +468,20 @@
       }
 
       allSpaces = data || [];
+
+      // Load archived spaces
+      const { data: archived, error: archiveError } = await supabase
+        .from('spaces')
+        .select('id, name, parent_id, can_be_dwelling, is_listed, monthly_rate, is_archived')
+        .eq('is_archived', true)
+        .order('name');
+
+      if (!archiveError) {
+        archivedSpaces = archived || [];
+      }
+
       renderSpaces();
+      renderArchivedSpaces();
       populateParentDropdown();
     }
 
@@ -481,11 +511,39 @@
             </div>
             <div class="space-item-actions">
               <a href="/GenAlpacaOps/spaces/admin/?edit=${space.id}" class="btn-small">Edit</a>
-              <button class="btn-small btn-secondary" onclick="deleteSpace('${space.id}', '${space.name}')">Delete</button>
             </div>
           </div>
         `;
       }).join('');
+    }
+
+    function renderArchivedSpaces() {
+      const section = document.getElementById('archivedSection');
+      const container = document.getElementById('archivedSpacesList');
+      const countEl = document.getElementById('archivedCount');
+
+      if (archivedSpaces.length === 0) {
+        section.style.display = 'none';
+        return;
+      }
+
+      section.style.display = 'block';
+      countEl.textContent = `${archivedSpaces.length} archived`;
+
+      container.innerHTML = archivedSpaces.map(space => `
+        <div class="space-item" style="opacity: 0.7;">
+          <div class="space-item-info">
+            <div class="space-item-thumb-placeholder"></div>
+            <div class="space-item-details">
+              <h3>${space.name}</h3>
+              <small>Archived</small>
+            </div>
+          </div>
+          <div class="space-item-actions">
+            <button class="btn-small btn-primary" onclick="unarchiveSpace('${space.id}', '${space.name.replace(/'/g, "\\'")}')">Restore</button>
+          </div>
+        </div>
+      `).join('');
     }
 
     function populateParentDropdown() {
@@ -520,8 +578,23 @@
       alert('Space created! You can now edit it from the main admin page.');
     }
 
+    window.unarchiveSpace = async function(id, name) {
+      if (!confirm(`Restore "${name}"? It will appear in the main spaces list again.`)) return;
+
+      const { error } = await supabase
+        .from('spaces')
+        .update({ is_archived: false })
+        .eq('id', id);
+
+      if (error) {
+        alert('Error restoring space: ' + error.message);
+        return;
+      }
+      loadSpaces();
+    };
+
     window.deleteSpace = async function(id, name) {
-      if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+      if (!confirm(`Permanently delete "${name}"? This cannot be undone.\n\nConsider archiving instead if you might need it later.`)) return;
 
       const { error } = await supabase.from('spaces').delete().eq('id', id);
       if (error) {

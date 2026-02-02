@@ -1,5 +1,22 @@
 /* Admin-specific styles */
 
+/* Danger button */
+.btn-danger {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
 .loading-overlay {
   position: fixed;
   inset: 0;
