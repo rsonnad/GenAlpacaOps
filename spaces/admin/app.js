@@ -1674,28 +1674,34 @@ async function handleEditSpaceSubmit() {
   submitBtn.textContent = 'Saving...';
 
   try {
+    // Build updates object with safe element access
+    const getVal = (id) => document.getElementById(id)?.value?.trim() || null;
+    const getInt = (id) => parseInt(document.getElementById(id)?.value) || null;
+    const getIntOrZero = (id) => parseInt(document.getElementById(id)?.value) || 0;
+    const getChecked = (id) => document.getElementById(id)?.checked || false;
+
     const updates = {
       name: name,
-      location: document.getElementById('editLocation').value.trim() || null,
-      description: document.getElementById('editDescription').value.trim() || null,
-      monthly_rate: parseInt(document.getElementById('editMonthlyRate').value) || null,
-      weekly_rate: parseInt(document.getElementById('editWeeklyRate').value) || null,
-      nightly_rate: parseInt(document.getElementById('editNightlyRate').value) || null,
-      sq_footage: parseInt(document.getElementById('editSqFootage').value) || null,
-      min_residents: parseInt(document.getElementById('editMinResidents').value) || 1,
-      max_residents: parseInt(document.getElementById('editMaxResidents').value) || null,
-      bath_privacy: document.getElementById('editBathPrivacy').value || null,
-      bath_fixture: document.getElementById('editBathFixture').value || null,
-      gender_restriction: document.getElementById('editGenderRestriction').value || 'none',
-      beds_king: parseInt(document.getElementById('editBedsKing').value) || 0,
-      beds_queen: parseInt(document.getElementById('editBedsQueen').value) || 0,
-      beds_double: parseInt(document.getElementById('editBedsDouble').value) || 0,
-      beds_twin: parseInt(document.getElementById('editBedsTwin').value) || 0,
-      beds_folding: parseInt(document.getElementById('editBedsFolding').value) || 0,
-      beds_trifold: parseInt(document.getElementById('editBedsTrifold').value) || 0,
-      is_listed: document.getElementById('editIsListed').checked,
-      is_secret: document.getElementById('editIsSecret').checked,
-      can_be_dwelling: document.getElementById('editCanBeDwelling').checked,
+      location: getVal('editLocation'),
+      description: getVal('editDescription'),
+      monthly_rate: getInt('editMonthlyRate'),
+      weekly_rate: getInt('editWeeklyRate'),
+      nightly_rate: getInt('editNightlyRate'),
+      sq_footage: getInt('editSqFootage'),
+      min_residents: getInt('editMinResidents') || 1,
+      max_residents: getInt('editMaxResidents'),
+      bath_privacy: getVal('editBathPrivacy'),
+      bath_fixture: getVal('editBathFixture'),
+      gender_restriction: getVal('editGenderRestriction') || 'none',
+      beds_king: getIntOrZero('editBedsKing'),
+      beds_queen: getIntOrZero('editBedsQueen'),
+      beds_double: getIntOrZero('editBedsDouble'),
+      beds_twin: getIntOrZero('editBedsTwin'),
+      beds_folding: getIntOrZero('editBedsFolding'),
+      beds_trifold: getIntOrZero('editBedsTrifold'),
+      is_listed: getChecked('editIsListed'),
+      is_secret: getChecked('editIsSecret'),
+      can_be_dwelling: getChecked('editCanBeDwelling'),
     };
 
     console.log('Updating space with:', updates);
