@@ -256,11 +256,8 @@
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script type="module">
+    import { supabase } from '../../shared/supabase.js';
     import { initAuth, getAuthState, signOut, onAuthStateChange } from '../../shared/auth.js';
-
-    const SUPABASE_URL = 'https://yqxkcxawdfpnlljgvfnj.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxeGtjeGF3ZGZwbmxsamd2Zm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxMzk0NjcsImV4cCI6MjA2MTcxNTQ2N30.aHpSvi1Qgpa-R6bWTbdS4leA8Qa9gVCWMxvZumyinQE';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let authState = null;
     let allSpaces = [];
