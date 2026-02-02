@@ -1771,6 +1771,7 @@ function openEditSpace(spaceId) {
   // Populate form fields
   document.getElementById('editName').value = space.name || '';
   document.getElementById('editLocation').value = space.location || '';
+  document.getElementById('editType').value = space.type || '';
   document.getElementById('editDescription').value = space.description || '';
   document.getElementById('editMonthlyRate').value = space.monthly_rate || '';
   document.getElementById('editWeeklyRate').value = space.weekly_rate || '';
@@ -1938,6 +1939,7 @@ async function handleEditSpaceSubmit() {
     const updates = {
       name: name,
       location: getVal('editLocation'),
+      type: getVal('editType'),
       description: getVal('editDescription'),
       monthly_rate: getInt('editMonthlyRate'),
       weekly_rate: getInt('editWeeklyRate'),
