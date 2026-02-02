@@ -1,6 +1,7 @@
 // Admin view - Full access interface with authentication
 import { supabase } from '../../shared/supabase.js';
 import { initAuth, getAuthState, signOut, onAuthStateChange } from '../../shared/auth.js';
+import { mediaService } from '../../shared/media-service.js';
 
 // App state
 let spaces = [];
@@ -9,6 +10,8 @@ let photoRequests = [];
 let authState = null;
 let currentView = 'card';
 let currentSort = { column: 'availability', direction: 'asc' };
+let allTags = [];
+let storageUsage = null;
 
 // DOM elements
 const loadingOverlay = document.getElementById('loadingOverlay');
@@ -123,18 +126,37 @@ function updateRoleUI() {
 // Load data from Supabase (staff/admin have access to all data via RLS)
 async function loadData() {
   try {
-    // Load spaces with all related data
+    // Load spaces with all related data (using new media tables)
     const { data: spacesData, error: spacesError } = await supabase
       .from('spaces')
       .select(`
         *,
         parent:parent_id(name),
         space_amenities(amenity:amenity_id(name)),
-        photo_spaces(photo:photo_id(id,url,caption),display_order)
+        media_spaces(
+          display_order,
+          is_primary,
+          media:media_id(
+            id,
+            url,
+            caption,
+            title,
+            media_type,
+            category,
+            file_size_bytes,
+            media_tag_assignments(tag:tag_id(id,name,color,tag_group))
+          )
+        )
       `)
       .order('name');
 
     if (spacesError) throw spacesError;
+
+    // Load all tags for tagging UI
+    allTags = await mediaService.getTags();
+
+    // Check storage usage
+    storageUsage = await mediaService.getStorageUsage();
 
     // Load active assignments with people
     const { data: assignmentsData, error: assignmentsError } = await supabase
@@ -197,10 +219,21 @@ async function loadData() {
       space.availableUntil = nextAssignment?.start_date ? new Date(nextAssignment.start_date) : null;
 
       space.amenities = space.space_amenities?.map(sa => sa.amenity?.name).filter(Boolean) || [];
-      space.photos = (space.photo_spaces || [])
+
+      // Process media (new system) - flatten and add tags
+      space.photos = (space.media_spaces || [])
         .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
-        .map(ps => ({ ...ps.photo, display_order: ps.display_order }))
+        .map(ms => {
+          if (!ms.media) return null;
+          return {
+            ...ms.media,
+            display_order: ms.display_order,
+            is_primary: ms.is_primary,
+            tags: ms.media.media_tag_assignments?.map(mta => mta.tag).filter(Boolean) || []
+          };
+        })
         .filter(p => p && p.url);
+
       space.photoRequests = photoRequests.filter(pr => pr.space_id === space.id);
     });
 
@@ -266,6 +299,21 @@ function setupEventListeners() {
   });
   document.getElementById('submitPhotoUpload').addEventListener('click', handlePhotoUpload);
   document.getElementById('photoFile').addEventListener('change', handleFilePreview);
+
+  // Media picker tab switching
+  document.querySelectorAll('.media-picker-tabs .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchMediaPickerTab(btn.dataset.tab));
+  });
+
+  // Library tab handlers
+  document.getElementById('cancelLibrarySelect')?.addEventListener('click', () => {
+    photoUploadModal.classList.add('hidden');
+  });
+  document.getElementById('submitLibrarySelect')?.addEventListener('click', handleLibrarySelect);
+  document.getElementById('libraryCategoryFilter')?.addEventListener('change', (e) => {
+    activeLibraryFilters.category = e.target.value;
+    loadLibraryMedia();
+  });
 
   // Edit space modal handlers
   document.getElementById('closeEditModal').addEventListener('click', () => {
@@ -746,8 +794,8 @@ async function handlePhotoRequestSubmit() {
   }
 }
 
-// Photo ordering
-async function movePhoto(spaceId, photoId, direction) {
+// Photo ordering (detail view)
+async function movePhoto(spaceId, mediaId, direction) {
   if (!authState?.isAdmin) {
     alert('Only admins can reorder photos');
     return;
@@ -757,7 +805,7 @@ async function movePhoto(spaceId, photoId, direction) {
   if (!space) return;
 
   const photos = [...space.photos];
-  const idx = photos.findIndex(p => p.id === photoId);
+  const idx = photos.findIndex(p => p.id === mediaId);
   if (idx === -1) return;
 
   let newIdx;
@@ -784,13 +832,8 @@ async function movePhoto(spaceId, photoId, direction) {
   photos.splice(newIdx, 0, photo);
 
   try {
-    for (let i = 0; i < photos.length; i++) {
-      await supabase
-        .from('photo_spaces')
-        .update({ display_order: i })
-        .eq('space_id', spaceId)
-        .eq('photo_id', photos[i].id);
-    }
+    const mediaIds = photos.map(p => p.id);
+    await mediaService.reorderInSpace(spaceId, mediaIds);
 
     await loadData();
     render();
@@ -804,31 +847,350 @@ async function movePhoto(spaceId, photoId, direction) {
 
 // Photo upload handling
 let currentUploadSpaceId = null;
+let currentUploadContext = null; // 'dwelling', 'event', 'projects', etc.
+let selectedLibraryMedia = new Set();
+let libraryMedia = [];
+let activeLibraryFilters = { tags: [], category: '' };
 
-function openPhotoUpload(spaceId, spaceName) {
+function openPhotoUpload(spaceId, spaceName, context = 'dwelling') {
   if (!authState?.isAdmin) {
     alert('Only admins can upload photos');
     return;
   }
   currentUploadSpaceId = spaceId;
+  currentUploadContext = context;
+  selectedLibraryMedia.clear();
+  selectedUploadFiles = [];
+
   document.getElementById('uploadModalSpaceName').textContent = spaceName;
   document.getElementById('photoFile').value = '';
-  document.getElementById('photoCaption').value = '';
-  document.getElementById('uploadPreview').innerHTML = '';
+  document.getElementById('photoBulkCaption').value = '';
+  document.getElementById('uploadPreviewGrid').innerHTML = '';
+  document.getElementById('bulkTagSection')?.classList.add('hidden');
+  document.getElementById('uploadProgress')?.classList.add('hidden');
+
+  // Set default category based on context
+  const categorySelect = document.getElementById('photoCategory');
+  if (categorySelect) {
+    categorySelect.value = context === 'projects' ? 'projects' : 'mktg';
+  }
+
+  // Populate tags with context-aware defaults
+  renderUploadTags();
+
+  // Show auto-tag hint
+  const autoTagHint = document.getElementById('autoTagHint');
+  if (autoTagHint) {
+    const autoTags = getAutoTagsForContext(context);
+    autoTagHint.textContent = autoTags.length
+      ? `Auto-tagged: ${autoTags.join(', ')}`
+      : '';
+  }
+
+  // Show storage usage
+  updateStorageIndicator();
+
+  // Reset to upload tab
+  switchMediaPickerTab('upload');
+
+  // Load library for the library tab
+  loadLibraryMedia();
+
+  // Render tag filter chips
+  renderLibraryTagFilter();
+
   photoUploadModal.classList.remove('hidden');
 }
 
-function handleFilePreview(e) {
-  const file = e.target.files[0];
-  if (!file) return;
+function getAutoTagsForContext(context) {
+  switch (context) {
+    case 'dwelling':
+      return ['listing'];
+    case 'event':
+      return ['listing'];
+    case 'projects':
+      return ['in-progress'];
+    case 'social':
+      return ['social'];
+    default:
+      return ['listing'];
+  }
+}
 
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    document.getElementById('uploadPreview').innerHTML = `
-      <img src="${e.target.result}" style="max-width:100%; max-height:200px; border-radius:var(--radius);">
+function switchMediaPickerTab(tabName) {
+  // Update tab buttons
+  document.querySelectorAll('.media-picker-tabs .tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tabName);
+  });
+
+  // Update tab content
+  document.getElementById('uploadTab').classList.toggle('active', tabName === 'upload');
+  document.getElementById('libraryTab').classList.toggle('active', tabName === 'library');
+}
+
+function renderUploadTags() {
+  const container = document.getElementById('uploadTagsContainer');
+  if (!container) return;
+
+  // Get auto-tags for current context
+  const autoTags = getAutoTagsForContext(currentUploadContext);
+
+  // Group tags by tag_group
+  const grouped = {};
+  allTags.forEach(tag => {
+    const group = tag.tag_group || 'other';
+    if (!grouped[group]) grouped[group] = [];
+    grouped[group].push(tag);
+  });
+
+  // Render grouped checkboxes
+  container.innerHTML = Object.entries(grouped).map(([group, tags]) => `
+    <div class="tag-group">
+      <div class="tag-group-label">${group}</div>
+      <div class="tag-checkboxes">
+        ${tags.map(tag => {
+          const isAuto = autoTags.includes(tag.name);
+          return `
+            <label class="tag-checkbox" style="--tag-color: ${tag.color || '#666'}">
+              <input type="checkbox" value="${tag.name}" ${isAuto ? 'checked' : ''}>
+              <span class="tag-chip">${tag.name}</span>
+            </label>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateStorageIndicator() {
+  const indicator = document.getElementById('storageIndicator');
+  if (!indicator || !storageUsage) return;
+
+  const percent = storageUsage.percent_used || 0;
+  const used = mediaService.formatBytes(storageUsage.current_bytes || 0);
+  const limit = mediaService.formatBytes(storageUsage.limit_bytes || 0);
+
+  let colorClass = 'storage-ok';
+  if (percent >= 90) colorClass = 'storage-critical';
+  else if (percent >= 70) colorClass = 'storage-warning';
+
+  indicator.innerHTML = `
+    <div class="storage-bar ${colorClass}">
+      <div class="storage-fill" style="width: ${Math.min(percent, 100)}%"></div>
+    </div>
+    <div class="storage-text">${used} / ${limit} (${percent.toFixed(1)}%)</div>
+  `;
+}
+
+// Library tab functions
+async function loadLibraryMedia() {
+  try {
+    libraryMedia = await mediaService.search({
+      category: activeLibraryFilters.category || null,
+      tags: activeLibraryFilters.tags,
+      limit: 100,
+    });
+    renderLibraryGrid();
+  } catch (error) {
+    console.error('Error loading library:', error);
+    libraryMedia = [];
+    renderLibraryGrid();
+  }
+}
+
+function renderLibraryTagFilter() {
+  const container = document.getElementById('libraryTagFilter');
+  if (!container) return;
+
+  // Show purpose and room tags as filter chips
+  const filterableTags = allTags.filter(t =>
+    ['purpose', 'room', 'condition'].includes(t.tag_group)
+  );
+
+  container.innerHTML = filterableTags.map(tag => `
+    <button type="button"
+      class="tag-filter-chip ${activeLibraryFilters.tags.includes(tag.name) ? 'active' : ''}"
+      data-tag="${tag.name}"
+      onclick="toggleLibraryTagFilter('${tag.name}')"
+    >${tag.name}</button>
+  `).join('');
+}
+
+function toggleLibraryTagFilter(tagName) {
+  const idx = activeLibraryFilters.tags.indexOf(tagName);
+  if (idx >= 0) {
+    activeLibraryFilters.tags.splice(idx, 1);
+  } else {
+    activeLibraryFilters.tags.push(tagName);
+  }
+  renderLibraryTagFilter();
+  loadLibraryMedia();
+}
+
+function renderLibraryGrid() {
+  const container = document.getElementById('libraryMediaGrid');
+  if (!container) return;
+
+  if (!libraryMedia || libraryMedia.length === 0) {
+    container.innerHTML = `
+      <div class="library-empty">
+        <p>No media found${activeLibraryFilters.tags.length ? ' matching filters' : ''}.</p>
+        <p style="font-size: 0.8rem; margin-top: 0.5rem;">Try uploading new media or adjusting filters.</p>
+      </div>
     `;
-  };
-  reader.readAsDataURL(file);
+    return;
+  }
+
+  container.innerHTML = libraryMedia.map(media => {
+    const isSelected = selectedLibraryMedia.has(media.id);
+    const tagsHtml = media.tags?.slice(0, 3).map(t => `<span class="tag-chip">${t.name}</span>`).join('') || '';
+
+    return `
+      <div class="library-media-item ${isSelected ? 'selected' : ''}"
+           data-media-id="${media.id}"
+           onclick="toggleLibraryMediaSelection('${media.id}')">
+        <img src="${media.url}" alt="${media.caption || 'Media'}">
+        ${tagsHtml ? `<div class="media-info">${tagsHtml}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  updateLibrarySelectButton();
+}
+
+function toggleLibraryMediaSelection(mediaId) {
+  if (selectedLibraryMedia.has(mediaId)) {
+    selectedLibraryMedia.delete(mediaId);
+  } else {
+    selectedLibraryMedia.add(mediaId);
+  }
+  renderLibraryGrid();
+}
+
+function updateLibrarySelectButton() {
+  const btn = document.getElementById('submitLibrarySelect');
+  if (!btn) return;
+
+  const count = selectedLibraryMedia.size;
+  btn.disabled = count === 0;
+  btn.textContent = `Add Selected (${count})`;
+}
+
+async function handleLibrarySelect() {
+  if (selectedLibraryMedia.size === 0) return;
+
+  const submitBtn = document.getElementById('submitLibrarySelect');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Adding...';
+
+  try {
+    // Get current max display_order for the space
+    const space = spaces.find(s => s.id === currentUploadSpaceId);
+    let displayOrder = space?.photos?.length || 0;
+
+    // Link each selected media to the space
+    for (const mediaId of selectedLibraryMedia) {
+      await mediaService.linkToSpace(mediaId, currentUploadSpaceId, displayOrder);
+      displayOrder++;
+    }
+
+    alert(`Added ${selectedLibraryMedia.size} media item(s) to space.`);
+    photoUploadModal.classList.add('hidden');
+
+    await loadData();
+    render();
+
+  } catch (error) {
+    console.error('Error adding media from library:', error);
+    alert('Failed to add media: ' + error.message);
+  } finally {
+    submitBtn.disabled = false;
+    updateLibrarySelectButton();
+  }
+}
+
+// Track selected files for upload
+let selectedUploadFiles = [];
+
+function handleFilePreview(e) {
+  const files = Array.from(e.target.files);
+  if (!files.length) {
+    selectedUploadFiles = [];
+    renderUploadPreviews();
+    return;
+  }
+
+  selectedUploadFiles = files.map((file, idx) => ({
+    file,
+    id: `file-${Date.now()}-${idx}`,
+    caption: '',
+    preview: null
+  }));
+
+  // Load previews for each file
+  selectedUploadFiles.forEach((item, idx) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      item.preview = e.target.result;
+      renderUploadPreviews();
+    };
+    reader.readAsDataURL(item.file);
+  });
+
+  renderUploadPreviews();
+}
+
+function renderUploadPreviews() {
+  const grid = document.getElementById('uploadPreviewGrid');
+  const bulkSection = document.getElementById('bulkTagSection');
+  const fileCountEl = document.getElementById('fileCount');
+  const submitBtn = document.getElementById('submitPhotoUpload');
+
+  if (!grid) return;
+
+  // Update file count and show/hide bulk section
+  const count = selectedUploadFiles.length;
+  if (fileCountEl) fileCountEl.textContent = count;
+  if (bulkSection) bulkSection.classList.toggle('hidden', count <= 1);
+  if (submitBtn) submitBtn.textContent = count > 1 ? `Upload All (${count})` : 'Upload';
+
+  if (count === 0) {
+    grid.innerHTML = '';
+    return;
+  }
+
+  grid.innerHTML = selectedUploadFiles.map((item, idx) => `
+    <div class="upload-preview-item" data-file-id="${item.id}">
+      ${item.preview
+        ? `<img src="${item.preview}" alt="Preview ${idx + 1}">`
+        : `<div style="display:flex;align-items:center;justify-content:center;height:100%;background:var(--bg);color:var(--text-muted);font-size:0.75rem;">Loading...</div>`
+      }
+      <span class="preview-index">${idx + 1}</span>
+      <button type="button" class="preview-remove" onclick="removeUploadFile('${item.id}')" title="Remove">×</button>
+      <div class="preview-caption">
+        <input type="text"
+          placeholder="Caption..."
+          value="${item.caption}"
+          onchange="updateFileCaption('${item.id}', this.value)"
+          onclick="event.stopPropagation()">
+      </div>
+    </div>
+  `).join('');
+}
+
+function removeUploadFile(fileId) {
+  selectedUploadFiles = selectedUploadFiles.filter(f => f.id !== fileId);
+  renderUploadPreviews();
+
+  // Also clear the file input if all removed
+  if (selectedUploadFiles.length === 0) {
+    document.getElementById('photoFile').value = '';
+  }
+}
+
+function updateFileCaption(fileId, caption) {
+  const item = selectedUploadFiles.find(f => f.id === fileId);
+  if (item) item.caption = caption;
 }
 
 async function handlePhotoUpload() {
@@ -837,67 +1199,103 @@ async function handlePhotoUpload() {
     return;
   }
 
-  const file = document.getElementById('photoFile').files[0];
-  const caption = document.getElementById('photoCaption').value.trim();
-
-  if (!file) {
-    alert('Please select an image.');
+  // Check if we have files to upload
+  if (selectedUploadFiles.length === 0) {
+    alert('Please select at least one image.');
     return;
   }
 
+  const bulkCaption = document.getElementById('photoBulkCaption')?.value.trim() || '';
+  const category = document.getElementById('photoCategory')?.value || 'mktg';
+
+  // Get selected tags (apply to all)
+  const selectedTags = [];
+  document.querySelectorAll('#uploadTagsContainer input[type="checkbox"]:checked').forEach(cb => {
+    selectedTags.push(cb.value);
+  });
+
   const submitBtn = document.getElementById('submitPhotoUpload');
+  const progressContainer = document.getElementById('uploadProgress');
+  const progressFill = document.getElementById('uploadProgressFill');
+  const progressText = document.getElementById('uploadProgressText');
+
   submitBtn.disabled = true;
   submitBtn.textContent = 'Uploading...';
 
+  // Show progress for multiple files
+  if (selectedUploadFiles.length > 1 && progressContainer) {
+    progressContainer.classList.remove('hidden');
+  }
+
+  let successCount = 0;
+  let failCount = 0;
+  const totalFiles = selectedUploadFiles.length;
+
   try {
-    const ext = file.name.split('.').pop();
-    const filename = `${currentUploadSpaceId}/${Date.now()}.${ext}`;
+    for (let i = 0; i < selectedUploadFiles.length; i++) {
+      const item = selectedUploadFiles[i];
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('housephotos')
-      .upload(filename, file);
+      // Update progress
+      if (progressFill) progressFill.style.width = `${((i) / totalFiles) * 100}%`;
+      if (progressText) progressText.textContent = `Uploading ${i + 1} of ${totalFiles}...`;
 
-    if (uploadError) throw uploadError;
+      // Use per-file caption if set, otherwise bulk caption
+      const caption = item.caption || bulkCaption;
 
-    const { data: urlData } = supabase.storage
-      .from('housephotos')
-      .getPublicUrl(filename);
+      try {
+        const result = await mediaService.upload(item.file, {
+          category,
+          caption,
+          tags: selectedTags,
+          spaceId: currentUploadSpaceId,
+        });
 
-    const publicUrl = urlData.publicUrl;
+        if (result.success) {
+          successCount++;
+        } else {
+          console.error(`Failed to upload ${item.file.name}:`, result.error);
+          failCount++;
+        }
+      } catch (err) {
+        console.error(`Error uploading ${item.file.name}:`, err);
+        failCount++;
+      }
+    }
 
-    const { data: photoData, error: photoError } = await supabase
-      .from('photos')
-      .insert({
-        url: publicUrl,
-        caption: caption || null,
-        uploaded_by: authState.appUser?.id || 'admin'
-      })
-      .select()
-      .single();
+    // Final progress
+    if (progressFill) progressFill.style.width = '100%';
+    if (progressText) progressText.textContent = 'Complete!';
 
-    if (photoError) throw photoError;
+    // Show results
+    if (failCount === 0) {
+      if (successCount === 1) {
+        alert('Photo uploaded successfully!');
+      } else {
+        alert(`${successCount} photos uploaded successfully!`);
+      }
+    } else {
+      alert(`Uploaded ${successCount} of ${totalFiles} photos.\n${failCount} failed - check console for details.`);
+    }
 
-    const { error: linkError } = await supabase
-      .from('photo_spaces')
-      .insert({
-        photo_id: photoData.id,
-        space_id: currentUploadSpaceId
-      });
+    // Refresh storage usage
+    storageUsage = await mediaService.getStorageUsage();
+    if (storageUsage && storageUsage.percent_used >= 80) {
+      alert(`Warning: Storage is ${storageUsage.percent_used.toFixed(1)}% full.`);
+    }
 
-    if (linkError) throw linkError;
-
-    alert('Photo uploaded successfully!');
     photoUploadModal.classList.add('hidden');
 
     await loadData();
     render();
 
   } catch (error) {
-    console.error('Error uploading photo:', error);
-    alert('Failed to upload: ' + error.message);
+    console.error('Error during upload:', error);
+    alert('Upload failed: ' + error.message);
   } finally {
     submitBtn.disabled = false;
-    submitBtn.textContent = 'Upload';
+    submitBtn.textContent = selectedUploadFiles.length > 1 ? `Upload All (${selectedUploadFiles.length})` : 'Upload';
+    if (progressContainer) progressContainer.classList.add('hidden');
+    selectedUploadFiles = [];
   }
 }
 
@@ -957,17 +1355,28 @@ function renderEditPhotos(space) {
     return;
   }
 
-  container.innerHTML = space.photos.map((photo, idx) => `
-    <div class="edit-photo-item" data-photo-id="${photo.id}">
-      <img src="${photo.url}" alt="${photo.caption || 'Photo ' + (idx + 1)}">
-      <span class="photo-order">#${idx + 1}</span>
-      <div class="photo-controls">
-        <button type="button" onclick="event.preventDefault(); event.stopPropagation(); movePhotoInEdit('${space.id}', '${photo.id}', 'up')" ${idx === 0 ? 'disabled' : ''}>↑ Up</button>
-        <button type="button" onclick="event.preventDefault(); event.stopPropagation(); movePhotoInEdit('${space.id}', '${photo.id}', 'down')" ${idx === space.photos.length - 1 ? 'disabled' : ''}>↓ Down</button>
-        <button type="button" class="btn-delete" onclick="event.preventDefault(); event.stopPropagation(); removePhotoFromSpace('${space.id}', '${photo.id}')">× Remove</button>
+  container.innerHTML = space.photos.map((photo, idx) => {
+    // Show tags if available
+    const tagsHtml = photo.tags?.length
+      ? `<div class="photo-tags">${photo.tags.slice(0, 3).map(t => `<span class="photo-tag">${t.name}</span>`).join('')}</div>`
+      : '';
+
+    // Show primary badge
+    const primaryBadge = photo.is_primary ? '<span class="photo-tag" style="background: var(--accent);">Primary</span>' : '';
+
+    return `
+      <div class="edit-photo-item" data-photo-id="${photo.id}">
+        <img src="${photo.url}" alt="${photo.caption || 'Photo ' + (idx + 1)}">
+        ${tagsHtml}
+        <span class="photo-order">#${idx + 1} ${primaryBadge}</span>
+        <div class="photo-controls">
+          <button type="button" onclick="event.preventDefault(); event.stopPropagation(); movePhotoInEdit('${space.id}', '${photo.id}', 'up')" ${idx === 0 ? 'disabled' : ''}>↑ Up</button>
+          <button type="button" onclick="event.preventDefault(); event.stopPropagation(); movePhotoInEdit('${space.id}', '${photo.id}', 'down')" ${idx === space.photos.length - 1 ? 'disabled' : ''}>↓ Down</button>
+          <button type="button" class="btn-delete" onclick="event.preventDefault(); event.stopPropagation(); removePhotoFromSpace('${space.id}', '${photo.id}')">× Remove</button>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 async function handleEditSpaceSubmit() {
@@ -1036,7 +1445,7 @@ async function handleEditSpaceSubmit() {
 }
 
 // Move photo from edit modal (optimistic update for performance)
-async function movePhotoInEdit(spaceId, photoId, direction) {
+async function movePhotoInEdit(spaceId, mediaId, direction) {
   if (!authState?.isAdmin) {
     alert('Only admins can reorder photos');
     return;
@@ -1046,7 +1455,7 @@ async function movePhotoInEdit(spaceId, photoId, direction) {
   if (!space) return;
 
   const photos = [...space.photos];
-  const idx = photos.findIndex(p => p.id === photoId);
+  const idx = photos.findIndex(p => p.id === mediaId);
   if (idx === -1) return;
 
   let newIdx;
@@ -1071,50 +1480,63 @@ async function movePhotoInEdit(spaceId, photoId, direction) {
   // Re-render immediately for snappy UI
   renderEditPhotos(space);
 
-  // Sync to database in background (don't block UI or show errors)
+  // Sync to database in background using media service
   try {
-    const updates = photos.map((p, i) =>
-      supabase
-        .from('photo_spaces')
-        .update({ display_order: i })
-        .eq('space_id', spaceId)
-        .eq('photo_id', p.id)
-    );
-    await Promise.all(updates);
+    const mediaIds = photos.map(p => p.id);
+    await mediaService.reorderInSpace(spaceId, mediaIds);
   } catch (error) {
     console.error('Error saving photo order:', error);
     // Silently fail - the visual order is already updated
-    // It will sync correctly on next page load
   }
 }
 
-// Remove photo from space (unlinks, doesn't delete the actual photo)
-async function removePhotoFromSpace(spaceId, photoId) {
+// Remove photo from space (unlinks, doesn't delete the actual media file)
+async function removePhotoFromSpace(spaceId, mediaId) {
   if (!authState?.isAdmin) {
     alert('Only admins can remove photos');
     return;
   }
 
   try {
-    // Remove the photo_spaces link (photo still exists in photos table)
-    const { error: unlinkError } = await supabase
-      .from('photo_spaces')
-      .delete()
-      .eq('space_id', spaceId)
-      .eq('photo_id', photoId);
-
-    if (unlinkError) throw unlinkError;
+    // Use media service to unlink
+    await mediaService.unlinkFromSpace(mediaId, spaceId);
 
     // Update local data without full reload (keeps modal open)
     const space = spaces.find(s => s.id === spaceId);
     if (space) {
-      space.photos = space.photos.filter(p => p.id !== photoId);
+      space.photos = space.photos.filter(p => p.id !== mediaId);
       renderEditPhotos(space);
     }
 
   } catch (error) {
     console.error('Error removing photo:', error);
     alert('Failed to remove photo: ' + error.message);
+  }
+}
+
+// Permanently delete media (removes file from storage too)
+async function deleteMedia(mediaId) {
+  if (!authState?.isAdmin) {
+    alert('Only admins can delete media');
+    return;
+  }
+
+  if (!confirm('Permanently delete this media? This cannot be undone.')) {
+    return;
+  }
+
+  try {
+    const result = await mediaService.delete(mediaId);
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+
+    await loadData();
+    render();
+    alert('Media deleted successfully.');
+  } catch (error) {
+    console.error('Error deleting media:', error);
+    alert('Failed to delete: ' + error.message);
   }
 }
 
@@ -1125,4 +1547,11 @@ window.openPhotoUpload = openPhotoUpload;
 window.movePhoto = movePhoto;
 window.movePhotoInEdit = movePhotoInEdit;
 window.removePhotoFromSpace = removePhotoFromSpace;
+window.deleteMedia = deleteMedia;
 window.openEditSpace = openEditSpace;
+window.mediaService = mediaService;
+window.toggleLibraryTagFilter = toggleLibraryTagFilter;
+window.toggleLibraryMediaSelection = toggleLibraryMediaSelection;
+window.switchMediaPickerTab = switchMediaPickerTab;
+window.removeUploadFile = removeUploadFile;
+window.updateFileCaption = updateFileCaption;

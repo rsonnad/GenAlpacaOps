@@ -1,0 +1,734 @@
+/**
+ * Media Service - Abstraction layer for media storage
+ *
+ * Handles:
+ * - Image uploads to Supabase
+ * - Video routing to external storage (GCS - future)
+ * - Storage usage tracking
+ * - Tagging and categorization
+ */
+
+import { supabase } from './supabase.js';
+
+// =============================================
+// CONFIGURATION
+// =============================================
+
+const CONFIG = {
+  // Storage limits
+  supabaseMaxBytes: 1 * 1024 * 1024 * 1024, // 1GB
+  warningThreshold: 0.8, // Warn at 80% usage
+
+  // Bucket names
+  buckets: {
+    images: 'housephotos',
+    // videos: 'videos', // Future: GCS bucket
+  },
+
+  // Categories
+  validCategories: ['mktg', 'projects', 'archive'],
+
+  // File type detection
+  imageTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+  videoTypes: ['video/mp4', 'video/webm', 'video/quicktime', 'video/avi'],
+};
+
+// =============================================
+// STORAGE ROUTING
+// =============================================
+
+/**
+ * Determine which storage provider to use for a file
+ */
+function getStorageProvider(file) {
+  const isVideo = CONFIG.videoTypes.includes(file.type);
+
+  if (isVideo) {
+    // Videos always go to external storage (GCS)
+    // For now, return 'pending' until GCS is set up
+    return 'pending';
+  }
+
+  return 'supabase';
+}
+
+/**
+ * Check if file type is supported
+ */
+function isSupported(file) {
+  return CONFIG.imageTypes.includes(file.type) || CONFIG.videoTypes.includes(file.type);
+}
+
+/**
+ * Check if file is a video
+ */
+function isVideo(file) {
+  return CONFIG.videoTypes.includes(file.type);
+}
+
+// =============================================
+// STORAGE USAGE
+// =============================================
+
+/**
+ * Get current Supabase storage usage
+ */
+async function getStorageUsage() {
+  const { data, error } = await supabase.rpc('check_storage_limit');
+
+  if (error) {
+    console.error('Error checking storage:', error);
+    // Fallback: calculate from media table
+    const { data: usage } = await supabase
+      .from('media')
+      .select('file_size_bytes')
+      .eq('storage_provider', 'supabase')
+      .eq('is_archived', false);
+
+    const totalBytes = usage?.reduce((sum, m) => sum + (m.file_size_bytes || 0), 0) || 0;
+    return {
+      current_bytes: totalBytes,
+      limit_bytes: CONFIG.supabaseMaxBytes,
+      percent_used: (totalBytes / CONFIG.supabaseMaxBytes) * 100,
+      bytes_remaining: CONFIG.supabaseMaxBytes - totalBytes,
+    };
+  }
+
+  return data?.[0] || null;
+}
+
+/**
+ * Get storage breakdown by category
+ */
+async function getStorageBreakdown() {
+  const { data, error } = await supabase
+    .from('storage_usage')
+    .select('*');
+
+  if (error) {
+    console.error('Error getting breakdown:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Check if we should warn about storage usage
+ */
+async function shouldWarnStorage() {
+  const usage = await getStorageUsage();
+  if (!usage) return false;
+  return usage.percent_used >= CONFIG.warningThreshold * 100;
+}
+
+// =============================================
+// UPLOAD FUNCTIONS
+// =============================================
+
+/**
+ * Upload media file
+ *
+ * @param {File} file - The file to upload
+ * @param {Object} options - Upload options
+ * @param {string} options.category - 'mktg', 'projects', or 'archive'
+ * @param {string} options.caption - Optional caption
+ * @param {string} options.title - Optional title
+ * @param {string[]} options.tags - Array of tag names to assign
+ * @param {string} options.spaceId - Optional space to link to
+ * @param {number} options.displayOrder - Display order if linking to space
+ * @returns {Object} - { success, media, error }
+ */
+async function upload(file, options = {}) {
+  const {
+    category = 'mktg',
+    caption = '',
+    title = '',
+    tags = [],
+    spaceId = null,
+    displayOrder = 0,
+  } = options;
+
+  // Validate file type
+  if (!isSupported(file)) {
+    return {
+      success: false,
+      error: `Unsupported file type: ${file.type}. Supported: images (JPEG, PNG, WebP, GIF) and videos (MP4, WebM, MOV, AVI)`,
+    };
+  }
+
+  // Check if video (not supported yet)
+  if (isVideo(file)) {
+    return {
+      success: false,
+      error: 'Video upload requires external storage (coming soon). For now, please use an external video host like YouTube or Vimeo and paste the URL.',
+      isVideo: true,
+    };
+  }
+
+  // Validate category
+  if (!CONFIG.validCategories.includes(category)) {
+    return {
+      success: false,
+      error: `Invalid category: ${category}. Valid: ${CONFIG.validCategories.join(', ')}`,
+    };
+  }
+
+  // Check storage usage
+  const usage = await getStorageUsage();
+  if (usage && (usage.bytes_remaining < file.size)) {
+    return {
+      success: false,
+      error: `Not enough storage space. Need ${formatBytes(file.size)}, only ${formatBytes(usage.bytes_remaining)} available.`,
+    };
+  }
+
+  try {
+    // Generate unique filename
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 8);
+    const storagePath = `${category}/${timestamp}-${randomId}.${ext}`;
+
+    // Upload to Supabase storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from(CONFIG.buckets.images)
+      .upload(storagePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      return { success: false, error: uploadError.message };
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from(CONFIG.buckets.images)
+      .getPublicUrl(storagePath);
+
+    const publicUrl = urlData?.publicUrl;
+
+    if (!publicUrl) {
+      return { success: false, error: 'Failed to get public URL' };
+    }
+
+    // Get image dimensions (if browser supports it)
+    let width = null;
+    let height = null;
+    try {
+      const dimensions = await getImageDimensions(file);
+      width = dimensions.width;
+      height = dimensions.height;
+    } catch (e) {
+      console.warn('Could not get image dimensions:', e);
+    }
+
+    // Insert media record
+    const { data: mediaRecord, error: mediaError } = await supabase
+      .from('media')
+      .insert({
+        url: publicUrl,
+        storage_provider: 'supabase',
+        storage_path: storagePath,
+        media_type: 'image',
+        mime_type: file.type,
+        file_size_bytes: file.size,
+        width,
+        height,
+        title: title || null,
+        caption: caption || null,
+        category,
+      })
+      .select()
+      .single();
+
+    if (mediaError) {
+      console.error('Media record error:', mediaError);
+      // Try to clean up uploaded file
+      await supabase.storage.from(CONFIG.buckets.images).remove([storagePath]);
+      return { success: false, error: mediaError.message };
+    }
+
+    // Assign tags
+    if (tags.length > 0) {
+      await assignTags(mediaRecord.id, tags);
+    }
+
+    // Link to space if provided
+    if (spaceId) {
+      await linkToSpace(mediaRecord.id, spaceId, displayOrder);
+    }
+
+    // Warn if storage is getting full
+    if (usage && usage.percent_used >= CONFIG.warningThreshold * 100) {
+      console.warn(`Storage usage warning: ${usage.percent_used.toFixed(1)}% used`);
+    }
+
+    return {
+      success: true,
+      media: mediaRecord,
+      storageWarning: usage?.percent_used >= CONFIG.warningThreshold * 100,
+    };
+
+  } catch (error) {
+    console.error('Upload failed:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Add external media (video URL, etc.)
+ */
+async function addExternal(url, options = {}) {
+  const {
+    category = 'mktg',
+    mediaType = 'video',
+    caption = '',
+    title = '',
+    tags = [],
+    spaceId = null,
+    displayOrder = 0,
+  } = options;
+
+  try {
+    const { data: mediaRecord, error } = await supabase
+      .from('media')
+      .insert({
+        url,
+        storage_provider: 'external',
+        storage_path: null,
+        media_type: mediaType,
+        mime_type: null,
+        file_size_bytes: null,
+        title: title || null,
+        caption: caption || null,
+        category,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    if (tags.length > 0) {
+      await assignTags(mediaRecord.id, tags);
+    }
+
+    if (spaceId) {
+      await linkToSpace(mediaRecord.id, spaceId, displayOrder);
+    }
+
+    return { success: true, media: mediaRecord };
+
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// =============================================
+// TAG MANAGEMENT
+// =============================================
+
+/**
+ * Get all available tags
+ */
+async function getTags(group = null) {
+  let query = supabase.from('media_tags').select('*').order('tag_group').order('name');
+
+  if (group) {
+    query = query.eq('tag_group', group);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching tags:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Get tags grouped by tag_group
+ */
+async function getTagsGrouped() {
+  const tags = await getTags();
+  const grouped = {};
+
+  for (const tag of tags) {
+    const group = tag.tag_group || 'other';
+    if (!grouped[group]) {
+      grouped[group] = [];
+    }
+    grouped[group].push(tag);
+  }
+
+  return grouped;
+}
+
+/**
+ * Assign tags to media by tag names
+ */
+async function assignTags(mediaId, tagNames) {
+  if (!tagNames || tagNames.length === 0) return;
+
+  // Get tag IDs from names
+  const { data: tags } = await supabase
+    .from('media_tags')
+    .select('id, name')
+    .in('name', tagNames);
+
+  if (!tags || tags.length === 0) return;
+
+  // Insert assignments
+  const assignments = tags.map(tag => ({
+    media_id: mediaId,
+    tag_id: tag.id,
+  }));
+
+  await supabase
+    .from('media_tag_assignments')
+    .upsert(assignments, { onConflict: 'media_id,tag_id' });
+}
+
+/**
+ * Remove tag from media
+ */
+async function removeTag(mediaId, tagId) {
+  await supabase
+    .from('media_tag_assignments')
+    .delete()
+    .eq('media_id', mediaId)
+    .eq('tag_id', tagId);
+}
+
+/**
+ * Create a new tag
+ */
+async function createTag(name, group = null, color = null) {
+  const { data, error } = await supabase
+    .from('media_tags')
+    .insert({ name, tag_group: group, color })
+    .select()
+    .single();
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, tag: data };
+}
+
+// =============================================
+// SPACE LINKING
+// =============================================
+
+/**
+ * Link media to a space
+ */
+async function linkToSpace(mediaId, spaceId, displayOrder = 0, isPrimary = false) {
+  const { error } = await supabase
+    .from('media_spaces')
+    .upsert({
+      media_id: mediaId,
+      space_id: spaceId,
+      display_order: displayOrder,
+      is_primary: isPrimary,
+    }, { onConflict: 'media_id,space_id' });
+
+  if (error) {
+    console.error('Error linking to space:', error);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Unlink media from a space
+ */
+async function unlinkFromSpace(mediaId, spaceId) {
+  const { error } = await supabase
+    .from('media_spaces')
+    .delete()
+    .eq('media_id', mediaId)
+    .eq('space_id', spaceId);
+
+  return !error;
+}
+
+/**
+ * Reorder media within a space
+ */
+async function reorderInSpace(spaceId, mediaIds) {
+  const updates = mediaIds.map((mediaId, index) =>
+    supabase
+      .from('media_spaces')
+      .update({ display_order: index })
+      .eq('space_id', spaceId)
+      .eq('media_id', mediaId)
+  );
+
+  await Promise.all(updates);
+}
+
+/**
+ * Set primary media for a space
+ */
+async function setPrimaryForSpace(spaceId, mediaId) {
+  // Clear existing primary
+  await supabase
+    .from('media_spaces')
+    .update({ is_primary: false })
+    .eq('space_id', spaceId);
+
+  // Set new primary
+  await supabase
+    .from('media_spaces')
+    .update({ is_primary: true })
+    .eq('space_id', spaceId)
+    .eq('media_id', mediaId);
+}
+
+// =============================================
+// QUERY FUNCTIONS
+// =============================================
+
+/**
+ * Get media for a space
+ */
+async function getForSpace(spaceId) {
+  const { data, error } = await supabase
+    .from('media_spaces')
+    .select(`
+      display_order,
+      is_primary,
+      media:media_id (
+        id, url, caption, title, media_type, category,
+        media_tag_assignments ( tag:tag_id ( id, name, color, tag_group ) )
+      )
+    `)
+    .eq('space_id', spaceId)
+    .order('display_order');
+
+  if (error) {
+    console.error('Error fetching media for space:', error);
+    return [];
+  }
+
+  // Flatten the response
+  return (data || []).map(item => ({
+    ...item.media,
+    display_order: item.display_order,
+    is_primary: item.is_primary,
+    tags: item.media?.media_tag_assignments?.map(a => a.tag) || [],
+  }));
+}
+
+/**
+ * Search media by tags, category, etc.
+ */
+async function search(options = {}) {
+  const {
+    category = null,
+    tags = [],
+    mediaType = null,
+    limit = 50,
+    offset = 0,
+  } = options;
+
+  let query = supabase
+    .from('media')
+    .select(`
+      *,
+      media_tag_assignments ( tag:tag_id ( id, name, color, tag_group ) ),
+      media_spaces ( space_id, display_order, is_primary )
+    `)
+    .eq('is_archived', false)
+    .order('uploaded_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (category) {
+    query = query.eq('category', category);
+  }
+
+  if (mediaType) {
+    query = query.eq('media_type', mediaType);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Search error:', error);
+    return [];
+  }
+
+  // Filter by tags if provided (post-query for simplicity)
+  let results = data || [];
+  if (tags.length > 0) {
+    results = results.filter(media => {
+      const mediaTags = media.media_tag_assignments?.map(a => a.tag?.name) || [];
+      return tags.some(t => mediaTags.includes(t));
+    });
+  }
+
+  // Flatten tags
+  return results.map(media => ({
+    ...media,
+    tags: media.media_tag_assignments?.map(a => a.tag) || [],
+    spaces: media.media_spaces || [],
+    media_tag_assignments: undefined,
+    media_spaces: undefined,
+  }));
+}
+
+/**
+ * Get all media (paginated)
+ */
+async function getAll(options = {}) {
+  return search(options);
+}
+
+// =============================================
+// DELETE / ARCHIVE
+// =============================================
+
+/**
+ * Archive media (soft delete)
+ */
+async function archive(mediaId) {
+  const { error } = await supabase
+    .from('media')
+    .update({
+      is_archived: true,
+      archived_at: new Date().toISOString(),
+    })
+    .eq('id', mediaId);
+
+  return !error;
+}
+
+/**
+ * Permanently delete media
+ */
+async function deleteMedia(mediaId) {
+  // Get media record first
+  const { data: media } = await supabase
+    .from('media')
+    .select('storage_provider, storage_path')
+    .eq('id', mediaId)
+    .single();
+
+  if (!media) {
+    return { success: false, error: 'Media not found' };
+  }
+
+  // Delete from storage if Supabase
+  if (media.storage_provider === 'supabase' && media.storage_path) {
+    const { error: storageError } = await supabase.storage
+      .from(CONFIG.buckets.images)
+      .remove([media.storage_path]);
+
+    if (storageError) {
+      console.error('Storage delete error:', storageError);
+      // Continue anyway - DB record should still be deleted
+    }
+  }
+
+  // Delete from database (cascades to assignments)
+  const { error } = await supabase
+    .from('media')
+    .delete()
+    .eq('id', mediaId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+// =============================================
+// UTILITY FUNCTIONS
+// =============================================
+
+/**
+ * Format bytes to human readable
+ */
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+/**
+ * Get image dimensions from file
+ */
+function getImageDimensions(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      resolve({ width: img.width, height: img.height });
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+// =============================================
+// EXPORTS
+// =============================================
+
+export const mediaService = {
+  // Config
+  CONFIG,
+
+  // Storage
+  getStorageProvider,
+  isSupported,
+  isVideo,
+  getStorageUsage,
+  getStorageBreakdown,
+  shouldWarnStorage,
+
+  // Upload
+  upload,
+  addExternal,
+
+  // Tags
+  getTags,
+  getTagsGrouped,
+  assignTags,
+  removeTag,
+  createTag,
+
+  // Space linking
+  linkToSpace,
+  unlinkFromSpace,
+  reorderInSpace,
+  setPrimaryForSpace,
+
+  // Query
+  getForSpace,
+  search,
+  getAll,
+
+  // Delete
+  archive,
+  delete: deleteMedia,
+
+  // Utils
+  formatBytes,
+};
+
+// Also export for window access in non-module scripts
+if (typeof window !== 'undefined') {
+  window.mediaService = mediaService;
+}

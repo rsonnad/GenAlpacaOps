@@ -160,23 +160,110 @@
     </div>
   </div>
 
-  <!-- Photo Upload Modal -->
+  <!-- Media Picker Modal (Upload or Choose from Library) -->
   <div id="photoUploadModal" class="modal hidden">
-    <div class="modal-content">
+    <div class="modal-content modal-large">
       <div class="modal-header">
-        <h2>Upload Photo for <span id="uploadModalSpaceName"></span></h2>
+        <h2>Add Media to <span id="uploadModalSpaceName"></span></h2>
         <button class="modal-close" id="closeUploadModal">&times;</button>
       </div>
       <div class="modal-body">
-        <label for="photoFile">Select image:</label>
-        <input type="file" id="photoFile" accept="image/*">
-        <div id="uploadPreview" style="margin-top: 1rem;"></div>
-        <label for="photoCaption">Caption (optional):</label>
-        <input type="text" id="photoCaption" placeholder="e.g., View from the window">
-      </div>
-      <div class="modal-footer">
-        <button id="cancelPhotoUpload" class="btn-secondary">Cancel</button>
-        <button id="submitPhotoUpload" class="btn-primary">Upload</button>
+        <!-- Tab navigation -->
+        <div class="media-picker-tabs">
+          <button type="button" class="tab-btn active" data-tab="upload">Upload New</button>
+          <button type="button" class="tab-btn" data-tab="library">From Library</button>
+        </div>
+
+        <!-- Upload New Tab -->
+        <div id="uploadTab" class="tab-content active">
+          <!-- Storage indicator -->
+          <div id="storageIndicator" class="storage-indicator"></div>
+
+          <div class="form-group">
+            <label for="photoFile">Select images:</label>
+            <input type="file" id="photoFile" accept="image/*,video/*" multiple>
+            <p class="form-hint">Select multiple images to bulk upload. Videos require external hosting (coming soon).</p>
+          </div>
+
+          <!-- Bulk tagging section (shown when multiple files selected) -->
+          <div id="bulkTagSection" class="bulk-tag-section hidden">
+            <div class="bulk-tag-header">
+              <h4><span id="fileCount">0</span> images selected</h4>
+              <p class="form-hint">Tags below will apply to ALL selected images</p>
+            </div>
+          </div>
+
+          <!-- Preview grid for multiple files -->
+          <div id="uploadPreviewGrid" class="upload-preview-grid"></div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="photoBulkCaption">Caption for all (optional):</label>
+              <input type="text" id="photoBulkCaption" placeholder="Leave empty to set per-image">
+            </div>
+            <div class="form-group">
+              <label for="photoCategory">Category:</label>
+              <select id="photoCategory">
+                <option value="mktg">Marketing</option>
+                <option value="projects">Projects</option>
+                <option value="archive">Archive</option>
+              </select>
+            </div>
+          </div>
+
+          <fieldset class="form-fieldset">
+            <legend>Tags (apply to all)</legend>
+            <p class="form-hint" id="autoTagHint" style="margin-bottom: 0.5rem; color: var(--accent);"></p>
+            <div id="uploadTagsContainer" class="tags-container">
+              <!-- Tags populated by JS -->
+            </div>
+          </fieldset>
+
+          <!-- Upload progress -->
+          <div id="uploadProgress" class="upload-progress hidden">
+            <div class="progress-bar">
+              <div class="progress-fill" id="uploadProgressFill"></div>
+            </div>
+            <p class="progress-text" id="uploadProgressText">Uploading 0 of 0...</p>
+          </div>
+
+          <div class="modal-footer-inline">
+            <button id="cancelPhotoUpload" type="button" class="btn-secondary">Cancel</button>
+            <button id="submitPhotoUpload" type="button" class="btn-primary">Upload All</button>
+          </div>
+        </div>
+
+        <!-- Library Tab -->
+        <div id="libraryTab" class="tab-content">
+          <!-- Filter controls -->
+          <div class="library-filters">
+            <div class="form-group">
+              <label>Filter by tag:</label>
+              <div id="libraryTagFilter" class="tag-filter-chips">
+                <!-- Tag chips populated by JS -->
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="libraryCategoryFilter">Category:</label>
+              <select id="libraryCategoryFilter">
+                <option value="">All categories</option>
+                <option value="mktg">Marketing</option>
+                <option value="projects">Projects</option>
+                <option value="archive">Archive</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Media grid -->
+          <div id="libraryMediaGrid" class="library-media-grid">
+            <!-- Media items populated by JS -->
+          </div>
+
+          <div class="modal-footer-inline">
+            <button id="cancelLibrarySelect" type="button" class="btn-secondary">Cancel</button>
+            <button id="submitLibrarySelect" type="button" class="btn-primary" disabled>Add Selected (0)</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
