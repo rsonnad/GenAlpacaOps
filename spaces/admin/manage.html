@@ -105,15 +105,15 @@
 
     .filter-row {
       display: flex;
-      gap: 1.5rem;
+      gap: 1rem;
       align-items: flex-end;
-      flex-wrap: wrap;
     }
 
     .filter-group {
       display: flex;
       flex-direction: column;
       gap: 0.25rem;
+      flex-shrink: 0;
     }
 
     .filter-group label {
@@ -131,7 +131,7 @@
       border-radius: var(--radius);
       font-family: inherit;
       font-size: 0.875rem;
-      min-width: 180px;
+      min-width: 140px;
     }
 
     .filter-group input[type="text"]:focus,
@@ -141,13 +141,29 @@
     }
 
     .filter-checkboxes-group {
-      justify-content: flex-end;
+      flex-direction: row;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .filter-checkboxes-group > label {
+      display: none;
     }
 
     .filter-checkboxes-group .filter-checkboxes {
       height: 36px;
       display: flex;
       align-items: center;
+    }
+
+    @media (max-width: 900px) {
+      .filter-row {
+        flex-wrap: wrap;
+      }
+      .filter-group {
+        flex: 1;
+        min-width: 140px;
+      }
     }
 
     .section-body {
@@ -339,6 +355,7 @@
     <div class="manage-container">
       <div class="manage-tabs">
         <button class="manage-tab active" data-tab="spaces">Spaces</button>
+        <button class="manage-tab" data-tab="rentals">Rentals</button>
         <button class="manage-tab" data-tab="media">Media</button>
         <button class="manage-tab" data-tab="users">Users</button>
       </div>
@@ -424,6 +441,94 @@
             <div id="archivedSpacesList" class="spaces-list">
               <!-- Populated by JS -->
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rentals Panel -->
+      <div id="rentalsPanel" class="manage-panel">
+        <!-- Pipeline View -->
+        <div class="rental-pipeline" id="rentalPipeline">
+          <div class="pipeline-column" data-stage="applications">
+            <div class="pipeline-header">
+              <h3>Applications</h3>
+              <span class="pipeline-count" id="applicationsCount">0</span>
+            </div>
+            <div class="pipeline-cards" id="applicationsCards"></div>
+          </div>
+          <div class="pipeline-column" data-stage="approved">
+            <div class="pipeline-header">
+              <h3>Approved</h3>
+              <span class="pipeline-count" id="approvedCount">0</span>
+            </div>
+            <div class="pipeline-cards" id="approvedCards"></div>
+          </div>
+          <div class="pipeline-column" data-stage="contract">
+            <div class="pipeline-header">
+              <h3>Contract</h3>
+              <span class="pipeline-count" id="contractCount">0</span>
+            </div>
+            <div class="pipeline-cards" id="contractCards"></div>
+          </div>
+          <div class="pipeline-column" data-stage="deposit">
+            <div class="pipeline-header">
+              <h3>Deposit</h3>
+              <span class="pipeline-count" id="depositCount">0</span>
+            </div>
+            <div class="pipeline-cards" id="depositCards"></div>
+          </div>
+          <div class="pipeline-column" data-stage="ready">
+            <div class="pipeline-header">
+              <h3>Ready</h3>
+              <span class="pipeline-count" id="readyCount">0</span>
+            </div>
+            <div class="pipeline-cards" id="readyCards"></div>
+          </div>
+        </div>
+
+        <!-- Denied/Delayed Section (collapsible) -->
+        <details class="section" id="deniedDelayedSection" style="margin-top: 1.5rem;">
+          <summary class="section-header" style="cursor: pointer;">
+            <h2>Denied & Delayed</h2>
+            <span id="deniedDelayedCount" class="text-muted">0</span>
+          </summary>
+          <div class="section-body">
+            <div id="deniedDelayedList" class="spaces-list"></div>
+          </div>
+        </details>
+
+        <!-- Payment Methods Section -->
+        <div class="section" style="margin-top: 1.5rem;">
+          <div class="section-header">
+            <h2>Payment Methods</h2>
+            <button class="btn-small btn-primary" id="addPaymentMethodBtn">+ Add Method</button>
+          </div>
+          <div class="section-body">
+            <div id="paymentMethodsList" class="payment-methods-grid"></div>
+          </div>
+        </div>
+
+        <!-- Create Test Application (for development) -->
+        <div class="section" style="margin-top: 1.5rem;">
+          <div class="section-header">
+            <h2>Create Application</h2>
+          </div>
+          <div class="section-body">
+            <form id="createApplicationForm" class="add-space-form">
+              <div class="form-group">
+                <label for="newAppPersonId">Person</label>
+                <select id="newAppPersonId" required>
+                  <option value="">Select a person...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="newAppSpaceId">Desired Space</label>
+                <select id="newAppSpaceId">
+                  <option value="">Any / Flexible</option>
+                </select>
+              </div>
+              <button type="submit" class="btn-primary">Create Application</button>
+            </form>
           </div>
         </div>
       </div>
