@@ -702,8 +702,16 @@
                 </select>
               </div>
               <div class="form-group">
-                <label for="termRate">Monthly Rate *</label>
-                <input type="number" id="termRate" min="0" step="1" required>
+                <label for="termRate">Rate *</label>
+                <div class="rate-input-group">
+                  <span class="rate-prefix">$</span>
+                  <input type="number" id="termRate" min="0" step="1" required>
+                  <select id="termRateTerm">
+                    <option value="monthly">/ month</option>
+                    <option value="weekly">/ week</option>
+                    <option value="nightly">/ night</option>
+                  </select>
+                </div>
               </div>
               <div class="form-group">
                 <label for="termMoveIn">Move-in Date *</label>
@@ -712,12 +720,23 @@
               <div class="form-group">
                 <label for="termLeaseEnd">Lease End Date</label>
                 <input type="date" id="termLeaseEnd">
-                <small class="form-hint">Leave blank for month-to-month</small>
+                <small class="form-hint">Leave blank for open-ended</small>
+              </div>
+              <div class="form-group">
+                <label for="termNoticePeriod">Termination Notice</label>
+                <select id="termNoticePeriod">
+                  <option value="none">None (fixed-length lease)</option>
+                  <option value="1_day">1 day notice</option>
+                  <option value="1_week">1 week notice</option>
+                  <option value="30_days" selected>30 days notice</option>
+                  <option value="60_days">60 days notice</option>
+                </select>
+                <small class="form-hint">Required notice to terminate. Select "None" for fixed-length leases.</small>
               </div>
               <div class="form-group">
                 <label for="termSecurityDeposit">Security Deposit</label>
                 <input type="number" id="termSecurityDeposit" min="0" step="1" value="0">
-                <small class="form-hint">Can be $0. Move-in deposit is always 1 month's rent.</small>
+                <small class="form-hint">Can be $0. Move-in deposit is always 1 period's rent.</small>
               </div>
             </div>
           </form>
@@ -1806,7 +1825,7 @@
           </div>
           <div class="card-body">
             <div class="space-name">${space?.name || 'Flexible'}</div>
-            ${app.approved_rate ? `<div class="rate">$${app.approved_rate}/mo</div>` : ''}
+            ${app.approved_rate ? `<div class="rate">$${app.approved_rate}/${app.approved_rate_term === 'weekly' ? 'wk' : app.approved_rate_term === 'nightly' ? 'night' : 'mo'}</div>` : ''}
           </div>
           ${subStatus ? `
             <div class="card-footer">
@@ -1912,8 +1931,10 @@
       // Terms tab
       document.getElementById('termSpace').value = app.approved_space_id || app.desired_space_id || '';
       document.getElementById('termRate').value = app.approved_rate || approvedSpace?.monthly_rate || desiredSpace?.monthly_rate || '';
+      document.getElementById('termRateTerm').value = app.approved_rate_term || 'monthly';
       document.getElementById('termMoveIn').value = app.approved_move_in || app.desired_move_in || '';
       document.getElementById('termLeaseEnd').value = app.approved_lease_end || '';
+      document.getElementById('termNoticePeriod').value = app.notice_period || '30_days';
       document.getElementById('termSecurityDeposit').value = app.security_deposit_amount || 0;
 
       // Documents tab
@@ -2061,8 +2082,10 @@
 
       const spaceId = document.getElementById('termSpace').value;
       const rate = parseFloat(document.getElementById('termRate').value);
+      const rateTerm = document.getElementById('termRateTerm').value;
       const moveInDate = document.getElementById('termMoveIn').value;
       const leaseEndDate = document.getElementById('termLeaseEnd').value || null;
+      const noticePeriod = document.getElementById('termNoticePeriod').value;
       const securityDeposit = parseFloat(document.getElementById('termSecurityDeposit').value) || 0;
 
       if (!spaceId || !rate || !moveInDate) {
@@ -2075,9 +2098,10 @@
         await rentalService.approveApplication(currentApplicationId, {
           spaceId,
           rate,
-          rateTerm: 'monthly',
+          rateTerm,
           moveInDate,
           leaseEndDate,
+          noticePeriod,
           securityDepositAmount: securityDeposit,
         });
         await loadApplications();

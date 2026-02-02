@@ -226,9 +226,10 @@ async function approveApplication(applicationId, terms) {
     moveInDate,
     leaseEndDate = null,
     securityDepositAmount = 0,
+    noticePeriod = '30_days',
   } = terms;
 
-  // Move-in deposit is always 1 month's rent
+  // Move-in deposit is always 1 period's rent
   const moveInDepositAmount = rate;
 
   const { data, error } = await supabase
@@ -240,6 +241,7 @@ async function approveApplication(applicationId, terms) {
       approved_rate_term: rateTerm,
       approved_move_in: moveInDate,
       approved_lease_end: leaseEndDate,
+      notice_period: noticePeriod,
       move_in_deposit_amount: moveInDepositAmount,
       security_deposit_amount: securityDepositAmount,
       reviewed_at: new Date().toISOString(),
@@ -391,6 +393,22 @@ async function getAgreementData(applicationId) {
   const signingDate = new Date();
   const signingFormatted = `${signingDate.getDate()} day of ${signingDate.toLocaleString('en-US', { month: 'short' })} ${signingDate.getFullYear()}`;
 
+  // Format notice period for display
+  const noticePeriodDisplay = {
+    'none': 'Fixed-length lease (no early termination)',
+    '1_day': '1 day notice required',
+    '1_week': '1 week notice required',
+    '30_days': '30 days notice required',
+    '60_days': '60 days notice required',
+  }[app.notice_period] || '30 days notice required';
+
+  // Format rate term for display
+  const rateTermDisplay = {
+    'monthly': 'month',
+    'weekly': 'week',
+    'nightly': 'night',
+  }[app.approved_rate_term] || 'month';
+
   return {
     // Tenant info
     tenantName: `${person?.first_name || ''} ${person?.last_name || ''}`.trim() || 'Unknown',
@@ -400,24 +418,32 @@ async function getAgreementData(applicationId) {
     // Dates
     signingDate: signingFormatted,
     leaseStartDate: formatDate(app.approved_move_in),
-    leaseEndDate: formatDate(app.approved_lease_end) || 'Month-to-month',
+    leaseEndDate: formatDate(app.approved_lease_end) || 'Open-ended',
 
     // Space
     dwellingDescription: space?.name || 'TBD',
     dwellingLocation: space?.location || '',
 
     // Financial
-    monthlyRent: app.approved_rate ? `$${app.approved_rate}` : 'TBD',
+    rate: app.approved_rate ? `$${app.approved_rate}` : 'TBD',
+    rateTerm: rateTermDisplay,
+    rateDisplay: app.approved_rate ? `$${app.approved_rate}/${rateTermDisplay}` : 'TBD',
     securityDeposit: app.security_deposit_amount ? `$${app.security_deposit_amount}` : '$0',
     moveInDeposit: app.move_in_deposit_amount ? `$${app.move_in_deposit_amount}` : 'TBD',
 
+    // Notice period
+    noticePeriod: app.notice_period || '30_days',
+    noticePeriodDisplay: noticePeriodDisplay,
+
     // Raw values for calculations
     raw: {
-      monthlyRate: app.approved_rate,
+      rate: app.approved_rate,
+      rateTerm: app.approved_rate_term,
       securityDepositAmount: app.security_deposit_amount,
       moveInDepositAmount: app.move_in_deposit_amount,
       moveInDate: app.approved_move_in,
       leaseEndDate: app.approved_lease_end,
+      noticePeriod: app.notice_period,
     },
   };
 }
