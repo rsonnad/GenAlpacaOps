@@ -1768,6 +1768,8 @@ function openEditSpace(spaceId) {
   document.getElementById('editMonthlyRate').value = space.monthly_rate || '';
   document.getElementById('editWeeklyRate').value = space.weekly_rate || '';
   document.getElementById('editNightlyRate').value = space.nightly_rate || '';
+  document.getElementById('editRentalTerm').value = space.rental_term || '';
+  document.getElementById('editStandardDeposit').value = space.standard_deposit || '';
   document.getElementById('editSqFootage').value = space.sq_footage || '';
   document.getElementById('editMinResidents').value = space.min_residents || 1;
   document.getElementById('editMaxResidents').value = space.max_residents || '';
@@ -1936,6 +1938,8 @@ async function handleEditSpaceSubmit() {
       monthly_rate: getInt('editMonthlyRate'),
       weekly_rate: getInt('editWeeklyRate'),
       nightly_rate: getInt('editNightlyRate'),
+      rental_term: getVal('editRentalTerm'),
+      standard_deposit: getVal('editStandardDeposit'),
       sq_footage: getInt('editSqFootage'),
       min_residents: getInt('editMinResidents') || 1,
       max_residents: getInt('editMaxResidents'),
