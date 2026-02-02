@@ -1193,12 +1193,14 @@ function updateStorageIndicator() {
 
 // Library tab functions
 async function loadLibraryMedia() {
+  console.log('loadLibraryMedia called with filters:', activeLibraryFilters);
   try {
     libraryMedia = await mediaService.search({
       category: activeLibraryFilters.category || null,
       tags: activeLibraryFilters.tags,
       limit: 100,
     });
+    console.log('Library media loaded:', libraryMedia.length, 'items');
     renderLibraryGrid();
   } catch (error) {
     console.error('Error loading library:', error);
@@ -1226,12 +1228,14 @@ function renderLibraryTagFilter() {
 }
 
 function toggleLibraryTagFilter(tagName) {
+  console.log('toggleLibraryTagFilter called:', tagName);
   const idx = activeLibraryFilters.tags.indexOf(tagName);
   if (idx >= 0) {
     activeLibraryFilters.tags.splice(idx, 1);
   } else {
     activeLibraryFilters.tags.push(tagName);
   }
+  console.log('Active filters:', activeLibraryFilters.tags);
   renderLibraryTagFilter();
   loadLibraryMedia();
 }
