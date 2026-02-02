@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="../styles.css?v=4">
   <link rel="stylesheet" href="styles.css?v=4">
   <link rel="stylesheet" href="media.css?v=4">
+  <link rel="stylesheet" href="rentals.css?v=1">
   <style>
     .manage-container {
       max-width: 1200px;
@@ -639,6 +640,259 @@
     </div>
   </div>
 
+  <!-- Rental Application Detail Modal -->
+  <div id="rentalDetailModal" class="modal hidden">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h2 id="rentalDetailTitle">Application Details</h2>
+        <span id="rentalDetailStatus" class="status-badge"></span>
+        <button class="modal-close" id="closeRentalDetail">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Modal tabs -->
+        <div class="detail-tabs">
+          <button class="detail-tab active" data-detail-tab="applicant">Applicant</button>
+          <button class="detail-tab" data-detail-tab="terms">Terms</button>
+          <button class="detail-tab" data-detail-tab="documents">Documents</button>
+          <button class="detail-tab" data-detail-tab="deposits">Deposits</button>
+          <button class="detail-tab" data-detail-tab="rent">Rent</button>
+          <button class="detail-tab" data-detail-tab="history">History</button>
+        </div>
+
+        <!-- Applicant Tab -->
+        <div id="applicantTab" class="detail-tab-content active">
+          <div class="applicant-info">
+            <div class="form-grid">
+              <div class="info-group">
+                <label>Name</label>
+                <p id="applicantName">-</p>
+              </div>
+              <div class="info-group">
+                <label>Email</label>
+                <p id="applicantEmail">-</p>
+              </div>
+              <div class="info-group">
+                <label>Phone</label>
+                <p id="applicantPhone">-</p>
+              </div>
+              <div class="info-group">
+                <label>Desired Space</label>
+                <p id="applicantDesiredSpace">-</p>
+              </div>
+              <div class="info-group">
+                <label>Desired Move-in</label>
+                <p id="applicantDesiredMoveIn">-</p>
+              </div>
+              <div class="info-group">
+                <label>Submitted</label>
+                <p id="applicantSubmittedAt">-</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Terms Tab -->
+        <div id="termsTab" class="detail-tab-content">
+          <form id="termsForm" class="terms-form">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="termSpace">Space *</label>
+                <select id="termSpace" required>
+                  <option value="">Select space...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="termRate">Monthly Rate *</label>
+                <input type="number" id="termRate" min="0" step="1" required>
+              </div>
+              <div class="form-group">
+                <label for="termMoveIn">Move-in Date *</label>
+                <input type="date" id="termMoveIn" required>
+              </div>
+              <div class="form-group">
+                <label for="termLeaseEnd">Lease End Date</label>
+                <input type="date" id="termLeaseEnd">
+                <small class="form-hint">Leave blank for month-to-month</small>
+              </div>
+              <div class="form-group">
+                <label for="termSecurityDeposit">Security Deposit</label>
+                <input type="number" id="termSecurityDeposit" min="0" step="1" value="0">
+                <small class="form-hint">Can be $0. Move-in deposit is always 1 month's rent.</small>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Documents Tab -->
+        <div id="documentsTab" class="detail-tab-content">
+          <div class="documents-section">
+            <div class="document-status">
+              <h4>Rental Agreement Status</h4>
+              <p id="agreementStatusDisplay">Pending</p>
+            </div>
+            <div id="agreementDataSection" class="agreement-data-section">
+              <h4>Agreement Data (Copy for Claude Skill)</h4>
+              <pre id="agreementDataPre" class="agreement-data-pre"></pre>
+              <button type="button" id="copyAgreementDataBtn" class="btn-small">Copy to Clipboard</button>
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+              <label for="agreementDocUrl">Document URL</label>
+              <input type="text" id="agreementDocUrl" placeholder="Paste generated document URL here...">
+            </div>
+            <div class="document-actions" style="margin-top: 1rem;">
+              <button type="button" id="markAgreementGenerated" class="btn-small">Mark as Generated</button>
+              <button type="button" id="markAgreementSent" class="btn-small">Mark as Sent</button>
+              <button type="button" id="markAgreementSigned" class="btn-small btn-primary">Mark as Signed</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Deposits Tab -->
+        <div id="depositsTab" class="detail-tab-content">
+          <div class="deposits-grid">
+            <div class="deposit-card">
+              <h4>Move-in Deposit</h4>
+              <p class="deposit-amount" id="moveInDepositAmount">$0</p>
+              <p class="deposit-status" id="moveInDepositStatus">Pending</p>
+              <button type="button" id="recordMoveInDepositBtn" class="btn-small btn-primary">Record Payment</button>
+            </div>
+            <div class="deposit-card">
+              <h4>Security Deposit</h4>
+              <p class="deposit-amount" id="securityDepositAmount">$0</p>
+              <p class="deposit-status" id="securityDepositStatus">Pending</p>
+              <button type="button" id="recordSecurityDepositBtn" class="btn-small btn-primary">Record Payment</button>
+            </div>
+          </div>
+          <div class="proration-section" style="margin-top: 1.5rem;">
+            <h4>Proration Calculator</h4>
+            <div id="prorationDetails" class="proration-details"></div>
+          </div>
+          <div class="deposit-request-section" style="margin-top: 1.5rem;">
+            <h4>Request Deposit</h4>
+            <button type="button" id="copyDepositRequestBtn" class="btn-small">Copy Payment Instructions</button>
+            <button type="button" id="markDepositRequestedBtn" class="btn-small">Mark as Requested</button>
+            <button type="button" id="confirmDepositBtn" class="btn-small btn-primary">Confirm Deposit</button>
+          </div>
+        </div>
+
+        <!-- Rent Tab -->
+        <div id="rentTab" class="detail-tab-content">
+          <div class="rent-summary">
+            <p><strong>Monthly Rent:</strong> <span id="rentMonthlyAmount">$0</span></p>
+          </div>
+          <div class="rent-history" style="margin-top: 1rem;">
+            <h4>Payment History</h4>
+            <table id="rentHistoryTable" class="data-table">
+              <thead>
+                <tr><th>Period</th><th>Amount</th><th>Paid</th><th>Method</th></tr>
+              </thead>
+              <tbody id="rentHistoryBody">
+                <tr><td colspan="4" class="text-muted">No payments recorded</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <button type="button" id="recordRentPaymentBtn" class="btn-small btn-primary" style="margin-top: 1rem;">Record Rent Payment</button>
+        </div>
+
+        <!-- History Tab -->
+        <div id="historyTab" class="detail-tab-content">
+          <div id="applicationHistory" class="application-history">
+            <p class="text-muted">Application timeline will appear here.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div id="rentalActions" class="rental-action-buttons"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Method Modal -->
+  <div id="paymentMethodModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="paymentMethodModalTitle">Add Payment Method</h2>
+        <button class="modal-close" id="closePaymentMethodModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="paymentMethodForm">
+          <input type="hidden" id="paymentMethodId">
+          <div class="form-group">
+            <label for="paymentMethodName">Name *</label>
+            <input type="text" id="paymentMethodName" required placeholder="e.g., Venmo">
+          </div>
+          <div class="form-group">
+            <label for="paymentMethodType">Type *</label>
+            <select id="paymentMethodType" required>
+              <option value="venmo">Venmo</option>
+              <option value="zelle">Zelle</option>
+              <option value="paypal">PayPal</option>
+              <option value="bank_ach">Bank ACH</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="paymentMethodIdentifier">Account Identifier</label>
+            <input type="text" id="paymentMethodIdentifier" placeholder="@username, email, or phone">
+          </div>
+          <div class="form-group">
+            <label for="paymentMethodInstructions">Instructions</label>
+            <textarea id="paymentMethodInstructions" rows="3" placeholder="Payment instructions..."></textarea>
+          </div>
+          <label class="checkbox-label">
+            <input type="checkbox" id="paymentMethodActive" checked>
+            Active (shown to tenants)
+          </label>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="deletePaymentMethodBtn" class="btn-danger" style="display: none;">Delete</button>
+        <div class="footer-right">
+          <button type="button" id="cancelPaymentMethodBtn" class="btn-secondary">Cancel</button>
+          <button type="button" id="savePaymentMethodBtn" class="btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Record Deposit Modal -->
+  <div id="recordDepositModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="recordDepositTitle">Record Deposit</h2>
+        <button class="modal-close" id="closeRecordDepositModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="recordDepositForm">
+          <input type="hidden" id="depositType">
+          <div class="form-group">
+            <label>Amount</label>
+            <input type="text" id="depositAmount" readonly>
+          </div>
+          <div class="form-group">
+            <label for="depositMethod">Payment Method *</label>
+            <select id="depositMethod" required>
+              <option value="">Select method...</option>
+              <option value="venmo">Venmo</option>
+              <option value="zelle">Zelle</option>
+              <option value="paypal">PayPal</option>
+              <option value="bank_ach">Bank ACH</option>
+              <option value="cash">Cash</option>
+              <option value="check">Check</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="depositTransactionId">Transaction ID (optional)</label>
+            <input type="text" id="depositTransactionId" placeholder="Reference number...">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="cancelRecordDepositBtn" class="btn-secondary">Cancel</button>
+        <button type="button" id="confirmRecordDepositBtn" class="btn-primary">Record Payment</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Bulk Tag Edit Modal -->
   <div id="bulkTagModal" class="modal hidden">
     <div class="modal-content">
@@ -671,6 +925,7 @@
     import { supabase } from '../../shared/supabase.js';
     import { initAuth, getAuthState, signOut, onAuthStateChange } from '../../shared/auth.js';
     import { mediaService } from '../../shared/media-service.js';
+    import { rentalService } from '../../shared/rental-service.js';
 
     // =============================================
     // STATE
@@ -683,6 +938,13 @@
     let currentFilters = { category: '', tags: [] };
     let currentMediaId = null;
     let mediaLoaded = false;
+
+    // Rentals state
+    let allApplications = [];
+    let allPeople = [];
+    let allPaymentMethods = [];
+    let currentApplicationId = null;
+    let rentalsLoaded = false;
 
     // =============================================
     // AUTH HANDLING
@@ -730,6 +992,11 @@
           if (tab.dataset.tab === 'media' && !mediaLoaded) {
             loadMediaLibrary();
           }
+
+          // Load rentals when switching to Rentals tab
+          if (tab.dataset.tab === 'rentals' && !rentalsLoaded) {
+            loadRentals();
+          }
         });
       });
 
@@ -753,6 +1020,9 @@
 
       // Media library event listeners
       setupMediaEventListeners();
+
+      // Rentals event listeners
+      setupRentalsEventListeners();
     }
 
     // =============================================
@@ -1407,6 +1677,744 @@
         closeLightbox();
       }
     });
+
+    // =============================================
+    // RENTALS TAB
+    // =============================================
+
+    async function loadRentals() {
+      rentalsLoaded = true;
+      await Promise.all([
+        loadApplications(),
+        loadPeople(),
+        loadPaymentMethods(),
+      ]);
+      populateRentalDropdowns();
+    }
+
+    async function loadApplications() {
+      try {
+        allApplications = await rentalService.getApplications();
+        renderPipeline();
+        renderDeniedDelayed();
+      } catch (error) {
+        console.error('Error loading applications:', error);
+      }
+    }
+
+    async function loadPeople() {
+      try {
+        const { data, error } = await supabase
+          .from('people')
+          .select('id, first_name, last_name, email, type')
+          .order('first_name');
+        if (error) throw error;
+        allPeople = data || [];
+      } catch (error) {
+        console.error('Error loading people:', error);
+      }
+    }
+
+    async function loadPaymentMethods() {
+      try {
+        allPaymentMethods = await rentalService.getPaymentMethods(false);
+        renderPaymentMethods();
+      } catch (error) {
+        console.error('Error loading payment methods:', error);
+      }
+    }
+
+    function populateRentalDropdowns() {
+      // Populate person dropdown
+      const personSelect = document.getElementById('newAppPersonId');
+      if (personSelect) {
+        personSelect.innerHTML = '<option value="">Select a person...</option>' +
+          allPeople.map(p => `<option value="${p.id}">${p.first_name || ''} ${p.last_name || ''} (${p.email || 'no email'})</option>`).join('');
+      }
+
+      // Populate space dropdown for new applications
+      const spaceSelect = document.getElementById('newAppSpaceId');
+      if (spaceSelect) {
+        const dwellings = allSpaces.filter(s => s.can_be_dwelling);
+        spaceSelect.innerHTML = '<option value="">Any / Flexible</option>' +
+          dwellings.map(s => `<option value="${s.id}">${s.name}${s.monthly_rate ? ` - $${s.monthly_rate}/mo` : ''}</option>`).join('');
+      }
+
+      // Populate space dropdown for terms
+      const termSpaceSelect = document.getElementById('termSpace');
+      if (termSpaceSelect) {
+        const dwellings = allSpaces.filter(s => s.can_be_dwelling);
+        termSpaceSelect.innerHTML = '<option value="">Select space...</option>' +
+          dwellings.map(s => `<option value="${s.id}">${s.name}${s.monthly_rate ? ` - $${s.monthly_rate}/mo` : ''}</option>`).join('');
+      }
+    }
+
+    function renderPipeline() {
+      const stages = ['applications', 'approved', 'contract', 'deposit', 'ready'];
+
+      // Group applications by pipeline stage
+      const grouped = {};
+      stages.forEach(s => grouped[s] = []);
+
+      allApplications.forEach(app => {
+        const stage = rentalService.getPipelineStage(app);
+        if (grouped[stage]) {
+          grouped[stage].push(app);
+        }
+      });
+
+      // Render each column
+      stages.forEach(stage => {
+        const container = document.getElementById(`${stage}Cards`);
+        const countEl = document.getElementById(`${stage}Count`);
+        const apps = grouped[stage] || [];
+
+        if (countEl) countEl.textContent = apps.length;
+
+        if (container) {
+          if (apps.length === 0) {
+            container.innerHTML = '<div class="pipeline-empty">No applications</div>';
+          } else {
+            container.innerHTML = apps.map(app => renderPipelineCard(app)).join('');
+
+            // Add click handlers
+            container.querySelectorAll('.pipeline-card').forEach(card => {
+              card.addEventListener('click', () => openRentalDetail(card.dataset.id));
+            });
+          }
+        }
+      });
+    }
+
+    function renderPipelineCard(app) {
+      const person = app.person || {};
+      const space = app.approved_space || app.desired_space;
+      const days = rentalService.daysSince(app.submitted_at);
+
+      let subStatus = '';
+      if (app.deposit_status && app.deposit_status !== 'pending') {
+        subStatus = app.deposit_status;
+      } else if (app.agreement_status && app.agreement_status !== 'pending') {
+        subStatus = app.agreement_status;
+      }
+
+      return `
+        <div class="pipeline-card" data-id="${app.id}">
+          <div class="card-header">
+            <span class="applicant-name">${person.first_name || ''} ${person.last_name || ''}</span>
+            <span class="days-ago">${days}d</span>
+          </div>
+          <div class="card-body">
+            <div class="space-name">${space?.name || 'Flexible'}</div>
+            ${app.approved_rate ? `<div class="rate">$${app.approved_rate}/mo</div>` : ''}
+          </div>
+          ${subStatus ? `
+            <div class="card-footer">
+              <span class="sub-status">${subStatus}</span>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    function renderDeniedDelayed() {
+      const deniedDelayed = allApplications.filter(app =>
+        app.application_status === 'denied' || app.application_status === 'delayed'
+      );
+
+      const container = document.getElementById('deniedDelayedList');
+      const countEl = document.getElementById('deniedDelayedCount');
+
+      if (countEl) countEl.textContent = deniedDelayed.length;
+
+      if (container) {
+        if (deniedDelayed.length === 0) {
+          container.innerHTML = '<p class="text-muted">No denied or delayed applications.</p>';
+        } else {
+          container.innerHTML = deniedDelayed.map(app => {
+            const person = app.person || {};
+            return `
+              <div class="space-item" style="cursor: pointer;" onclick="window.openRentalDetail('${app.id}')">
+                <div class="space-item-info">
+                  <div class="space-item-details">
+                    <h3>${person.first_name || ''} ${person.last_name || ''}</h3>
+                    <small>${app.application_status} - ${app.denial_reason || app.delay_reason || 'No reason given'}</small>
+                  </div>
+                </div>
+                <div class="space-item-meta">
+                  <span class="status-badge ${app.application_status}">${app.application_status}</span>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+    }
+
+    function renderPaymentMethods() {
+      const container = document.getElementById('paymentMethodsList');
+      if (!container) return;
+
+      if (allPaymentMethods.length === 0) {
+        container.innerHTML = '<p class="text-muted">No payment methods configured.</p>';
+        return;
+      }
+
+      container.innerHTML = allPaymentMethods.map(method => {
+        const qrUrl = method.qr_code?.url;
+        return `
+          <div class="payment-method-card ${method.is_active ? '' : 'inactive'}" onclick="window.openPaymentMethodModal('${method.id}')">
+            ${qrUrl
+              ? `<div class="qr-code"><img src="${qrUrl}" alt="${method.name} QR"></div>`
+              : `<div class="qr-placeholder">$</div>`
+            }
+            <div class="method-info">
+              <div class="method-name">${method.name}</div>
+              <div class="method-account">${method.account_identifier || '-'}</div>
+              <div class="method-type">${method.method_type}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // =============================================
+    // RENTAL DETAIL MODAL
+    // =============================================
+
+    async function openRentalDetail(applicationId) {
+      currentApplicationId = applicationId;
+      const app = allApplications.find(a => a.id === applicationId);
+      if (!app) return;
+
+      const person = app.person || {};
+      const desiredSpace = app.desired_space;
+      const approvedSpace = app.approved_space;
+
+      // Update modal header
+      document.getElementById('rentalDetailTitle').textContent =
+        `${person.first_name || ''} ${person.last_name || ''}`;
+      const statusBadge = document.getElementById('rentalDetailStatus');
+      statusBadge.textContent = app.application_status;
+      statusBadge.className = `status-badge ${app.application_status}`;
+
+      // Applicant tab
+      document.getElementById('applicantName').textContent =
+        `${person.first_name || ''} ${person.last_name || ''}`.trim() || '-';
+      document.getElementById('applicantEmail').textContent = person.email || '-';
+      document.getElementById('applicantPhone').textContent = person.phone || '-';
+      document.getElementById('applicantDesiredSpace').textContent = desiredSpace?.name || 'Flexible';
+      document.getElementById('applicantDesiredMoveIn').textContent =
+        app.desired_move_in ? rentalService.formatDate(app.desired_move_in) : '-';
+      document.getElementById('applicantSubmittedAt').textContent =
+        rentalService.formatDate(app.submitted_at);
+
+      // Terms tab
+      document.getElementById('termSpace').value = app.approved_space_id || app.desired_space_id || '';
+      document.getElementById('termRate').value = app.approved_rate || approvedSpace?.monthly_rate || desiredSpace?.monthly_rate || '';
+      document.getElementById('termMoveIn').value = app.approved_move_in || app.desired_move_in || '';
+      document.getElementById('termLeaseEnd').value = app.approved_lease_end || '';
+      document.getElementById('termSecurityDeposit').value = app.security_deposit_amount || 0;
+
+      // Documents tab
+      document.getElementById('agreementStatusDisplay').textContent =
+        app.agreement_status || 'Pending';
+      document.getElementById('agreementDocUrl').value = app.agreement_document_url || '';
+
+      // Update agreement data
+      try {
+        const agreementData = await rentalService.getAgreementData(applicationId);
+        document.getElementById('agreementDataPre').textContent = JSON.stringify(agreementData, null, 2);
+      } catch (e) {
+        document.getElementById('agreementDataPre').textContent = 'Unable to load agreement data';
+      }
+
+      // Deposits tab
+      document.getElementById('moveInDepositAmount').textContent =
+        rentalService.formatCurrency(app.move_in_deposit_amount || app.approved_rate || 0);
+      document.getElementById('moveInDepositStatus').textContent =
+        app.move_in_deposit_paid ? 'Paid' : 'Pending';
+      document.getElementById('moveInDepositStatus').className =
+        `deposit-status ${app.move_in_deposit_paid ? 'paid' : ''}`;
+
+      document.getElementById('securityDepositAmount').textContent =
+        rentalService.formatCurrency(app.security_deposit_amount || 0);
+      document.getElementById('securityDepositStatus').textContent =
+        app.security_deposit_paid ? 'Paid' : (app.security_deposit_amount > 0 ? 'Pending' : 'N/A');
+      document.getElementById('securityDepositStatus').className =
+        `deposit-status ${app.security_deposit_paid ? 'paid' : ''}`;
+
+      // Proration
+      if (app.approved_move_in && app.approved_rate) {
+        const proration = rentalService.calculateProration(app.approved_move_in, app.approved_rate);
+        const application = rentalService.calculateDepositApplication(
+          app.approved_move_in, app.approved_rate, app.security_deposit_amount || 0
+        );
+
+        document.getElementById('prorationDetails').innerHTML = `
+          <p>Move-in: <strong>${rentalService.formatDate(app.approved_move_in)}</strong> (day ${proration.dayOfMonth} of ${proration.daysInMonth})</p>
+          <p>Days remaining: <strong>${proration.daysRemaining}</strong></p>
+          <p>First month (prorated): <strong class="highlight">${rentalService.formatCurrency(proration.proratedAmount)}</strong></p>
+          <p>Move-in deposit: ${rentalService.formatCurrency(application.moveInDeposit)}</p>
+          ${application.towardsSecurity > 0 ? `<p>Applied to security: ${rentalService.formatCurrency(application.towardsSecurity)}</p>` : ''}
+          ${application.securityRemaining > 0 ? `<p>Additional security due: <strong class="highlight">${rentalService.formatCurrency(application.securityRemaining)}</strong></p>` : ''}
+        `;
+      } else {
+        document.getElementById('prorationDetails').innerHTML = '<p class="text-muted">Set move-in date and rate to calculate proration.</p>';
+      }
+
+      // Rent tab
+      document.getElementById('rentMonthlyAmount').textContent =
+        rentalService.formatCurrency(app.approved_rate);
+
+      // Update action buttons
+      updateRentalActions(app);
+
+      // Show modal
+      document.getElementById('rentalDetailModal').classList.remove('hidden');
+
+      // Set first tab as active
+      switchDetailTab('applicant');
+    }
+
+    function switchDetailTab(tabName) {
+      document.querySelectorAll('.detail-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.detailTab === tabName);
+      });
+      document.querySelectorAll('.detail-tab-content').forEach(c => {
+        c.classList.toggle('active', c.id === tabName + 'Tab');
+      });
+    }
+
+    function updateRentalActions(app) {
+      const container = document.getElementById('rentalActions');
+      if (!container) return;
+
+      let buttons = [];
+      const stage = rentalService.getPipelineStage(app);
+
+      switch (stage) {
+        case 'applications':
+          if (app.application_status === 'submitted') {
+            buttons.push('<button class="btn-primary" onclick="startReviewApplication()">Start Review</button>');
+          }
+          buttons.push('<button class="btn-secondary" onclick="denyApplication()">Deny</button>');
+          buttons.push('<button class="btn-secondary" onclick="delayApplication()">Delay</button>');
+          break;
+
+        case 'approved':
+          buttons.push('<button class="btn-primary" onclick="generateAgreement()">Generate Rental Agreement</button>');
+          buttons.push('<button class="btn-secondary" onclick="editTerms()">Edit Terms</button>');
+          break;
+
+        case 'contract':
+          if (app.agreement_status === 'generated') {
+            buttons.push('<button class="btn-primary" onclick="markAgreementSent()">Mark as Sent</button>');
+          } else if (app.agreement_status === 'sent') {
+            buttons.push('<button class="btn-primary" onclick="markAgreementSigned()">Mark as Signed</button>');
+          }
+          break;
+
+        case 'deposit':
+          if (app.deposit_status !== 'confirmed') {
+            buttons.push('<button class="btn-primary" onclick="confirmDeposit()">Confirm Deposit</button>');
+          }
+          break;
+
+        case 'ready':
+          buttons.push('<button class="btn-primary" onclick="confirmMoveIn()">Confirm Move-in</button>');
+          break;
+      }
+
+      // Add approve button if under review
+      if (app.application_status === 'under_review') {
+        buttons.unshift('<button class="btn-primary" onclick="approveApplication()">Approve</button>');
+      }
+
+      container.innerHTML = buttons.join('');
+    }
+
+    function closeRentalDetail() {
+      document.getElementById('rentalDetailModal').classList.add('hidden');
+      currentApplicationId = null;
+    }
+
+    // =============================================
+    // RENTAL ACTIONS
+    // =============================================
+
+    window.openRentalDetail = openRentalDetail;
+
+    window.startReviewApplication = async function() {
+      if (!currentApplicationId) return;
+      try {
+        await rentalService.startReview(currentApplicationId);
+        await loadApplications();
+        openRentalDetail(currentApplicationId);
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+
+    window.approveApplication = async function() {
+      if (!currentApplicationId) return;
+
+      const spaceId = document.getElementById('termSpace').value;
+      const rate = parseFloat(document.getElementById('termRate').value);
+      const moveInDate = document.getElementById('termMoveIn').value;
+      const leaseEndDate = document.getElementById('termLeaseEnd').value || null;
+      const securityDeposit = parseFloat(document.getElementById('termSecurityDeposit').value) || 0;
+
+      if (!spaceId || !rate || !moveInDate) {
+        alert('Please fill in Space, Rate, and Move-in Date on the Terms tab.');
+        switchDetailTab('terms');
+        return;
+      }
+
+      try {
+        await rentalService.approveApplication(currentApplicationId, {
+          spaceId,
+          rate,
+          rateTerm: 'monthly',
+          moveInDate,
+          leaseEndDate,
+          securityDepositAmount: securityDeposit,
+        });
+        await loadApplications();
+        openRentalDetail(currentApplicationId);
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+
+    window.denyApplication = async function() {
+      if (!currentApplicationId) return;
+      const reason = prompt('Reason for denial (optional):');
+      try {
+        await rentalService.denyApplication(currentApplicationId, reason);
+        await loadApplications();
+        closeRentalDetail();
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+
+    window.delayApplication = async function() {
+      if (!currentApplicationId) return;
+      const reason = prompt('Reason for delay (optional):');
+      try {
+        await rentalService.delayApplication(currentApplicationId, reason);
+        await loadApplications();
+        closeRentalDetail();
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+
+    window.generateAgreement = async function() {
+      switchDetailTab('documents');
+    };
+
+    window.editTerms = function() {
+      switchDetailTab('terms');
+    };
+
+    window.markAgreementSent = async function() {
+      if (!currentApplicationId) return;
+      try {
+        await rentalService.updateAgreementStatus(currentApplicationId, 'sent');
+        await loadApplications();
+        openRentalDetail(currentApplicationId);
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+
+    window.markAgreementSigned = async function() {
+      if (!currentApplicationId) return;
+      try {
+        await rentalService.updateAgreementStatus(currentApplicationId, 'signed');
+        await loadApplications();
+        openRentalDetail(currentApplicationId);
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+
+    window.confirmDeposit = async function() {
+      if (!currentApplicationId) return;
+      try {
+        await rentalService.confirmDeposit(currentApplicationId);
+        await loadApplications();
+        openRentalDetail(currentApplicationId);
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+
+    window.confirmMoveIn = async function() {
+      if (!currentApplicationId) return;
+      if (!confirm('Confirm move-in? This will create an active assignment.')) return;
+      try {
+        await rentalService.confirmMoveIn(currentApplicationId);
+        await loadApplications();
+        closeRentalDetail();
+        alert('Move-in confirmed! Assignment created.');
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+
+    // =============================================
+    // CREATE APPLICATION
+    // =============================================
+
+    async function handleCreateApplication(e) {
+      e.preventDefault();
+      const personId = document.getElementById('newAppPersonId').value;
+      const spaceId = document.getElementById('newAppSpaceId').value || null;
+
+      if (!personId) {
+        alert('Please select a person.');
+        return;
+      }
+
+      try {
+        await rentalService.createApplication(personId, {
+          desired_space_id: spaceId,
+        });
+        await loadApplications();
+        document.getElementById('newAppPersonId').value = '';
+        document.getElementById('newAppSpaceId').value = '';
+        alert('Application created!');
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+
+    // =============================================
+    // PAYMENT METHODS
+    // =============================================
+
+    window.openPaymentMethodModal = function(methodId = null) {
+      const modal = document.getElementById('paymentMethodModal');
+      const title = document.getElementById('paymentMethodModalTitle');
+      const deleteBtn = document.getElementById('deletePaymentMethodBtn');
+
+      if (methodId) {
+        const method = allPaymentMethods.find(m => m.id === methodId);
+        if (!method) return;
+
+        title.textContent = 'Edit Payment Method';
+        document.getElementById('paymentMethodId').value = method.id;
+        document.getElementById('paymentMethodName').value = method.name || '';
+        document.getElementById('paymentMethodType').value = method.method_type || 'venmo';
+        document.getElementById('paymentMethodIdentifier').value = method.account_identifier || '';
+        document.getElementById('paymentMethodInstructions').value = method.instructions || '';
+        document.getElementById('paymentMethodActive').checked = method.is_active !== false;
+        deleteBtn.style.display = 'block';
+      } else {
+        title.textContent = 'Add Payment Method';
+        document.getElementById('paymentMethodForm').reset();
+        document.getElementById('paymentMethodId').value = '';
+        document.getElementById('paymentMethodActive').checked = true;
+        deleteBtn.style.display = 'none';
+      }
+
+      modal.classList.remove('hidden');
+    };
+
+    async function savePaymentMethod() {
+      const id = document.getElementById('paymentMethodId').value || null;
+      const data = {
+        id,
+        name: document.getElementById('paymentMethodName').value.trim(),
+        method_type: document.getElementById('paymentMethodType').value,
+        account_identifier: document.getElementById('paymentMethodIdentifier').value.trim() || null,
+        instructions: document.getElementById('paymentMethodInstructions').value.trim() || null,
+        is_active: document.getElementById('paymentMethodActive').checked,
+      };
+
+      if (!data.name) {
+        alert('Name is required.');
+        return;
+      }
+
+      try {
+        await rentalService.savePaymentMethod(data);
+        await loadPaymentMethods();
+        closePaymentMethodModal();
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+
+    async function deletePaymentMethod() {
+      const id = document.getElementById('paymentMethodId').value;
+      if (!id) return;
+      if (!confirm('Delete this payment method?')) return;
+
+      try {
+        await rentalService.deletePaymentMethod(id);
+        await loadPaymentMethods();
+        closePaymentMethodModal();
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+
+    function closePaymentMethodModal() {
+      document.getElementById('paymentMethodModal').classList.add('hidden');
+    }
+
+    // =============================================
+    // DEPOSIT RECORDING
+    // =============================================
+
+    window.openRecordDepositModal = function(type) {
+      const app = allApplications.find(a => a.id === currentApplicationId);
+      if (!app) return;
+
+      const amount = type === 'move_in' ? app.move_in_deposit_amount : app.security_deposit_amount;
+
+      document.getElementById('depositType').value = type;
+      document.getElementById('depositAmount').value = rentalService.formatCurrency(amount);
+      document.getElementById('depositMethod').value = '';
+      document.getElementById('depositTransactionId').value = '';
+      document.getElementById('recordDepositTitle').textContent =
+        type === 'move_in' ? 'Record Move-in Deposit' : 'Record Security Deposit';
+
+      document.getElementById('recordDepositModal').classList.remove('hidden');
+    };
+
+    async function confirmRecordDeposit() {
+      const type = document.getElementById('depositType').value;
+      const method = document.getElementById('depositMethod').value;
+      const transactionId = document.getElementById('depositTransactionId').value.trim() || null;
+
+      if (!method) {
+        alert('Please select a payment method.');
+        return;
+      }
+
+      try {
+        if (type === 'move_in') {
+          await rentalService.recordMoveInDeposit(currentApplicationId, { method, transactionId });
+        } else {
+          await rentalService.recordSecurityDeposit(currentApplicationId, { method, transactionId });
+        }
+        await loadApplications();
+        closeRecordDepositModal();
+        openRentalDetail(currentApplicationId);
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+
+    function closeRecordDepositModal() {
+      document.getElementById('recordDepositModal').classList.add('hidden');
+    }
+
+    // =============================================
+    // COPY TO CLIPBOARD
+    // =============================================
+
+    async function copyAgreementData() {
+      const text = document.getElementById('agreementDataPre').textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        alert('Agreement data copied to clipboard!');
+      } catch (e) {
+        alert('Failed to copy. Please select and copy manually.');
+      }
+    }
+
+    async function copyDepositRequest() {
+      if (!currentApplicationId) return;
+      try {
+        const message = await rentalService.generateDepositRequestMessage(currentApplicationId);
+        await navigator.clipboard.writeText(message);
+        alert('Payment instructions copied to clipboard!');
+      } catch (e) {
+        alert('Failed to copy: ' + e.message);
+      }
+    }
+
+    async function markDepositRequested() {
+      if (!currentApplicationId) return;
+      try {
+        await rentalService.requestDeposit(currentApplicationId);
+        await loadApplications();
+        openRentalDetail(currentApplicationId);
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+
+    // =============================================
+    // RENTALS EVENT LISTENERS
+    // =============================================
+
+    function setupRentalsEventListeners() {
+      // Create application form
+      document.getElementById('createApplicationForm')?.addEventListener('submit', handleCreateApplication);
+
+      // Add payment method button
+      document.getElementById('addPaymentMethodBtn')?.addEventListener('click', () => openPaymentMethodModal());
+
+      // Payment method modal
+      document.getElementById('closePaymentMethodModal')?.addEventListener('click', closePaymentMethodModal);
+      document.getElementById('cancelPaymentMethodBtn')?.addEventListener('click', closePaymentMethodModal);
+      document.getElementById('savePaymentMethodBtn')?.addEventListener('click', savePaymentMethod);
+      document.getElementById('deletePaymentMethodBtn')?.addEventListener('click', deletePaymentMethod);
+
+      // Rental detail modal
+      document.getElementById('closeRentalDetail')?.addEventListener('click', closeRentalDetail);
+
+      // Detail tabs
+      document.querySelectorAll('.detail-tab').forEach(tab => {
+        tab.addEventListener('click', () => switchDetailTab(tab.dataset.detailTab));
+      });
+
+      // Agreement actions
+      document.getElementById('copyAgreementDataBtn')?.addEventListener('click', copyAgreementData);
+      document.getElementById('markAgreementGenerated')?.addEventListener('click', async () => {
+        if (!currentApplicationId) return;
+        const url = document.getElementById('agreementDocUrl').value.trim();
+        try {
+          await rentalService.updateAgreementStatus(currentApplicationId, 'generated', url || null);
+          await loadApplications();
+          openRentalDetail(currentApplicationId);
+        } catch (error) {
+          alert('Error: ' + error.message);
+        }
+      });
+      document.getElementById('markAgreementSent')?.addEventListener('click', markAgreementSent);
+      document.getElementById('markAgreementSigned')?.addEventListener('click', markAgreementSigned);
+
+      // Deposit actions
+      document.getElementById('recordMoveInDepositBtn')?.addEventListener('click', () => openRecordDepositModal('move_in'));
+      document.getElementById('recordSecurityDepositBtn')?.addEventListener('click', () => openRecordDepositModal('security'));
+      document.getElementById('copyDepositRequestBtn')?.addEventListener('click', copyDepositRequest);
+      document.getElementById('markDepositRequestedBtn')?.addEventListener('click', markDepositRequested);
+      document.getElementById('confirmDepositBtn')?.addEventListener('click', confirmDeposit);
+
+      // Record deposit modal
+      document.getElementById('closeRecordDepositModal')?.addEventListener('click', closeRecordDepositModal);
+      document.getElementById('cancelRecordDepositBtn')?.addEventListener('click', closeRecordDepositModal);
+      document.getElementById('confirmRecordDepositBtn')?.addEventListener('click', confirmRecordDeposit);
+
+      // Close modals on backdrop click
+      document.getElementById('rentalDetailModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'rentalDetailModal') closeRentalDetail();
+      });
+      document.getElementById('paymentMethodModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'paymentMethodModal') closePaymentMethodModal();
+      });
+      document.getElementById('recordDepositModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'recordDepositModal') closeRecordDepositModal();
+      });
+    }
 
     init();
   </script>
