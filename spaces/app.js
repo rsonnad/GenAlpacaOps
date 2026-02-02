@@ -34,8 +34,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Load data from Supabase
-async function loadData() {
+// Load data from Supabase with retry logic
+async function loadData(retryCount = 0) {
+  const maxRetries = 3;
+
   try {
     // Load spaces
     const { data: spacesData, error: spacesError } = await supabase
@@ -136,7 +138,25 @@ async function loadData() {
 
   } catch (error) {
     console.error('Error loading data:', error);
-    alert('Failed to load data. Check console for details.');
+
+    // Retry on AbortError (network issues)
+    if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+      if (retryCount < maxRetries) {
+        console.log(`Retrying... (attempt ${retryCount + 2}/${maxRetries + 1})`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        return loadData(retryCount + 1);
+      }
+    }
+
+    // Show user-friendly message
+    cardView.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">
+        <p>Unable to load spaces. Please refresh the page.</p>
+        <button onclick="location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; cursor: pointer;">
+          Refresh
+        </button>
+      </div>
+    `;
   }
 }
 
