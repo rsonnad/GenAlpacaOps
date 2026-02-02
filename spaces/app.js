@@ -4,7 +4,6 @@ import { supabase } from '../shared/supabase.js';
 // App state
 let spaces = [];
 let currentView = 'card';
-let currentSort = { column: 'monthly_rate', direction: 'desc' };
 
 // DOM elements
 const cardView = document.getElementById('cardView');
@@ -35,12 +34,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Load data from Supabase (public query - RLS filters to listed + secret spaces)
+// Load data from Supabase
 async function loadData() {
   try {
-    // Load spaces - RLS will filter to:
-    // - Listed, non-secret spaces (for browsing)
-    // - Secret spaces (accessible by direct ID)
+    // Load spaces
     const { data: spacesData, error: spacesError } = await supabase
       .from('spaces')
       .select(`
@@ -58,17 +55,69 @@ async function loadData() {
 
     if (spacesError) throw spacesError;
 
-    spaces = spacesData || [];
+    // Load active assignments (just dates, no personal info)
+    const { data: assignmentsData, error: assignmentsError } = await supabase
+      .from('assignments')
+      .select(`
+        id,
+        start_date,
+        end_date,
+        status,
+        assignment_spaces(space_id)
+      `)
+      .in('status', ['active', 'pending_contract', 'contract_sent']);
+
+    if (assignmentsError) throw assignmentsError;
+
+    const assignments = assignmentsData || [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     // Process spaces
+    spaces = (spacesData || []).filter(s => !s.is_archived);
+
     spaces.forEach(space => {
-      // For public view, we don't load assignments (no occupancy info)
-      // Availability is assumed based on listing status
       space.amenities = space.space_amenities?.map(sa => sa.amenity?.name).filter(Boolean) || [];
       space.photos = (space.media_spaces || [])
         .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
         .map(ms => ms.media ? { ...ms.media, display_order: ms.display_order, is_primary: ms.is_primary } : null)
         .filter(p => p && p.url);
+
+      // Compute availability from assignments
+      const spaceAssignments = assignments
+        .filter(a => a.assignment_spaces?.some(as => as.space_id === space.id))
+        .sort((a, b) => {
+          const aStart = a.start_date ? new Date(a.start_date) : new Date(0);
+          const bStart = b.start_date ? new Date(b.start_date) : new Date(0);
+          return aStart - bStart;
+        });
+
+      // Find current assignment (active and either no end date or end date >= today)
+      const currentAssignment = spaceAssignments.find(a => {
+        if (a.status !== 'active') return false;
+        if (!a.end_date) return true;
+        return new Date(a.end_date) >= today;
+      });
+
+      // Find next assignment (starts after current ends)
+      const availableFrom = currentAssignment?.end_date
+        ? new Date(currentAssignment.end_date)
+        : today;
+
+      const nextAssignment = spaceAssignments.find(a => {
+        if (a === currentAssignment) return false;
+        if (!a.start_date) return false;
+        const startDate = new Date(a.start_date);
+        return startDate > availableFrom;
+      });
+
+      space.isAvailable = !currentAssignment;
+      space.availableFrom = currentAssignment
+        ? (currentAssignment.end_date ? new Date(currentAssignment.end_date) : null)
+        : today;
+      space.availableUntil = nextAssignment?.start_date
+        ? new Date(nextAssignment.start_date)
+        : null;
     });
 
   } catch (error) {
@@ -156,25 +205,29 @@ function getFilteredSpaces() {
     filtered = filtered.filter(s => s.bath_privacy === bath);
   }
 
-  // Note: Availability filter doesn't work for public view since we don't load assignments
-  // We could show all as "Contact for availability" or remove this filter
-
-  // Sort
-  filtered.sort((a, b) => {
-    let aVal = a[currentSort.column];
-    let bVal = b[currentSort.column];
-
-    if (aVal === null || aVal === undefined) aVal = '';
-    if (bVal === null || bVal === undefined) bVal = '';
-
-    if (typeof aVal === 'string') {
-      aVal = aVal.toLowerCase();
-      bVal = bVal.toLowerCase();
+  // Availability filter
+  const avail = availFilter.value;
+  if (avail) {
+    if (avail === 'available') {
+      filtered = filtered.filter(s => s.isAvailable);
+    } else if (avail === 'occupied') {
+      filtered = filtered.filter(s => !s.isAvailable);
     }
+  }
 
-    if (aVal < bVal) return currentSort.direction === 'asc' ? -1 : 1;
-    if (aVal > bVal) return currentSort.direction === 'asc' ? 1 : -1;
-    return 0;
+  // Sort: available first, then by monthly_rate descending, then by name
+  filtered.sort((a, b) => {
+    // Available spaces come first
+    if (a.isAvailable && !b.isAvailable) return -1;
+    if (!a.isAvailable && b.isAvailable) return 1;
+
+    // Then sort by monthly_rate descending (highest first)
+    const aRate = a.monthly_rate || 0;
+    const bRate = b.monthly_rate || 0;
+    if (aRate !== bRate) return bRate - aRate;
+
+    // Then by name
+    return (a.name || '').localeCompare(b.name || '');
   });
 
   return filtered;
@@ -189,21 +242,7 @@ function resetFilters() {
 }
 
 function handleSort(column) {
-  if (currentSort.column === column) {
-    currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-  } else {
-    currentSort.column = column;
-    currentSort.direction = 'asc';
-  }
-
-  // Update header classes
-  document.querySelectorAll('th[data-sort]').forEach(th => {
-    th.classList.remove('sort-asc', 'sort-desc');
-    if (th.dataset.sort === column) {
-      th.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
-    }
-  });
-
+  // For now, just re-render (sorting is handled in getFilteredSpaces)
   render();
 }
 
@@ -214,15 +253,24 @@ function render() {
   renderTable(filtered);
 }
 
+// Helper to format dates
+function formatDate(d) {
+  if (!d) return null;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 function renderCards(spacesToRender) {
   cardView.innerHTML = spacesToRender.map(space => {
     const photo = space.photos[0];
     const beds = getBedSummary(space);
     const bathText = space.bath_privacy ? `${space.bath_privacy} bath` : '';
 
-    // For public view, all listed spaces are available (no assignment data)
-    const availFromStr = 'NOW';
-    const availUntilStr = 'INDEFINITELY';
+    // Availability display
+    const availFromStr = space.isAvailable ? 'NOW' : (space.availableFrom ? formatDate(space.availableFrom) : 'TBD');
+    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'INDEFINITELY';
+
+    const fromBadgeClass = space.isAvailable ? 'available' : 'occupied';
+    const untilBadgeClass = availUntilStr === 'INDEFINITELY' ? 'available' : 'occupied';
 
     return `
       <div class="space-card" onclick="showSpaceDetail('${space.id}')">
@@ -238,8 +286,8 @@ function renderCards(spacesToRender) {
               </div>`
           }
           <div class="card-badges">
-            <span class="badge available">Available: ${availFromStr}</span>
-            <span class="badge available badge-right">Until: ${availUntilStr}</span>
+            <span class="badge ${fromBadgeClass}">Available: ${availFromStr}</span>
+            <span class="badge ${untilBadgeClass} badge-right">Until: ${availUntilStr}</span>
           </div>
         </div>
         <div class="card-body">
@@ -269,6 +317,10 @@ function renderTable(spacesToRender) {
   tableBody.innerHTML = spacesToRender.map(space => {
     const beds = getBedSummary(space);
 
+    const availFromStr = space.isAvailable ? 'NOW' : (space.availableFrom ? formatDate(space.availableFrom) : 'TBD');
+    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'INDEFINITELY';
+    const fromBadgeClass = space.isAvailable ? 'available' : 'occupied';
+
     return `
       <tr onclick="showSpaceDetail('${space.id}')" style="cursor:pointer;">
         <td><strong>${space.name}</strong>${space.location ? `<br><small style="color:var(--text-muted)">in ${space.location}</small>` : (space.parent ? `<br><small style="color:var(--text-muted)">in ${space.parent.name}</small>` : '')}</td>
@@ -277,8 +329,8 @@ function renderTable(spacesToRender) {
         <td>${beds || '-'}</td>
         <td>${space.bath_privacy || '-'}</td>
         <td>${space.amenities.slice(0, 3).join(', ') || '-'}</td>
-        <td><span class="badge available">Available: NOW</span></td>
-        <td>Until: INDEFINITELY</td>
+        <td><span class="badge ${fromBadgeClass}">Available: ${availFromStr}</span></td>
+        <td>Until: ${availUntilStr}</td>
       </tr>
     `;
   }).join('');
@@ -337,6 +389,11 @@ async function fetchAndShowSpace(spaceId) {
       .map(ms => ms.media ? { ...ms.media, display_order: ms.display_order, is_primary: ms.is_primary } : null)
       .filter(p => p && p.url);
 
+    // For directly fetched spaces, assume available (we don't load assignments for single fetch)
+    space.isAvailable = true;
+    space.availableFrom = new Date();
+    space.availableUntil = null;
+
     displaySpaceDetail(space);
   } catch (error) {
     console.error('Error fetching space:', error);
@@ -368,6 +425,10 @@ function displaySpaceDetail(space) {
     `;
   }
 
+  // Availability info
+  const availFromStr = space.isAvailable ? 'Now' : (space.availableFrom ? formatDate(space.availableFrom) : 'TBD');
+  const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'Indefinitely';
+
   document.getElementById('spaceDetailBody').innerHTML = `
     ${photosHtml}
     <div class="detail-grid">
@@ -378,6 +439,11 @@ function displaySpaceDetail(space) {
         <p><strong>Beds:</strong> ${getBedSummary(space) || 'N/A'}</p>
         <p><strong>Bathroom:</strong> ${space.bath_privacy || 'N/A'}${space.bath_fixture ? ` (${space.bath_fixture})` : ''}</p>
         <p><strong>Capacity:</strong> ${space.min_residents || 1}-${space.max_residents || '?'} residents</p>
+      </div>
+      <div class="detail-section">
+        <h3>Availability</h3>
+        <p><strong>Available from:</strong> ${availFromStr}</p>
+        <p><strong>Available until:</strong> ${availUntilStr}</p>
       </div>
       <div class="detail-section">
         <h3>Amenities</h3>
