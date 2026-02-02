@@ -3,6 +3,38 @@ import { supabase } from '../../shared/supabase.js';
 import { initAuth, getAuthState, signOut, onAuthStateChange } from '../../shared/auth.js';
 import { mediaService } from '../../shared/media-service.js';
 
+// Toast notification system
+function showToast(message, type = 'info', duration = 4000) {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+
+  const icons = {
+    success: '<svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
+    error: '<svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>',
+    warning: '<svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>',
+    info: '<svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>'
+  };
+
+  toast.innerHTML = `
+    <span class="toast-icon">${icons[type] || icons.info}</span>
+    <span class="toast-message">${message}</span>
+    <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+  `;
+
+  container.appendChild(toast);
+
+  // Auto-dismiss
+  if (duration > 0) {
+    setTimeout(() => {
+      toast.classList.add('toast-exit');
+      setTimeout(() => toast.remove(), 200);
+    }, duration);
+  }
+}
+
 // App state
 let spaces = [];
 let assignments = [];
@@ -239,7 +271,7 @@ async function loadData() {
 
   } catch (error) {
     console.error('Error loading data:', error);
-    alert('Failed to load data. Check console for details.');
+    showToast('Failed to load data. Check console for details.', 'error');
   }
 }
 
@@ -799,7 +831,7 @@ function openPhotoRequest(spaceId, spaceName) {
 async function handlePhotoRequestSubmit() {
   const description = document.getElementById('requestDescription')?.value.trim();
   if (!description) {
-    alert('Please describe the photo needed.');
+    showToast('Please describe the photo needed.', 'warning');
     return;
   }
 
@@ -822,7 +854,7 @@ async function handlePhotoRequestSubmit() {
 
     if (error) throw error;
 
-    alert('Photo request submitted!');
+    showToast('Photo request submitted!', 'success');
     photoUploadModal.classList.add('hidden');
 
     await loadData();
@@ -830,14 +862,14 @@ async function handlePhotoRequestSubmit() {
 
   } catch (error) {
     console.error('Error submitting photo request:', error);
-    alert('Failed to submit request. Check console for details.');
+    showToast('Failed to submit request. Check console for details.', 'error');
   }
 }
 
 // Photo ordering (detail view)
 async function movePhoto(spaceId, mediaId, direction) {
   if (!authState?.isAdmin) {
-    alert('Only admins can reorder photos');
+    showToast('Only admins can reorder photos', 'warning');
     return;
   }
 
@@ -881,7 +913,7 @@ async function movePhoto(spaceId, mediaId, direction) {
 
   } catch (error) {
     console.error('Error reordering photos:', error);
-    alert('Failed to reorder photos.');
+    showToast('Failed to reorder photos.', 'error');
   }
 }
 
@@ -894,7 +926,7 @@ let activeLibraryFilters = { tags: [], category: '' };
 
 function openPhotoUpload(spaceId, spaceName, context = 'dwelling', initialTab = 'library') {
   if (!authState?.isAdmin) {
-    alert('Only admins can upload photos');
+    showToast('Only admins can upload photos', 'warning');
     return;
   }
   currentUploadSpaceId = spaceId;
@@ -1161,7 +1193,7 @@ async function createNewTag(containerId) {
 
   const name = nameInput?.value.trim();
   if (!name) {
-    alert('Please enter a tag name');
+    showToast('Please enter a tag name', 'warning');
     return;
   }
 
@@ -1169,7 +1201,7 @@ async function createNewTag(containerId) {
   if (group === '__new__') {
     group = customGroupInput?.value.trim().toLowerCase();
     if (!group) {
-      alert('Please enter a category name');
+      showToast('Please enter a category name', 'warning');
       return;
     }
   }
@@ -1179,9 +1211,9 @@ async function createNewTag(containerId) {
 
     if (!result.success) {
       if (result.duplicate) {
-        alert('A tag with that name already exists');
+        showToast('A tag with that name already exists', 'warning');
       } else {
-        alert('Failed to create tag: ' + result.error);
+        showToast('Failed to create tag: ' + result.error, 'error');
       }
       return;
     }
@@ -1203,7 +1235,7 @@ async function createNewTag(containerId) {
 
   } catch (error) {
     console.error('Error creating tag:', error);
-    alert('Failed to create tag');
+    showToast('Failed to create tag', 'error');
   }
 }
 
@@ -1343,7 +1375,7 @@ async function handleLibrarySelect() {
       displayOrder++;
     }
 
-    alert(`Added ${selectedLibraryMedia.size} media item(s) to space.`);
+    showToast(`Added ${selectedLibraryMedia.size} media item(s) to space.`, 'success');
     photoUploadModal.classList.add('hidden');
 
     await loadData();
@@ -1351,7 +1383,7 @@ async function handleLibrarySelect() {
 
   } catch (error) {
     console.error('Error adding media from library:', error);
-    alert('Failed to add media: ' + error.message);
+    showToast('Failed to add media: ' + error.message, 'error');
   } finally {
     submitBtn.disabled = false;
     updateLibrarySelectButton();
@@ -1448,13 +1480,13 @@ async function handlePhotoUpload() {
   console.log('selectedUploadFiles:', selectedUploadFiles.length);
 
   if (!authState?.isAdmin) {
-    alert('Only admins can upload photos');
+    showToast('Only admins can upload photos', 'warning');
     return;
   }
 
   // Check if we have files to upload
   if (selectedUploadFiles.length === 0) {
-    alert('Please select at least one image.');
+    showToast('Please select at least one image.', 'warning');
     return;
   }
 
@@ -1522,18 +1554,18 @@ async function handlePhotoUpload() {
     // Show results
     if (failCount === 0) {
       if (successCount === 1) {
-        alert('Photo uploaded successfully!');
+        showToast('Photo uploaded successfully!', 'success');
       } else {
-        alert(`${successCount} photos uploaded successfully!`);
+        showToast(`${successCount} photos uploaded successfully!`, 'success');
       }
     } else {
-      alert(`Uploaded ${successCount} of ${totalFiles} photos.\n${failCount} failed - check console for details.`);
+      showToast(`Uploaded ${successCount} of ${totalFiles} photos. ${failCount} failed.`, 'warning');
     }
 
     // Refresh storage usage
     storageUsage = await mediaService.getStorageUsage();
     if (storageUsage && storageUsage.percent_used >= 80) {
-      alert(`Warning: Storage is ${storageUsage.percent_used.toFixed(1)}% full.`);
+      showToast(`Warning: Storage is ${storageUsage.percent_used.toFixed(1)}% full.`, 'warning');
     }
 
     photoUploadModal.classList.add('hidden');
@@ -1543,7 +1575,7 @@ async function handlePhotoUpload() {
 
   } catch (error) {
     console.error('Error during upload:', error);
-    alert('Upload failed: ' + error.message);
+    showToast('Upload failed: ' + error.message, 'error');
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = selectedUploadFiles.length > 1 ? `Upload All (${selectedUploadFiles.length})` : 'Upload';
@@ -1557,13 +1589,13 @@ let currentEditSpaceId = null;
 
 function openEditSpace(spaceId) {
   if (!authState?.isAdmin) {
-    alert('Only admins can edit spaces');
+    showToast('Only admins can edit spaces', 'warning');
     return;
   }
 
   const space = spaces.find(s => s.id === spaceId);
   if (!space) {
-    alert('Space not found');
+    showToast('Space not found', 'error');
     return;
   }
 
@@ -1705,7 +1737,7 @@ async function savePhotoOrder(spaceId, mediaIds) {
     }
   } catch (error) {
     console.error('Error saving photo order:', error);
-    alert('Failed to save photo order');
+    showToast('Failed to save photo order', 'error');
   }
 }
 
@@ -1713,7 +1745,7 @@ async function handleEditSpaceSubmit() {
   console.log('handleEditSpaceSubmit called');
 
   if (!authState?.isAdmin) {
-    alert('Only admins can edit spaces');
+    showToast('Only admins can edit spaces', 'warning');
     return;
   }
 
@@ -1723,7 +1755,7 @@ async function handleEditSpaceSubmit() {
   console.log('Saving space:', { spaceId, name });
 
   if (!name) {
-    alert('Name is required');
+    showToast('Name is required', 'warning');
     return;
   }
 
@@ -1773,7 +1805,7 @@ async function handleEditSpaceSubmit() {
 
     if (error) throw error;
 
-    alert('Space updated successfully!');
+    showToast('Space updated successfully!', 'success');
     editSpaceModal.classList.add('hidden');
 
     await loadData();
@@ -1781,7 +1813,7 @@ async function handleEditSpaceSubmit() {
 
   } catch (error) {
     console.error('Error updating space:', error);
-    alert('Failed to update space: ' + error.message);
+    showToast('Failed to update space: ' + error.message, 'error');
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = 'Save Changes';
@@ -1791,7 +1823,7 @@ async function handleEditSpaceSubmit() {
 // Move photo from edit modal (optimistic update for performance)
 async function movePhotoInEdit(spaceId, mediaId, direction) {
   if (!authState?.isAdmin) {
-    alert('Only admins can reorder photos');
+    showToast('Only admins can reorder photos', 'warning');
     return;
   }
 
@@ -1839,7 +1871,7 @@ async function removePhotoFromSpace(spaceId, mediaId) {
   console.log('removePhotoFromSpace called:', { spaceId, mediaId, isAdmin: authState?.isAdmin });
 
   if (!authState?.isAdmin) {
-    alert('Only admins can remove photos');
+    showToast('Only admins can remove photos', 'warning');
     return;
   }
 
@@ -1858,17 +1890,18 @@ async function removePhotoFromSpace(spaceId, mediaId) {
         showSpaceDetail(spaceId);
       }
     }
+    showToast('Photo removed from space', 'success');
 
   } catch (error) {
     console.error('Error removing photo:', error);
-    alert('Failed to remove photo: ' + error.message);
+    showToast('Failed to remove photo: ' + error.message, 'error');
   }
 }
 
 // Permanently delete media (removes file from storage too)
 async function deleteMedia(mediaId) {
   if (!authState?.isAdmin) {
-    alert('Only admins can delete media');
+    showToast('Only admins can delete media', 'warning');
     return;
   }
 
@@ -1884,10 +1917,10 @@ async function deleteMedia(mediaId) {
 
     await loadData();
     render();
-    alert('Media deleted successfully.');
+    showToast('Media deleted successfully.', 'success');
   } catch (error) {
     console.error('Error deleting media:', error);
-    alert('Failed to delete: ' + error.message);
+    showToast('Failed to delete: ' + error.message, 'error');
   }
 }
 
