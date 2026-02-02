@@ -91,11 +91,12 @@ GenAlpacaOps/
 **spaces** - Rental units and event spaces
 - `id` (uuid, PK)
 - `name`, `description`, `location`
+- `type` (free-form text: "Dwelling", "Amenity", "Event", etc.)
 - `monthly_rate`, `weekly_rate`, `nightly_rate`
 - `sq_footage`, `bath_privacy` (private/shared), `bath_fixture`
 - `beds_king`, `beds_queen`, `beds_double`, `beds_twin`, `beds_folding`, `beds_trifold`
 - `min_residents`, `max_residents`, `gender_restriction`
-- `is_listed`, `is_secret`, `can_be_dwelling`, `can_be_event`
+- `is_listed`, `is_secret`, `can_be_dwelling`, `can_be_event`, `is_archived`
 - `parent_id` (self-reference for nested spaces)
 
 **people** - Tenants, staff, guests
@@ -110,6 +111,8 @@ GenAlpacaOps/
 - `type` (dwelling, event)
 - `status` (active, completed, cancelled, pending_contract, contract_sent)
 - `start_date`, `end_date`
+- `desired_departure_date` (early exit: when tenant wants to leave)
+- `desired_departure_listed` (boolean: when true, early exit date affects consumer availability)
 - `rate_amount`, `rate_term` (monthly, weekly, nightly, flat)
 - `deposit_amount`, `is_free`
 
@@ -328,8 +331,19 @@ Spaces can be soft-deleted via archive/unarchive. Archived spaces have `is_archi
 ### Management Dashboard
 Located at `/spaces/admin/manage.html` with tabs for:
 - **Spaces**: Space management with archive/unarchive
+  - Filters: Search text, Parent Area dropdown, Dwelling/Non-dwelling checkboxes
+  - Shows thumbnails, type badge, and Edit button for each space
+  - Edit button links to main admin page with `?edit=<id>` to auto-open modal
 - **Media**: Full media library with tagging and filtering
 - **Users**: User management (future)
+
+### Early Exit Feature
+When a tenant wants to leave before their assignment ends:
+1. Admin sets `desired_departure_date` in the space detail modal
+2. Date is saved but NOT yet visible to consumers
+3. Admin clicks "List" button to publish the early exit
+4. Only when `desired_departure_listed=true` does the date affect consumer availability
+5. Changing the date resets `desired_departure_listed` to false (requires re-listing)
 
 ## Related Documentation
 

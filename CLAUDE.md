@@ -71,10 +71,18 @@ photo_spaces    - Old photo-space links
 ```
 
 ### Key Columns on `spaces`
+- `type` - Free-form text field (e.g., "Dwelling", "Amenity", "Event")
 - `is_listed` - Show in consumer view
 - `is_secret` - Only accessible via direct URL with ?id=
 - `can_be_dwelling` - Filter for rental listings
+- `can_be_event` - Can be used for events
 - `is_archived` - Soft delete (filtered out everywhere)
+
+### Key Columns on `assignments`
+- `status` - active, pending_contract, contract_sent, completed, cancelled
+- `start_date`, `end_date` - Assignment period
+- `desired_departure_date` - Early exit date (tenant wants to leave early)
+- `desired_departure_listed` - Boolean, when true the early exit date is shown to consumers for availability
 
 ## Common Patterns
 
@@ -95,14 +103,16 @@ const { data } = await supabase
 // Load active assignments
 const { data: assignments } = await supabase
   .from('assignments')
-  .select('id, start_date, end_date, status, assignment_spaces(space_id)')
+  .select('id, start_date, end_date, desired_departure_date, desired_departure_listed, status, assignment_spaces(space_id)')
   .in('status', ['active', 'pending_contract', 'contract_sent']);
 
 // For each space, find current assignment
+// Note: Only use desired_departure_date if desired_departure_listed is true
 const currentAssignment = spaceAssignments.find(a => {
   if (a.status !== 'active') return false;
-  if (!a.end_date) return true;
-  return new Date(a.end_date) >= today;
+  const effectiveEndDate = (a.desired_departure_listed && a.desired_departure_date) || a.end_date;
+  if (!effectiveEndDate) return true;
+  return new Date(effectiveEndDate) >= today;
 });
 space.isAvailable = !currentAssignment;
 ```
@@ -180,7 +190,13 @@ git push
 2. **Media system migration** - Using `media`/`media_spaces` tables instead of `photos`/`photo_spaces`
 3. **Space archiving** - `is_archived` flag for soft deletes
 4. **Image compression** - Client-side compression for images > 500KB
-5. **Early exit feature** - `desired_departure_date` on assignments overrides `end_date` for availability display
+5. **Early exit feature** - `desired_departure_date` + `desired_departure_listed` on assignments
+   - Admin sets desired departure date
+   - Admin clicks "List" to publish it for consumers
+   - Only when listed does it affect availability display
+6. **Space type field** - Free-form `type` column on spaces table, editable in admin modal
+7. **Manage page filters** - Search, parent area dropdown, dwelling/non-dwelling checkboxes
+8. **URL parameter handling** - `/spaces/admin/?edit=<id>` auto-opens edit modal
 
 ## Testing Changes
 
