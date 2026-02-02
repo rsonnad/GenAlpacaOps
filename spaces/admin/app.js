@@ -1955,12 +1955,13 @@ async function handleEditSpaceSubmit() {
 
     console.log('Updating space with:', updates);
 
-    const { error, count } = await supabase
+    const { data, error } = await supabase
       .from('spaces')
       .update(updates)
-      .eq('id', spaceId);
+      .eq('id', spaceId)
+      .select();
 
-    console.log('Update result:', { error, count });
+    console.log('Update result:', { data, error });
 
     if (error) throw error;
 
@@ -1997,7 +1998,8 @@ async function handleArchiveSpace() {
     const { error } = await supabase
       .from('spaces')
       .update({ is_archived: true })
-      .eq('id', spaceId);
+      .eq('id', spaceId)
+      .select();
 
     if (error) throw error;
 
@@ -2127,7 +2129,8 @@ async function updateDesiredDeparture(assignmentId, dateValue) {
         desired_departure_date: dateValue || null,
         desired_departure_listed: false
       })
-      .eq('id', assignmentId);
+      .eq('id', assignmentId)
+      .select();
 
     if (error) throw error;
 
@@ -2146,7 +2149,8 @@ async function toggleDesiredDepartureListed(assignmentId, listed) {
     const { error } = await supabase
       .from('assignments')
       .update({ desired_departure_listed: listed })
-      .eq('id', assignmentId);
+      .eq('id', assignmentId)
+      .select();
 
     if (error) throw error;
 
