@@ -397,6 +397,7 @@ function setupEventListeners() {
     const spaceId = document.getElementById('editSpaceId').value;
     const spaceName = document.getElementById('editName').value;
     if (spaceId) {
+      editSpaceModal.classList.add('hidden');
       openPhotoUpload(spaceId, spaceName);
     }
   });
