@@ -329,8 +329,8 @@ function renderCards(spacesToRender) {
               </div>`
           }
           <div class="card-badges">
-            <span class="badge ${fromBadgeClass}">Available: ${availFromStr}</span>
-            <span class="badge ${untilBadgeClass} badge-right">Until: ${availUntilStr}</span>
+            <span class="badge ${fromBadgeClass}">available: ${availFromStr}</span>
+            <span class="badge ${untilBadgeClass} badge-right">until: ${availUntilStr}</span>
           </div>
         </div>
         <div class="card-body">
@@ -372,8 +372,8 @@ function renderTable(spacesToRender) {
         <td>${beds || '-'}</td>
         <td>${space.bath_privacy || '-'}</td>
         <td>${space.amenities.slice(0, 3).join(', ') || '-'}</td>
-        <td><span class="badge ${fromBadgeClass}">Available: ${availFromStr}</span></td>
-        <td>Until: ${availUntilStr}</td>
+        <td><span class="badge ${fromBadgeClass}">available: ${availFromStr}</span></td>
+        <td>until: ${availUntilStr}</td>
       </tr>
     `;
   }).join('');
