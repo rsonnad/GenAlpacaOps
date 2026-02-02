@@ -302,33 +302,156 @@ async function openMediaDetail(mediaId) {
 function renderDetailTags(groupedTags, selectedTags) {
   const container = document.getElementById('detailTagsContainer');
 
-  const groupNames = ['purpose', 'space', 'condition', 'project', 'other'];
-  const groupLabels = {
-    purpose: 'Purpose',
-    space: 'Space',
-    condition: 'Condition',
-    project: 'Project',
-    other: 'Other',
-  };
+  // Get all groups dynamically from the data
+  const groupNames = Object.keys(groupedTags).sort();
 
-  container.innerHTML = groupNames
-    .filter(g => groupedTags[g]?.length > 0)
-    .map(group => `
-      <div class="tag-group">
-        <span class="tag-group-label">${groupLabels[group] || group}</span>
-        <div class="tag-checkboxes">
-          ${groupedTags[group].map(tag => `
-            <label class="tag-checkbox">
-              <input type="checkbox" name="detailTag" value="${tag.name}"
-                ${selectedTags.includes(tag.name) ? 'checked' : ''}>
-              <span class="tag-chip" style="--tag-color: ${tag.color || 'var(--accent)'}">
-                ${tag.name}
-              </span>
-            </label>
-          `).join('')}
+  container.innerHTML = `
+    ${groupNames
+      .filter(g => groupedTags[g]?.length > 0)
+      .map(group => `
+        <div class="tag-group">
+          <span class="tag-group-label">${group}</span>
+          <div class="tag-checkboxes">
+            ${groupedTags[group].map(tag => `
+              <label class="tag-checkbox">
+                <input type="checkbox" name="detailTag" value="${tag.name}"
+                  ${selectedTags.includes(tag.name) ? 'checked' : ''}>
+                <span class="tag-chip" style="--tag-color: ${tag.color || 'var(--accent)'}">
+                  ${tag.name}
+                </span>
+              </label>
+            `).join('')}
+          </div>
         </div>
-      </div>
-    `).join('');
+      `).join('')}
+    <div class="add-tag-inline">
+      <button type="button" class="btn-add-tag" onclick="showAddTagFormMedia()">+ Add Tag</button>
+    </div>
+  `;
+}
+
+async function showAddTagFormMedia() {
+  const container = document.getElementById('detailTagsContainer');
+  if (!container) return;
+
+  // Check if form already exists
+  if (container.querySelector('.add-tag-form')) {
+    container.querySelector('.add-tag-form').remove();
+    return;
+  }
+
+  // Get existing groups
+  const existingGroups = await mediaService.getTagGroups();
+
+  // Create inline form
+  const form = document.createElement('div');
+  form.className = 'add-tag-form';
+  form.innerHTML = `
+    <div class="add-tag-form-row">
+      <input type="text" id="newTagNameMedia" placeholder="Tag name" class="tag-input">
+      <select id="newTagGroupMedia" class="tag-select">
+        <option value="">Category (optional)</option>
+        ${existingGroups.map(g => `<option value="${g}">${g}</option>`).join('')}
+        <option value="__new__">+ New category...</option>
+      </select>
+      <input type="text" id="newTagGroupCustomMedia" placeholder="New category" class="tag-input hidden">
+      <button type="button" class="btn-small btn-primary" onclick="createNewTagMedia()">Add</button>
+      <button type="button" class="btn-small" onclick="hideAddTagFormMedia()">Cancel</button>
+    </div>
+  `;
+
+  // Insert before the add button
+  const addBtn = container.querySelector('.add-tag-inline');
+  if (addBtn) {
+    addBtn.before(form);
+  } else {
+    container.appendChild(form);
+  }
+
+  // Focus the name input
+  form.querySelector('#newTagNameMedia').focus();
+
+  // Handle category dropdown change
+  form.querySelector('#newTagGroupMedia').addEventListener('change', (e) => {
+    const customInput = form.querySelector('#newTagGroupCustomMedia');
+    if (e.target.value === '__new__') {
+      customInput.classList.remove('hidden');
+      customInput.focus();
+    } else {
+      customInput.classList.add('hidden');
+    }
+  });
+}
+
+function hideAddTagFormMedia() {
+  const container = document.getElementById('detailTagsContainer');
+  if (!container) return;
+  const form = container.querySelector('.add-tag-form');
+  if (form) form.remove();
+}
+
+async function createNewTagMedia() {
+  const container = document.getElementById('detailTagsContainer');
+  if (!container) return;
+
+  const nameInput = container.querySelector('#newTagNameMedia');
+  const groupSelect = container.querySelector('#newTagGroupMedia');
+  const customGroupInput = container.querySelector('#newTagGroupCustomMedia');
+
+  const name = nameInput?.value.trim();
+  if (!name) {
+    alert('Please enter a tag name');
+    return;
+  }
+
+  let group = groupSelect?.value;
+  if (group === '__new__') {
+    group = customGroupInput?.value.trim().toLowerCase();
+    if (!group) {
+      alert('Please enter a category name');
+      return;
+    }
+  }
+
+  try {
+    const result = await mediaService.createTag(name, group || null);
+
+    if (!result.success) {
+      if (result.duplicate) {
+        alert('A tag with that name already exists');
+      } else {
+        alert('Failed to create tag: ' + result.error);
+      }
+      return;
+    }
+
+    // Add to allTags
+    allTags.push(result.tag);
+
+    // Re-render the detail tags
+    const currentMedia = allMedia.find(m => m.id === currentMediaId);
+    const selectedTags = currentMedia?.tags?.map(t => t.name) || [];
+    const groupedTags = groupTagsByGroup(allTags);
+    renderDetailTags(groupedTags, selectedTags);
+
+    // Select the newly created tag
+    const checkbox = container.querySelector(`input[value="${result.tag.name}"]`);
+    if (checkbox) checkbox.checked = true;
+
+  } catch (error) {
+    console.error('Error creating tag:', error);
+    alert('Failed to create tag');
+  }
+}
+
+function groupTagsByGroup(tags) {
+  const grouped = {};
+  for (const tag of tags) {
+    const group = tag.tag_group || 'other';
+    if (!grouped[group]) grouped[group] = [];
+    grouped[group].push(tag);
+  }
+  return grouped;
 }
 
 async function saveMediaDetail() {
@@ -417,19 +540,15 @@ async function openBulkTagModal() {
 
 function renderBulkTags(containerId, groupedTags) {
   const container = document.getElementById(containerId);
-  const groupNames = ['purpose', 'space', 'condition', 'project'];
-  const groupLabels = {
-    purpose: 'Purpose',
-    space: 'Space',
-    condition: 'Condition',
-    project: 'Project',
-  };
+
+  // Get all groups dynamically from the data
+  const groupNames = Object.keys(groupedTags).sort();
 
   container.innerHTML = groupNames
     .filter(g => groupedTags[g]?.length > 0)
     .map(group => `
       <div class="tag-group">
-        <span class="tag-group-label">${groupLabels[group]}</span>
+        <span class="tag-group-label">${group}</span>
         <div class="tag-checkboxes">
           ${groupedTags[group].map(tag => `
             <label class="tag-checkbox">
@@ -579,3 +698,11 @@ function formatDate(dateStr, full = false) {
     day: 'numeric',
   });
 }
+
+// =============================================
+// GLOBAL EXPORTS (for onclick handlers in rendered HTML)
+// =============================================
+
+window.showAddTagFormMedia = showAddTagFormMedia;
+window.hideAddTagFormMedia = hideAddTagFormMedia;
+window.createNewTagMedia = createNewTagMedia;

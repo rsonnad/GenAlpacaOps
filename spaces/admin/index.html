@@ -130,24 +130,6 @@
     </main>
   </div>
 
-  <!-- Photo Request Modal -->
-  <div id="photoRequestModal" class="modal hidden">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Request Photo for <span id="modalSpaceName"></span></h2>
-        <button class="modal-close" id="closeModal">&times;</button>
-      </div>
-      <div class="modal-body">
-        <label for="photoDescription">Describe the photo needed:</label>
-        <textarea id="photoDescription" rows="4" placeholder="e.g., Wide angle shot of the bedroom from the doorway..."></textarea>
-      </div>
-      <div class="modal-footer">
-        <button id="cancelPhotoRequest" class="btn-secondary">Cancel</button>
-        <button id="submitPhotoRequest" class="btn-primary">Submit Request</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Space Detail Modal -->
   <div id="spaceDetailModal" class="modal hidden">
     <div class="modal-content modal-large">
@@ -171,12 +153,13 @@
       <div class="modal-body">
         <!-- Tab navigation -->
         <div class="media-picker-tabs">
-          <button type="button" class="tab-btn active" data-tab="upload">Upload New</button>
-          <button type="button" class="tab-btn" data-tab="library">From Library</button>
+          <button type="button" class="tab-btn active" data-tab="library">From Library</button>
+          <button type="button" class="tab-btn" data-tab="upload">Upload New</button>
+          <button type="button" class="tab-btn" data-tab="request">Request</button>
         </div>
 
         <!-- Upload New Tab -->
-        <div id="uploadTab" class="tab-content active">
+        <div id="uploadTab" class="tab-content">
           <!-- Storage indicator -->
           <div id="storageIndicator" class="storage-indicator"></div>
 
@@ -235,7 +218,7 @@
         </div>
 
         <!-- Library Tab -->
-        <div id="libraryTab" class="tab-content">
+        <div id="libraryTab" class="tab-content active">
           <!-- Filter controls -->
           <div class="library-filters">
             <div class="form-group">
@@ -263,6 +246,38 @@
           <div class="modal-footer-inline">
             <button id="cancelLibrarySelect" type="button" class="btn-secondary">Cancel</button>
             <button id="submitLibrarySelect" type="button" class="btn-primary" disabled>Add Selected (0)</button>
+          </div>
+        </div>
+
+        <!-- Request Tab -->
+        <div id="requestTab" class="tab-content">
+          <div class="request-tab-content">
+            <p class="form-hint" style="margin-bottom: 1rem;">
+              Request a photo to be taken. This creates a task that can be assigned to someone with camera access.
+            </p>
+
+            <div class="form-group">
+              <label for="requestDescription">Describe the photo needed:</label>
+              <textarea id="requestDescription" rows="4" placeholder="e.g., Wide angle shot of the bedroom from the doorway, showing the window and closet..."></textarea>
+            </div>
+
+            <fieldset class="form-fieldset">
+              <legend>Suggested Tags (for when photo is uploaded)</legend>
+              <div id="requestTagsContainer" class="tags-container">
+                <!-- Tags populated by JS -->
+              </div>
+            </fieldset>
+
+            <!-- Existing requests for this space -->
+            <div id="existingRequestsSection" class="existing-requests-section hidden">
+              <h4>Pending Requests for this Space</h4>
+              <div id="existingRequestsList"></div>
+            </div>
+          </div>
+
+          <div class="modal-footer-inline">
+            <button id="cancelPhotoRequest" type="button" class="btn-secondary">Cancel</button>
+            <button id="submitPhotoRequest" type="button" class="btn-primary">Submit Request</button>
           </div>
         </div>
       </div>

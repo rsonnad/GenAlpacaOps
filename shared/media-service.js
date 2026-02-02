@@ -409,10 +409,72 @@ async function removeTag(mediaId, tagId) {
 /**
  * Create a new tag
  */
-async function createTag(name, group = null, color = null) {
+async function createTag(name, group = null, color = null, description = null) {
+  // Normalize the name (lowercase, trim, replace spaces with hyphens)
+  const normalizedName = name.trim().toLowerCase().replace(/\s+/g, '-');
+
   const { data, error } = await supabase
     .from('media_tags')
-    .insert({ name, tag_group: group, color })
+    .insert({
+      name: normalizedName,
+      tag_group: group || null,
+      color: color || generateTagColor(),
+      description: description || null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    // Check if it's a duplicate
+    if (error.code === '23505') {
+      return { success: false, error: 'Tag already exists', duplicate: true };
+    }
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, tag: data };
+}
+
+/**
+ * Get all unique tag groups/categories
+ */
+async function getTagGroups() {
+  const { data, error } = await supabase
+    .from('media_tags')
+    .select('tag_group')
+    .not('tag_group', 'is', null);
+
+  if (error) {
+    console.error('Error fetching tag groups:', error);
+    return [];
+  }
+
+  // Get unique groups
+  const groups = [...new Set(data.map(t => t.tag_group))].filter(Boolean).sort();
+  return groups;
+}
+
+/**
+ * Generate a random tag color
+ */
+function generateTagColor() {
+  const colors = [
+    '#EF4444', '#F97316', '#F59E0B', '#EAB308', '#84CC16',
+    '#22C55E', '#10B981', '#14B8A6', '#06B6D4', '#0EA5E9',
+    '#3B82F6', '#6366F1', '#8B5CF6', '#A855F7', '#D946EF',
+    '#EC4899', '#F43F5E',
+  ];
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
+/**
+ * Update a tag
+ */
+async function updateTag(tagId, updates) {
+  const { data, error } = await supabase
+    .from('media_tags')
+    .update(updates)
+    .eq('id', tagId)
     .select()
     .single();
 
@@ -421,6 +483,22 @@ async function createTag(name, group = null, color = null) {
   }
 
   return { success: true, tag: data };
+}
+
+/**
+ * Delete a tag
+ */
+async function deleteTag(tagId) {
+  const { error } = await supabase
+    .from('media_tags')
+    .delete()
+    .eq('id', tagId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
 }
 
 // =============================================
@@ -705,9 +783,13 @@ export const mediaService = {
   // Tags
   getTags,
   getTagsGrouped,
+  getTagGroups,
   assignTags,
   removeTag,
   createTag,
+  updateTag,
+  deleteTag,
+  generateTagColor,
 
   // Space linking
   linkToSpace,

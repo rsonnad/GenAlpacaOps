@@ -33,7 +33,6 @@ const userInfo = document.getElementById('userInfo');
 const manageUsersLink = document.getElementById('manageUsersLink');
 
 // Modals
-const photoRequestModal = document.getElementById('photoRequestModal');
 const spaceDetailModal = document.getElementById('spaceDetailModal');
 const photoUploadModal = document.getElementById('photoUploadModal');
 const editSpaceModal = document.getElementById('editSpaceModal');
@@ -269,19 +268,8 @@ function setupEventListeners() {
   });
 
   // Modal handlers
-  document.getElementById('closeModal').addEventListener('click', () => {
-    photoRequestModal.classList.add('hidden');
-  });
   document.getElementById('closeDetailModal').addEventListener('click', () => {
     spaceDetailModal.classList.add('hidden');
-  });
-  document.getElementById('cancelPhotoRequest').addEventListener('click', () => {
-    photoRequestModal.classList.add('hidden');
-  });
-  document.getElementById('submitPhotoRequest').addEventListener('click', handlePhotoRequestSubmit);
-
-  photoRequestModal.addEventListener('click', (e) => {
-    if (e.target === photoRequestModal) photoRequestModal.classList.add('hidden');
   });
   spaceDetailModal.addEventListener('click', (e) => {
     if (e.target === spaceDetailModal) spaceDetailModal.classList.add('hidden');
@@ -314,6 +302,12 @@ function setupEventListeners() {
     activeLibraryFilters.category = e.target.value;
     loadLibraryMedia();
   });
+
+  // Request tab handlers
+  document.getElementById('cancelPhotoRequest')?.addEventListener('click', () => {
+    photoUploadModal.classList.add('hidden');
+  });
+  document.getElementById('submitPhotoRequest')?.addEventListener('click', handlePhotoRequestSubmit);
 
   // Edit space modal handlers
   document.getElementById('closeEditModal').addEventListener('click', () => {
@@ -526,10 +520,7 @@ function renderCards(spacesToRender) {
             Edit
           </button>
           <button class="btn-small" onclick="event.stopPropagation(); openPhotoUpload('${space.id}', '${space.name.replace(/'/g, "\\'")}')">
-            Images
-          </button>
-          <button class="btn-small" onclick="event.stopPropagation(); openPhotoRequest('${space.id}', '${space.name.replace(/'/g, "\\'")}')">
-            Request ${pendingRequests ? `(${pendingRequests})` : ''}
+            Images${pendingRequests ? ` (${pendingRequests} pending)` : ''}
           </button>
         </div>
       `;
@@ -649,10 +640,9 @@ function showSpaceDetail(spaceId) {
     const photoItems = space.photos.map((p, idx) => {
       const orderControls = isAdmin ? `
         <div class="photo-order-controls">
-          <button onclick="event.stopPropagation(); movePhoto('${space.id}', '${p.id}', 'top')" title="Move to top">⇈</button>
-          <button onclick="event.stopPropagation(); movePhoto('${space.id}', '${p.id}', 'up')" title="Move up">↑</button>
-          <button onclick="event.stopPropagation(); movePhoto('${space.id}', '${p.id}', 'down')" title="Move down">↓</button>
-          <button onclick="event.stopPropagation(); movePhoto('${space.id}', '${p.id}', 'bottom')" title="Move to bottom">⇊</button>
+          <button onclick="event.stopPropagation(); movePhoto('${space.id}', '${p.id}', 'up')" title="Move up" ${idx === 0 ? 'disabled' : ''}>↑</button>
+          <button onclick="event.stopPropagation(); movePhoto('${space.id}', '${p.id}', 'down')" title="Move down" ${idx === space.photos.length - 1 ? 'disabled' : ''}>↓</button>
+          <button class="btn-remove" onclick="event.stopPropagation(); removePhotoFromSpace('${space.id}', '${p.id}')" title="Remove from space">×</button>
         </div>
       ` : '';
       return `
@@ -739,8 +729,8 @@ function showSpaceDetail(spaceId) {
         <button class="btn-primary" onclick="openEditSpace('${space.id}'); spaceDetailModal.classList.add('hidden');">
           Edit Space
         </button>
-        <button class="btn-secondary" onclick="openPhotoRequest('${space.id}', '${space.name.replace(/'/g, "\\'")}')">
-          Request Photo
+        <button class="btn-secondary" onclick="openPhotoUpload('${space.id}', '${space.name.replace(/'/g, "\\'")}'); spaceDetailModal.classList.add('hidden');">
+          Add Images
         </button>
       </div>
     ` : ''}
@@ -750,40 +740,39 @@ function showSpaceDetail(spaceId) {
 }
 
 // Photo request handling
-let currentPhotoRequestSpaceId = null;
-
 function openPhotoRequest(spaceId, spaceName) {
-  if (!authState?.isAdmin) {
-    alert('Only admins can request photos');
-    return;
-  }
-  currentPhotoRequestSpaceId = spaceId;
-  document.getElementById('modalSpaceName').textContent = spaceName;
-  document.getElementById('photoDescription').value = '';
-  photoRequestModal.classList.remove('hidden');
+  // Now just opens the Images modal on the Request tab
+  openPhotoUpload(spaceId, spaceName, 'dwelling', 'request');
 }
 
 async function handlePhotoRequestSubmit() {
-  const description = document.getElementById('photoDescription').value.trim();
+  const description = document.getElementById('requestDescription')?.value.trim();
   if (!description) {
     alert('Please describe the photo needed.');
     return;
   }
 
+  // Get suggested tags for the request
+  const suggestedTags = [];
+  document.querySelectorAll('#requestTagsContainer input[type="checkbox"]:checked').forEach(cb => {
+    suggestedTags.push(cb.value);
+  });
+
   try {
     const { error } = await supabase
       .from('photo_requests')
       .insert({
-        space_id: currentPhotoRequestSpaceId,
+        space_id: currentUploadSpaceId,
         description: description,
         status: 'pending',
-        requested_by: authState.appUser?.id || 'admin'
+        requested_by: authState.appUser?.id || 'admin',
+        suggested_tags: suggestedTags.length > 0 ? suggestedTags : null
       });
 
     if (error) throw error;
 
     alert('Photo request submitted!');
-    photoRequestModal.classList.add('hidden');
+    photoUploadModal.classList.add('hidden');
 
     await loadData();
     render();
@@ -852,7 +841,7 @@ let selectedLibraryMedia = new Set();
 let libraryMedia = [];
 let activeLibraryFilters = { tags: [], category: '' };
 
-function openPhotoUpload(spaceId, spaceName, context = 'dwelling') {
+function openPhotoUpload(spaceId, spaceName, context = 'dwelling', initialTab = 'library') {
   if (!authState?.isAdmin) {
     alert('Only admins can upload photos');
     return;
@@ -890,16 +879,94 @@ function openPhotoUpload(spaceId, spaceName, context = 'dwelling') {
   // Show storage usage
   updateStorageIndicator();
 
-  // Reset to upload tab
-  switchMediaPickerTab('upload');
-
   // Load library for the library tab
   loadLibraryMedia();
 
   // Render tag filter chips
   renderLibraryTagFilter();
 
+  // Render request tab content
+  renderRequestTab();
+
+  // Switch to the specified initial tab
+  switchMediaPickerTab(initialTab);
+
   photoUploadModal.classList.remove('hidden');
+}
+
+function renderRequestTab() {
+  // Clear/reset the request form
+  const descriptionEl = document.getElementById('requestDescription');
+  if (descriptionEl) descriptionEl.value = '';
+
+  // Render suggested tags (same as upload tags but pre-selected based on context)
+  renderRequestTags();
+
+  // Show existing requests for this space
+  renderExistingRequests();
+}
+
+function renderRequestTags() {
+  const container = document.getElementById('requestTagsContainer');
+  if (!container) return;
+
+  // Get auto-tags for current context
+  const autoTags = getAutoTagsForContext(currentUploadContext);
+
+  // Group tags by tag_group
+  const grouped = {};
+  allTags.forEach(tag => {
+    const group = tag.tag_group || 'other';
+    if (!grouped[group]) grouped[group] = [];
+    grouped[group].push(tag);
+  });
+
+  // Render grouped checkboxes with add button
+  container.innerHTML = `
+    ${Object.entries(grouped).map(([group, tags]) => `
+      <div class="tag-group">
+        <div class="tag-group-label">${group}</div>
+        <div class="tag-checkboxes">
+          ${tags.map(tag => {
+            const isAuto = autoTags.includes(tag.name);
+            return `
+              <label class="tag-checkbox" style="--tag-color: ${tag.color || '#666'}">
+                <input type="checkbox" value="${tag.name}" ${isAuto ? 'checked' : ''}>
+                <span class="tag-chip">${tag.name}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `).join('')}
+    <div class="add-tag-inline">
+      <button type="button" class="btn-add-tag" onclick="showAddTagForm('requestTagsContainer')">+ Add Tag</button>
+    </div>
+  `;
+}
+
+function renderExistingRequests() {
+  const section = document.getElementById('existingRequestsSection');
+  const list = document.getElementById('existingRequestsList');
+  if (!section || !list) return;
+
+  // Find the current space and its pending requests
+  const space = spaces.find(s => s.id === currentUploadSpaceId);
+  const pendingRequests = space?.photoRequests?.filter(r => r.status === 'pending') || [];
+
+  if (pendingRequests.length === 0) {
+    section.classList.add('hidden');
+    return;
+  }
+
+  section.classList.remove('hidden');
+  list.innerHTML = pendingRequests.map(pr => `
+    <div class="existing-request-item">
+      <span class="request-status ${pr.status}">${pr.status}</span>
+      <p>${pr.description}</p>
+      <small>Requested ${new Date(pr.created_at).toLocaleDateString()}</small>
+    </div>
+  `).join('');
 }
 
 function getAutoTagsForContext(context) {
@@ -924,8 +991,9 @@ function switchMediaPickerTab(tabName) {
   });
 
   // Update tab content
-  document.getElementById('uploadTab').classList.toggle('active', tabName === 'upload');
-  document.getElementById('libraryTab').classList.toggle('active', tabName === 'library');
+  document.getElementById('uploadTab')?.classList.toggle('active', tabName === 'upload');
+  document.getElementById('libraryTab')?.classList.toggle('active', tabName === 'library');
+  document.getElementById('requestTab')?.classList.toggle('active', tabName === 'request');
 }
 
 function renderUploadTags() {
@@ -943,23 +1011,150 @@ function renderUploadTags() {
     grouped[group].push(tag);
   });
 
-  // Render grouped checkboxes
-  container.innerHTML = Object.entries(grouped).map(([group, tags]) => `
-    <div class="tag-group">
-      <div class="tag-group-label">${group}</div>
-      <div class="tag-checkboxes">
-        ${tags.map(tag => {
-          const isAuto = autoTags.includes(tag.name);
-          return `
-            <label class="tag-checkbox" style="--tag-color: ${tag.color || '#666'}">
-              <input type="checkbox" value="${tag.name}" ${isAuto ? 'checked' : ''}>
-              <span class="tag-chip">${tag.name}</span>
-            </label>
-          `;
-        }).join('')}
+  // Get unique groups for the dropdown
+  const allGroups = [...new Set(allTags.map(t => t.tag_group).filter(Boolean))].sort();
+
+  // Render grouped checkboxes with add button
+  container.innerHTML = `
+    ${Object.entries(grouped).map(([group, tags]) => `
+      <div class="tag-group">
+        <div class="tag-group-label">${group}</div>
+        <div class="tag-checkboxes">
+          ${tags.map(tag => {
+            const isAuto = autoTags.includes(tag.name);
+            return `
+              <label class="tag-checkbox" style="--tag-color: ${tag.color || '#666'}">
+                <input type="checkbox" value="${tag.name}" ${isAuto ? 'checked' : ''}>
+                <span class="tag-chip">${tag.name}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
       </div>
+    `).join('')}
+    <div class="add-tag-inline">
+      <button type="button" class="btn-add-tag" onclick="showAddTagForm('uploadTagsContainer')">+ Add Tag</button>
     </div>
-  `).join('');
+  `;
+}
+
+// Track existing tag groups for the dropdown
+let existingTagGroups = [];
+
+async function showAddTagForm(containerId) {
+  // Get existing groups
+  existingTagGroups = await mediaService.getTagGroups();
+
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  // Check if form already exists
+  if (container.querySelector('.add-tag-form')) {
+    container.querySelector('.add-tag-form').remove();
+    return;
+  }
+
+  // Create inline form
+  const form = document.createElement('div');
+  form.className = 'add-tag-form';
+  form.innerHTML = `
+    <div class="add-tag-form-row">
+      <input type="text" id="newTagName" placeholder="Tag name" class="tag-input">
+      <select id="newTagGroup" class="tag-select">
+        <option value="">Category (optional)</option>
+        ${existingTagGroups.map(g => `<option value="${g}">${g}</option>`).join('')}
+        <option value="__new__">+ New category...</option>
+      </select>
+      <input type="text" id="newTagGroupCustom" placeholder="New category" class="tag-input hidden">
+      <button type="button" class="btn-small btn-primary" onclick="createNewTag('${containerId}')">Add</button>
+      <button type="button" class="btn-small" onclick="hideAddTagForm('${containerId}')">Cancel</button>
+    </div>
+  `;
+
+  // Insert before the add button
+  const addBtn = container.querySelector('.add-tag-inline');
+  if (addBtn) {
+    addBtn.before(form);
+  } else {
+    container.appendChild(form);
+  }
+
+  // Focus the name input
+  form.querySelector('#newTagName').focus();
+
+  // Handle category dropdown change
+  form.querySelector('#newTagGroup').addEventListener('change', (e) => {
+    const customInput = form.querySelector('#newTagGroupCustom');
+    if (e.target.value === '__new__') {
+      customInput.classList.remove('hidden');
+      customInput.focus();
+    } else {
+      customInput.classList.add('hidden');
+    }
+  });
+}
+
+function hideAddTagForm(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const form = container.querySelector('.add-tag-form');
+  if (form) form.remove();
+}
+
+async function createNewTag(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const nameInput = container.querySelector('#newTagName');
+  const groupSelect = container.querySelector('#newTagGroup');
+  const customGroupInput = container.querySelector('#newTagGroupCustom');
+
+  const name = nameInput?.value.trim();
+  if (!name) {
+    alert('Please enter a tag name');
+    return;
+  }
+
+  let group = groupSelect?.value;
+  if (group === '__new__') {
+    group = customGroupInput?.value.trim().toLowerCase();
+    if (!group) {
+      alert('Please enter a category name');
+      return;
+    }
+  }
+
+  try {
+    const result = await mediaService.createTag(name, group || null);
+
+    if (!result.success) {
+      if (result.duplicate) {
+        alert('A tag with that name already exists');
+      } else {
+        alert('Failed to create tag: ' + result.error);
+      }
+      return;
+    }
+
+    // Add to allTags
+    allTags.push(result.tag);
+
+    // Re-render tags and auto-select the new one
+    renderUploadTags();
+
+    // Select the newly created tag
+    const checkbox = container.querySelector(`input[value="${result.tag.name}"]`);
+    if (checkbox) checkbox.checked = true;
+
+    // Also refresh request tags if visible
+    if (document.getElementById('requestTagsContainer')) {
+      renderRequestTags();
+    }
+
+  } catch (error) {
+    console.error('Error creating tag:', error);
+    alert('Failed to create tag');
+  }
 }
 
 function updateStorageIndicator() {
@@ -1555,3 +1750,6 @@ window.toggleLibraryMediaSelection = toggleLibraryMediaSelection;
 window.switchMediaPickerTab = switchMediaPickerTab;
 window.removeUploadFile = removeUploadFile;
 window.updateFileCaption = updateFileCaption;
+window.showAddTagForm = showAddTagForm;
+window.hideAddTagForm = hideAddTagForm;
+window.createNewTag = createNewTag;
