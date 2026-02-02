@@ -196,36 +196,13 @@
       margin-right: 1rem;
     }
 
-    .space-type, .space-status {
+    .space-type {
       padding: 0.25rem 0.5rem;
       border-radius: var(--radius);
       font-size: 0.75rem;
       font-weight: 500;
-    }
-
-    .type-dwelling {
-      background: var(--accent-light);
-      color: var(--accent);
-    }
-
-    .type-event {
-      background: #f3e8ff;
-      color: #7c3aed;
-    }
-
-    .type-amenity {
       background: #f1f5f9;
       color: #64748b;
-    }
-
-    .status-available {
-      background: #dcfce7;
-      color: #16a34a;
-    }
-
-    .status-occupied {
-      background: #fef3c7;
-      color: #d97706;
     }
 
     /* Lightbox */
@@ -659,7 +636,7 @@
       const { data, error } = await supabase
         .from('spaces')
         .select(`
-          id, name, parent_id, can_be_dwelling, can_be_event, is_listed, monthly_rate, is_archived,
+          id, name, parent_id, can_be_dwelling, type, is_listed, monthly_rate, is_archived,
           media_spaces(
             display_order,
             is_primary,
@@ -673,38 +650,12 @@
         return;
       }
 
-      // Load active assignments for occupancy status
-      const { data: assignmentsData } = await supabase
-        .from('assignments')
-        .select(`
-          id, status, end_date, desired_departure_date, desired_departure_listed,
-          assignment_spaces(space_id)
-        `)
-        .in('status', ['active', 'pending_contract', 'contract_sent']);
-
-      const assignments = assignmentsData || [];
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
       const allData = (data || []).map(space => {
         // Get the primary photo or first photo
         const mediaSpaces = space.media_spaces || [];
         const primaryMedia = mediaSpaces.find(ms => ms.is_primary) ||
                             mediaSpaces.sort((a, b) => (a.display_order || 0) - (b.display_order || 0))[0];
         space.thumbnail = primaryMedia?.media?.url || null;
-
-        // Compute occupancy
-        const spaceAssignments = assignments.filter(a =>
-          a.assignment_spaces?.some(as => as.space_id === space.id)
-        );
-        const currentAssignment = spaceAssignments.find(a => {
-          if (a.status !== 'active') return false;
-          const effectiveEndDate = (a.desired_departure_listed && a.desired_departure_date) || a.end_date;
-          if (!effectiveEndDate) return true;
-          return new Date(effectiveEndDate) >= today;
-        });
-        space.currentAssignment = currentAssignment || null;
-
         return space;
       });
 
@@ -788,14 +739,6 @@
           ? `<img src="${space.thumbnail}" alt="${space.name}" class="space-item-thumb" onclick="event.stopPropagation(); openLightbox('${space.thumbnail}')">`
           : `<div class="space-item-thumb-placeholder"></div>`;
 
-        // Determine space type
-        const spaceType = space.can_be_dwelling ? 'Dwelling' : (space.can_be_event ? 'Event' : 'Amenity');
-        const typeClass = space.can_be_dwelling ? 'type-dwelling' : (space.can_be_event ? 'type-event' : 'type-amenity');
-
-        // Occupancy status
-        const occupancy = space.currentAssignment ? 'Occupied' : (space.can_be_dwelling ? 'Available' : '');
-        const occupancyClass = space.currentAssignment ? 'status-occupied' : 'status-available';
-
         return `
           <div class="space-item">
             <div class="space-item-info">
@@ -809,8 +752,7 @@
               </div>
             </div>
             <div class="space-item-meta">
-              <span class="space-type ${typeClass}">${spaceType}</span>
-              ${occupancy ? `<span class="space-status ${occupancyClass}">${occupancy}</span>` : ''}
+              ${space.type ? `<span class="space-type">${space.type}</span>` : ''}
             </div>
             <div class="space-item-actions">
               <a href="/GenAlpacaOps/spaces/admin/?edit=${space.id}" class="btn-small">Edit</a>
