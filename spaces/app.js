@@ -50,7 +50,7 @@ async function loadData() {
         min_residents, max_residents, is_listed, is_secret,
         parent:parent_id(name),
         space_amenities(amenity:amenity_id(name)),
-        photo_spaces(photo:photo_id(id,url,caption),display_order)
+        media_spaces(display_order, is_primary, media:media_id(id, url, caption))
       `)
       .eq('can_be_dwelling', true)
       .order('name');
@@ -64,9 +64,9 @@ async function loadData() {
       // For public view, we don't load assignments (no occupancy info)
       // Availability is assumed based on listing status
       space.amenities = space.space_amenities?.map(sa => sa.amenity?.name).filter(Boolean) || [];
-      space.photos = (space.photo_spaces || [])
+      space.photos = (space.media_spaces || [])
         .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
-        .map(ps => ({ ...ps.photo, display_order: ps.display_order }))
+        .map(ms => ms.media ? { ...ms.media, display_order: ms.display_order, is_primary: ms.is_primary } : null)
         .filter(p => p && p.url);
     });
 
@@ -318,7 +318,7 @@ async function fetchAndShowSpace(spaceId) {
         min_residents, max_residents, is_listed, is_secret,
         parent:parent_id(name),
         space_amenities(amenity:amenity_id(name)),
-        photo_spaces(photo:photo_id(id,url,caption),display_order)
+        media_spaces(display_order, is_primary, media:media_id(id, url, caption))
       `)
       .eq('id', spaceId)
       .eq('can_be_dwelling', true)
@@ -331,9 +331,9 @@ async function fetchAndShowSpace(spaceId) {
 
     // Process the space data
     space.amenities = space.space_amenities?.map(sa => sa.amenity?.name).filter(Boolean) || [];
-    space.photos = (space.photo_spaces || [])
+    space.photos = (space.media_spaces || [])
       .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
-      .map(ps => ({ ...ps.photo, display_order: ps.display_order }))
+      .map(ms => ms.media ? { ...ms.media, display_order: ms.display_order, is_primary: ms.is_primary } : null)
       .filter(p => p && p.url);
 
     displaySpaceDetail(space);
