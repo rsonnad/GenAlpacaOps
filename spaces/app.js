@@ -53,6 +53,7 @@ async function loadData() {
         media_spaces(display_order, is_primary, media:media_id(id, url, caption))
       `)
       .eq('can_be_dwelling', true)
+      .order('monthly_rate', { ascending: false, nullsFirst: false })
       .order('name');
 
     if (spacesError) throw spacesError;
