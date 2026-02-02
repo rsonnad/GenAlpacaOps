@@ -115,6 +115,19 @@ async function init() {
     await loadData();
     setupEventListeners();
     render();
+
+    // Check for URL parameters to auto-open modals
+    const urlParams = new URLSearchParams(window.location.search);
+    const editSpaceId = urlParams.get('edit');
+    if (editSpaceId) {
+      // Verify the space exists
+      const space = spaces.find(s => s.id === editSpaceId);
+      if (space) {
+        openEditSpace(editSpaceId);
+        // Clear the URL parameter without reloading
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
   } catch (error) {
     console.error('Init error:', error);
     loadingOverlay.innerHTML = `
