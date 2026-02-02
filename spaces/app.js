@@ -310,10 +310,10 @@ function renderCards(spacesToRender) {
 
     // Availability display
     const availFromStr = space.isAvailable ? 'NOW' : (space.availableFrom ? formatDate(space.availableFrom) : 'TBD');
-    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'THE COWS COME HOME';
+    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'The Cows Come Home';
 
     const fromBadgeClass = space.isAvailable ? 'available' : 'occupied';
-    const untilBadgeClass = availUntilStr === 'THE COWS COME HOME' ? 'available' : 'occupied';
+    const untilBadgeClass = availUntilStr === 'The Cows Come Home' ? 'available' : 'occupied';
 
     // Location/parent display
     const locationText = space.location || (space.parent ? space.parent.name : '');
@@ -370,7 +370,7 @@ function renderTable(spacesToRender) {
     const beds = getBedSummary(space);
 
     const availFromStr = space.isAvailable ? 'NOW' : (space.availableFrom ? formatDate(space.availableFrom) : 'TBD');
-    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'THE COWS COME HOME';
+    const availUntilStr = space.availableUntil ? formatDate(space.availableUntil) : 'The Cows Come Home';
     const fromBadgeClass = space.isAvailable ? 'available' : 'occupied';
 
     return `
