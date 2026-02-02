@@ -59,6 +59,8 @@ const priceFilter = document.getElementById('priceFilter');
 const bathFilter = document.getElementById('bathFilter');
 const availFilter = document.getElementById('availFilter');
 const visibilityFilter = document.getElementById('visibilityFilter');
+const dwellingFilter = document.getElementById('dwellingFilter');
+const nonDwellingFilter = document.getElementById('nonDwellingFilter');
 const clearFilters = document.getElementById('clearFilters');
 const roleBadge = document.getElementById('roleBadge');
 const userInfo = document.getElementById('userInfo');
@@ -319,6 +321,8 @@ function setupEventListeners() {
   bathFilter.addEventListener('change', render);
   availFilter.addEventListener('change', render);
   visibilityFilter.addEventListener('change', render);
+  dwellingFilter.addEventListener('change', render);
+  nonDwellingFilter.addEventListener('change', render);
   clearFilters.addEventListener('click', resetFilters);
 
   // Table sorting
@@ -436,8 +440,20 @@ function setView(view) {
 function getFilteredSpaces() {
   let filtered = [...spaces];
 
-  // Only show dwelling spaces
-  filtered = filtered.filter(s => s.can_be_dwelling);
+  // Dwelling/Non-dwelling filter
+  const showDwelling = dwellingFilter.checked;
+  const showNonDwelling = nonDwellingFilter.checked;
+
+  if (showDwelling && showNonDwelling) {
+    // Show all
+  } else if (showDwelling) {
+    filtered = filtered.filter(s => s.can_be_dwelling);
+  } else if (showNonDwelling) {
+    filtered = filtered.filter(s => !s.can_be_dwelling);
+  } else {
+    // Neither checked - show nothing
+    filtered = [];
+  }
 
   // Search
   const search = searchInput.value.toLowerCase();
@@ -544,6 +560,8 @@ function resetFilters() {
   bathFilter.value = '';
   availFilter.value = '';
   visibilityFilter.value = '';
+  dwellingFilter.checked = true;
+  nonDwellingFilter.checked = false;
   render();
 }
 
