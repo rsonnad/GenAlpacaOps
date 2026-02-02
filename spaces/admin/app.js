@@ -1545,7 +1545,7 @@ function renderEditPhotos(space) {
   const container = document.getElementById('editPhotosContainer');
 
   if (!space.photos || space.photos.length === 0) {
-    container.innerHTML = '<div class="no-photos-message">No photos yet. Use the Upload button to add photos.</div>';
+    container.innerHTML = '<div class="no-photos-message">No photos yet. Use the Images button to add photos.</div>';
     return;
   }
 
@@ -1559,18 +1559,95 @@ function renderEditPhotos(space) {
     const primaryBadge = photo.is_primary ? '<span class="photo-tag" style="background: var(--accent);">Primary</span>' : '';
 
     return `
-      <div class="edit-photo-item" data-photo-id="${photo.id}">
+      <div class="edit-photo-item" draggable="true" data-photo-id="${photo.id}" data-space-id="${space.id}">
+        <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
         <img src="${photo.url}" alt="${photo.caption || 'Photo ' + (idx + 1)}">
         ${tagsHtml}
         <span class="photo-order">#${idx + 1} ${primaryBadge}</span>
-        <div class="photo-controls">
-          <button type="button" onclick="event.preventDefault(); event.stopPropagation(); movePhotoInEdit('${space.id}', '${photo.id}', 'up')" ${idx === 0 ? 'disabled' : ''}>↑ Up</button>
-          <button type="button" onclick="event.preventDefault(); event.stopPropagation(); movePhotoInEdit('${space.id}', '${photo.id}', 'down')" ${idx === space.photos.length - 1 ? 'disabled' : ''}>↓ Down</button>
-          <button type="button" class="btn-delete" onclick="event.preventDefault(); event.stopPropagation(); removePhotoFromSpace('${space.id}', '${photo.id}')">× Remove</button>
-        </div>
+        <button type="button" class="btn-remove-photo" onclick="event.preventDefault(); event.stopPropagation(); removePhotoFromSpace('${space.id}', '${photo.id}')" title="Remove">×</button>
       </div>
     `;
   }).join('');
+
+  // Initialize drag and drop
+  initPhotoDragAndDrop(container, space.id);
+}
+
+// Drag and drop for photo reordering
+function initPhotoDragAndDrop(container, spaceId) {
+  let draggedItem = null;
+
+  container.querySelectorAll('.edit-photo-item').forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+      draggedItem = item;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      draggedItem = null;
+      // Remove all drag-over states
+      container.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    });
+
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (draggedItem && draggedItem !== item) {
+        item.classList.add('drag-over');
+      }
+    });
+
+    item.addEventListener('dragleave', () => {
+      item.classList.remove('drag-over');
+    });
+
+    item.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+
+      if (!draggedItem || draggedItem === item) return;
+
+      // Get current order
+      const items = [...container.querySelectorAll('.edit-photo-item')];
+      const fromIndex = items.indexOf(draggedItem);
+      const toIndex = items.indexOf(item);
+
+      // Reorder in DOM
+      if (fromIndex < toIndex) {
+        item.parentNode.insertBefore(draggedItem, item.nextSibling);
+      } else {
+        item.parentNode.insertBefore(draggedItem, item);
+      }
+
+      // Get new order of photo IDs
+      const newOrder = [...container.querySelectorAll('.edit-photo-item')]
+        .map(el => el.dataset.photoId);
+
+      // Save to database
+      await savePhotoOrder(spaceId, newOrder);
+    });
+  });
+}
+
+// Save photo order to database
+async function savePhotoOrder(spaceId, mediaIds) {
+  try {
+    await mediaService.reorderInSpace(spaceId, mediaIds);
+
+    // Update local data
+    const space = spaces.find(s => s.id === spaceId);
+    if (space) {
+      // Reorder the photos array to match
+      const photoMap = new Map(space.photos.map(p => [p.id, p]));
+      space.photos = mediaIds.map(id => photoMap.get(id)).filter(Boolean);
+      // Re-render to update order numbers
+      renderEditPhotos(space);
+    }
+  } catch (error) {
+    console.error('Error saving photo order:', error);
+    alert('Failed to save photo order');
+  }
 }
 
 async function handleEditSpaceSubmit() {
