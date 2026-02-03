@@ -437,16 +437,20 @@ function setupEventListeners() {
 // Lightbox functionality
 let lightboxGallery = [];
 let lightboxIndex = 0;
+let currentGalleryUrls = []; // Stores URLs of photos in currently displayed space
 
-function openLightbox(imageUrl, gallery = null) {
+function setCurrentGallery(photos) {
+  currentGalleryUrls = photos.map(p => p.url);
+}
+
+function openLightbox(imageUrl) {
   const lightbox = document.getElementById('imageLightbox');
   const lightboxImage = document.getElementById('lightboxImage');
   if (lightbox && lightboxImage) {
-    // Set up gallery if provided
-    if (gallery && Array.isArray(gallery)) {
-      lightboxGallery = gallery;
-      lightboxIndex = gallery.indexOf(imageUrl);
-      if (lightboxIndex === -1) lightboxIndex = 0;
+    // Use current gallery if available and image is in it
+    if (currentGalleryUrls.length > 0 && currentGalleryUrls.includes(imageUrl)) {
+      lightboxGallery = [...currentGalleryUrls];
+      lightboxIndex = lightboxGallery.indexOf(imageUrl);
     } else {
       lightboxGallery = [imageUrl];
       lightboxIndex = 0;
@@ -849,10 +853,10 @@ function showSpaceDetail(spaceId) {
 
   let photosHtml = '';
   if (space.photos.length) {
-    const galleryUrls = JSON.stringify(space.photos.map(p => p.url));
+    setCurrentGallery(space.photos);
     const photoItems = space.photos.map((p, idx) => {
       return `
-        <div class="detail-photo" onclick="openLightbox('${p.url}', ${galleryUrls.replace(/"/g, '&quot;')})" style="cursor: zoom-in;">
+        <div class="detail-photo" onclick="openLightbox('${p.url}')" style="cursor: zoom-in;">
           <img src="${p.url}" alt="${p.caption || space.name}">
         </div>
       `;
@@ -1902,7 +1906,7 @@ function renderEditPhotos(space) {
     return;
   }
 
-  const galleryUrls = JSON.stringify(space.photos.map(p => p.url));
+  setCurrentGallery(space.photos);
 
   container.innerHTML = space.photos.map((photo, idx) => {
     // Show tags if available
@@ -1916,7 +1920,7 @@ function renderEditPhotos(space) {
     return `
       <div class="edit-photo-item" draggable="true" data-photo-id="${photo.id}" data-space-id="${space.id}">
         <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
-        <img src="${photo.url}" alt="${photo.caption || 'Photo ' + (idx + 1)}" onclick="openLightbox('${photo.url}', ${galleryUrls.replace(/"/g, '&quot;')})" style="cursor: zoom-in;">
+        <img src="${photo.url}" alt="${photo.caption || 'Photo ' + (idx + 1)}" onclick="openLightbox('${photo.url}')" style="cursor: zoom-in;">
         ${tagsHtml}
         <span class="photo-order">#${idx + 1} ${primaryBadge}</span>
         <button type="button" class="btn-remove-photo" onclick="event.preventDefault(); event.stopPropagation(); removePhotoFromSpace('${space.id}', '${photo.id}')" title="Remove">×</button>

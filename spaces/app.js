@@ -499,13 +499,13 @@ function displaySpaceDetail(space) {
 
   let photosHtml = '';
   if (space.photos.length) {
-    const galleryUrls = JSON.stringify(space.photos.map(p => p.url));
+    setCurrentGallery(space.photos);
     photosHtml = `
       <div class="detail-section detail-photos">
         <h3>Photos</h3>
         <div class="detail-photos-grid">
           ${space.photos.map(p => `
-            <div class="detail-photo" onclick="openLightbox('${p.url}', ${galleryUrls.replace(/"/g, '&quot;')})" style="cursor: zoom-in;">
+            <div class="detail-photo" onclick="openLightbox('${p.url}')" style="cursor: zoom-in;">
               <img src="${p.url}" alt="${p.caption || space.name}">
             </div>
           `).join('')}
@@ -561,16 +561,20 @@ function displaySpaceDetail(space) {
 // Lightbox functionality
 let lightboxGallery = [];
 let lightboxIndex = 0;
+let currentGalleryUrls = []; // Stores URLs of photos in currently displayed space
 
-function openLightbox(imageUrl, gallery = null) {
+function setCurrentGallery(photos) {
+  currentGalleryUrls = photos.map(p => p.url);
+}
+
+function openLightbox(imageUrl) {
   const lightbox = document.getElementById('imageLightbox');
   const lightboxImage = document.getElementById('lightboxImage');
   if (lightbox && lightboxImage) {
-    // Set up gallery if provided
-    if (gallery && Array.isArray(gallery)) {
-      lightboxGallery = gallery;
-      lightboxIndex = gallery.indexOf(imageUrl);
-      if (lightboxIndex === -1) lightboxIndex = 0;
+    // Use current gallery if available and image is in it
+    if (currentGalleryUrls.length > 0 && currentGalleryUrls.includes(imageUrl)) {
+      lightboxGallery = [...currentGalleryUrls];
+      lightboxIndex = lightboxGallery.indexOf(imageUrl);
     } else {
       lightboxGallery = [imageUrl];
       lightboxIndex = 0;
