@@ -504,7 +504,7 @@ function displaySpaceDetail(space) {
         <h3>Photos</h3>
         <div class="detail-photos-grid">
           ${space.photos.map(p => `
-            <div class="detail-photo">
+            <div class="detail-photo" onclick="openLightbox('${p.url}')" style="cursor: zoom-in;">
               <img src="${p.url}" alt="${p.caption || space.name}">
             </div>
           `).join('')}
