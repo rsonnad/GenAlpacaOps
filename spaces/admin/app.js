@@ -406,29 +406,94 @@ function setupEventListeners() {
 
   // Image lightbox
   const lightbox = document.getElementById('imageLightbox');
-  const lightboxImage = document.getElementById('lightboxImage');
 
   lightbox?.addEventListener('click', (e) => {
     if (e.target === lightbox || e.target.classList.contains('lightbox-close')) {
-      lightbox.classList.add('hidden');
+      closeLightbox();
     }
   });
 
-  // Close lightbox on escape
+  // Navigation buttons
+  const prevBtn = document.getElementById('lightboxPrev');
+  const nextBtn = document.getElementById('lightboxNext');
+  if (prevBtn) prevBtn.addEventListener('click', (e) => { e.stopPropagation(); lightboxPrev(); });
+  if (nextBtn) nextBtn.addEventListener('click', (e) => { e.stopPropagation(); lightboxNext(); });
+
+  // Keyboard navigation
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !lightbox?.classList.contains('hidden')) {
-      lightbox.classList.add('hidden');
+    const lightbox = document.getElementById('imageLightbox');
+    if (!lightbox || lightbox.classList.contains('hidden')) return;
+
+    if (e.key === 'Escape') {
+      closeLightbox();
+    } else if (e.key === 'ArrowLeft') {
+      lightboxPrev();
+    } else if (e.key === 'ArrowRight') {
+      lightboxNext();
     }
   });
 }
 
-// Open image in lightbox
-function openLightbox(imageUrl) {
+// Lightbox functionality
+let lightboxGallery = [];
+let lightboxIndex = 0;
+
+function openLightbox(imageUrl, gallery = null) {
   const lightbox = document.getElementById('imageLightbox');
   const lightboxImage = document.getElementById('lightboxImage');
   if (lightbox && lightboxImage) {
+    // Set up gallery if provided
+    if (gallery && Array.isArray(gallery)) {
+      lightboxGallery = gallery;
+      lightboxIndex = gallery.indexOf(imageUrl);
+      if (lightboxIndex === -1) lightboxIndex = 0;
+    } else {
+      lightboxGallery = [imageUrl];
+      lightboxIndex = 0;
+    }
+
     lightboxImage.src = imageUrl;
     lightbox.classList.remove('hidden');
+    updateLightboxNav();
+  }
+}
+
+function updateLightboxNav() {
+  const prevBtn = document.getElementById('lightboxPrev');
+  const nextBtn = document.getElementById('lightboxNext');
+  if (prevBtn && nextBtn) {
+    prevBtn.disabled = lightboxIndex <= 0;
+    nextBtn.disabled = lightboxIndex >= lightboxGallery.length - 1;
+    // Hide nav buttons if only one image
+    const showNav = lightboxGallery.length > 1;
+    prevBtn.style.display = showNav ? 'flex' : 'none';
+    nextBtn.style.display = showNav ? 'flex' : 'none';
+  }
+}
+
+function lightboxPrev() {
+  if (lightboxIndex > 0) {
+    lightboxIndex--;
+    document.getElementById('lightboxImage').src = lightboxGallery[lightboxIndex];
+    updateLightboxNav();
+  }
+}
+
+function lightboxNext() {
+  if (lightboxIndex < lightboxGallery.length - 1) {
+    lightboxIndex++;
+    document.getElementById('lightboxImage').src = lightboxGallery[lightboxIndex];
+    updateLightboxNav();
+  }
+}
+
+function closeLightbox() {
+  const lightbox = document.getElementById('imageLightbox');
+  if (lightbox) {
+    lightbox.classList.add('hidden');
+    document.getElementById('lightboxImage').src = '';
+    lightboxGallery = [];
+    lightboxIndex = 0;
   }
 }
 
@@ -784,9 +849,10 @@ function showSpaceDetail(spaceId) {
 
   let photosHtml = '';
   if (space.photos.length) {
+    const galleryUrls = JSON.stringify(space.photos.map(p => p.url));
     const photoItems = space.photos.map((p, idx) => {
       return `
-        <div class="detail-photo" onclick="openLightbox('${p.url}')" style="cursor: zoom-in;">
+        <div class="detail-photo" onclick="openLightbox('${p.url}', ${galleryUrls.replace(/"/g, '&quot;')})" style="cursor: zoom-in;">
           <img src="${p.url}" alt="${p.caption || space.name}">
         </div>
       `;
@@ -1836,6 +1902,8 @@ function renderEditPhotos(space) {
     return;
   }
 
+  const galleryUrls = JSON.stringify(space.photos.map(p => p.url));
+
   container.innerHTML = space.photos.map((photo, idx) => {
     // Show tags if available
     const tagsHtml = photo.tags?.length
@@ -1848,7 +1916,7 @@ function renderEditPhotos(space) {
     return `
       <div class="edit-photo-item" draggable="true" data-photo-id="${photo.id}" data-space-id="${space.id}">
         <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
-        <img src="${photo.url}" alt="${photo.caption || 'Photo ' + (idx + 1)}" onclick="openLightbox('${photo.url}')" style="cursor: zoom-in;">
+        <img src="${photo.url}" alt="${photo.caption || 'Photo ' + (idx + 1)}" onclick="openLightbox('${photo.url}', ${galleryUrls.replace(/"/g, '&quot;')})" style="cursor: zoom-in;">
         ${tagsHtml}
         <span class="photo-order">#${idx + 1} ${primaryBadge}</span>
         <button type="button" class="btn-remove-photo" onclick="event.preventDefault(); event.stopPropagation(); removePhotoFromSpace('${space.id}', '${photo.id}')" title="Remove">×</button>

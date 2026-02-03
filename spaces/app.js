@@ -499,12 +499,13 @@ function displaySpaceDetail(space) {
 
   let photosHtml = '';
   if (space.photos.length) {
+    const galleryUrls = JSON.stringify(space.photos.map(p => p.url));
     photosHtml = `
       <div class="detail-section detail-photos">
         <h3>Photos</h3>
         <div class="detail-photos-grid">
           ${space.photos.map(p => `
-            <div class="detail-photo" onclick="openLightbox('${p.url}')" style="cursor: zoom-in;">
+            <div class="detail-photo" onclick="openLightbox('${p.url}', ${galleryUrls.replace(/"/g, '&quot;')})" style="cursor: zoom-in;">
               <img src="${p.url}" alt="${p.caption || space.name}">
             </div>
           `).join('')}
@@ -558,12 +559,55 @@ function displaySpaceDetail(space) {
 }
 
 // Lightbox functionality
-function openLightbox(imageUrl) {
+let lightboxGallery = [];
+let lightboxIndex = 0;
+
+function openLightbox(imageUrl, gallery = null) {
   const lightbox = document.getElementById('imageLightbox');
   const lightboxImage = document.getElementById('lightboxImage');
   if (lightbox && lightboxImage) {
+    // Set up gallery if provided
+    if (gallery && Array.isArray(gallery)) {
+      lightboxGallery = gallery;
+      lightboxIndex = gallery.indexOf(imageUrl);
+      if (lightboxIndex === -1) lightboxIndex = 0;
+    } else {
+      lightboxGallery = [imageUrl];
+      lightboxIndex = 0;
+    }
+
     lightboxImage.src = imageUrl;
     lightbox.classList.remove('hidden');
+    updateLightboxNav();
+  }
+}
+
+function updateLightboxNav() {
+  const prevBtn = document.getElementById('lightboxPrev');
+  const nextBtn = document.getElementById('lightboxNext');
+  if (prevBtn && nextBtn) {
+    prevBtn.disabled = lightboxIndex <= 0;
+    nextBtn.disabled = lightboxIndex >= lightboxGallery.length - 1;
+    // Hide nav buttons if only one image
+    const showNav = lightboxGallery.length > 1;
+    prevBtn.style.display = showNav ? 'flex' : 'none';
+    nextBtn.style.display = showNav ? 'flex' : 'none';
+  }
+}
+
+function lightboxPrev() {
+  if (lightboxIndex > 0) {
+    lightboxIndex--;
+    document.getElementById('lightboxImage').src = lightboxGallery[lightboxIndex];
+    updateLightboxNav();
+  }
+}
+
+function lightboxNext() {
+  if (lightboxIndex < lightboxGallery.length - 1) {
+    lightboxIndex++;
+    document.getElementById('lightboxImage').src = lightboxGallery[lightboxIndex];
+    updateLightboxNav();
   }
 }
 
@@ -572,6 +616,8 @@ function closeLightbox() {
   if (lightbox) {
     lightbox.classList.add('hidden');
     document.getElementById('lightboxImage').src = '';
+    lightboxGallery = [];
+    lightboxIndex = 0;
   }
 }
 
@@ -586,10 +632,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ESC key closes lightbox
+  // Navigation buttons
+  const prevBtn = document.getElementById('lightboxPrev');
+  const nextBtn = document.getElementById('lightboxNext');
+  if (prevBtn) prevBtn.addEventListener('click', (e) => { e.stopPropagation(); lightboxPrev(); });
+  if (nextBtn) nextBtn.addEventListener('click', (e) => { e.stopPropagation(); lightboxNext(); });
+
+  // Keyboard navigation
   document.addEventListener('keydown', (e) => {
+    const lightbox = document.getElementById('imageLightbox');
+    if (!lightbox || lightbox.classList.contains('hidden')) return;
+
     if (e.key === 'Escape') {
       closeLightbox();
+    } else if (e.key === 'ArrowLeft') {
+      lightboxPrev();
+    } else if (e.key === 'ArrowRight') {
+      lightboxNext();
     }
   });
 });
