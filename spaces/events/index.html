@@ -402,6 +402,70 @@
       font-weight: 500;
     }
 
+    .space-thumbnail {
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+
+    .space-thumbnail:hover {
+      transform: scale(1.05);
+    }
+
+    .space-thumbnail-placeholder {
+      width: 50px;
+      height: 50px;
+      background: var(--bg);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+    }
+
+    .thumbnail-cell {
+      width: 60px;
+      padding: 0.375rem 0.5rem !important;
+    }
+
+    /* Lightbox styles */
+    .lightbox {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      cursor: pointer;
+    }
+
+    .lightbox img {
+      max-width: 90%;
+      max-height: 90%;
+      object-fit: contain;
+      border-radius: var(--radius);
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      color: white;
+      font-size: 2rem;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0.5rem;
+    }
+
     .availability-badge {
       display: inline-block;
       padding: 0.2rem 0.5rem;
@@ -817,6 +881,7 @@
               <thead>
                 <tr>
                   <th class="checkbox-cell"></th>
+                  <th class="thumbnail-cell"></th>
                   <th>Space</th>
                   <th>Availability</th>
                 </tr>
@@ -824,7 +889,7 @@
               <tbody id="spacesTableBody">
                 <!-- Populated dynamically by JS -->
                 <tr>
-                  <td colspan="3" class="spaces-loading">Loading spaces...</td>
+                  <td colspan="4" class="spaces-loading">Loading spaces...</td>
                 </tr>
               </tbody>
             </table>
@@ -992,11 +1057,23 @@
       }
     });
 
-    // Load all event spaces from database
+    // Lightbox function
+    function openLightbox(imageUrl) {
+      const lightbox = document.createElement('div');
+      lightbox.className = 'lightbox';
+      lightbox.innerHTML = `
+        <button class="lightbox-close">&times;</button>
+        <img src="${imageUrl}" alt="Space photo">
+      `;
+      lightbox.addEventListener('click', () => lightbox.remove());
+      document.body.appendChild(lightbox);
+    }
+
+    // Load all event spaces from database (with media)
     async function loadAllEventSpaces() {
       try {
         const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/spaces?can_be_event_space=eq.true&is_archived=eq.false&select=id,name&order=name`,
+          `${SUPABASE_URL}/rest/v1/spaces?can_be_event_space=eq.true&is_archived=eq.false&select=id,name,media_spaces(display_order,is_primary,media:media_id(url))&order=name`,
           {
             headers: {
               'apikey': SUPABASE_KEY,
@@ -1006,19 +1083,37 @@
         );
 
         if (!response.ok) throw new Error('Failed to load spaces');
-        allEventSpaces = await response.json();
+        const spacesData = await response.json();
+
+        // Process spaces to extract primary photo
+        allEventSpaces = spacesData.map(space => {
+          const mediaSpaces = space.media_spaces || [];
+          // Sort by display_order and find primary or first
+          const sorted = mediaSpaces
+            .filter(ms => ms.media?.url)
+            .sort((a, b) => {
+              if (a.is_primary && !b.is_primary) return -1;
+              if (!a.is_primary && b.is_primary) return 1;
+              return (a.display_order || 0) - (b.display_order || 0);
+            });
+          return {
+            id: space.id,
+            name: space.name,
+            photoUrl: sorted[0]?.media?.url || null
+          };
+        });
 
         // Render spaces (all disabled until date selected)
         renderSpaces();
       } catch (error) {
         console.error('Error loading spaces:', error);
-        spacesTableBody.innerHTML = '<tr><td colspan="3" class="spaces-loading" style="color: var(--error);">Failed to load spaces. Please refresh the page.</td></tr>';
+        spacesTableBody.innerHTML = '<tr><td colspan="4" class="spaces-loading" style="color: var(--error);">Failed to load spaces. Please refresh the page.</td></tr>';
       }
     }
 
     // Load booked spaces for a specific date
     async function loadAvailableSpaces(date) {
-      spacesTableBody.innerHTML = '<tr><td colspan="3" class="spaces-loading">Checking availability...</td></tr>';
+      spacesTableBody.innerHTML = '<tr><td colspan="4" class="spaces-loading">Checking availability...</td></tr>';
 
       try {
         // Get assignments that overlap with the selected date
@@ -1067,14 +1162,14 @@
         renderSpaces();
       } catch (error) {
         console.error('Error checking availability:', error);
-        spacesTableBody.innerHTML = '<tr><td colspan="3" class="spaces-loading" style="color: var(--error);">Failed to check availability. Please try again.</td></tr>';
+        spacesTableBody.innerHTML = '<tr><td colspan="4" class="spaces-loading" style="color: var(--error);">Failed to check availability. Please try again.</td></tr>';
       }
     }
 
     // Render spaces table
     function renderSpaces() {
       if (allEventSpaces.length === 0) {
-        spacesTableBody.innerHTML = '<tr><td colspan="3" class="spaces-loading">No event spaces configured.</td></tr>';
+        spacesTableBody.innerHTML = '<tr><td colspan="4" class="spaces-loading">No event spaces configured.</td></tr>';
         return;
       }
 
@@ -1102,26 +1197,41 @@
           availabilityHtml = '<span class="availability-badge unavailable">Booked</span>';
         }
 
+        const thumbnailHtml = space.photoUrl
+          ? `<img src="${space.photoUrl}" alt="${space.name}" class="space-thumbnail" data-full-url="${space.photoUrl}">`
+          : '<div class="space-thumbnail-placeholder">No photo</div>';
+
         return `
           <tr class="${rowClass}" data-space-id="${space.id}">
             <td class="checkbox-cell">
               <input type="checkbox" id="space_${space.id}" name="spaces[]" value="${space.id}" ${!canSelect ? 'disabled' : ''}>
             </td>
+            <td class="thumbnail-cell">${thumbnailHtml}</td>
             <td class="space-name">${space.name}</td>
             <td>${availabilityHtml}</td>
           </tr>
         `;
       }).join('');
 
-      // Add click handler to rows for easier selection
+      // Add click handler to rows for easier selection (but not on thumbnails)
       spacesTableBody.querySelectorAll('tr:not(.unavailable)').forEach(row => {
         row.addEventListener('click', (e) => {
+          // Don't toggle checkbox when clicking thumbnail
+          if (e.target.classList.contains('space-thumbnail')) return;
           if (e.target.type !== 'checkbox') {
             const checkbox = row.querySelector('input[type="checkbox"]');
             if (checkbox && !checkbox.disabled) {
               checkbox.checked = !checkbox.checked;
             }
           }
+        });
+      });
+
+      // Add lightbox click handler to thumbnails
+      spacesTableBody.querySelectorAll('.space-thumbnail').forEach(img => {
+        img.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openLightbox(img.dataset.fullUrl);
         });
       });
     }
