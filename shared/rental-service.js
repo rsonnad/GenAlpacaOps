@@ -10,6 +10,7 @@
  */
 
 import { supabase } from './supabase.js';
+import { validate, rules } from './validation.js';
 
 // =============================================
 // STATUS CONSTANTS
@@ -169,6 +170,21 @@ function getPipelineStage(application) {
  * Create a new rental application
  */
 async function createApplication(personId, options = {}) {
+  // Validate inputs
+  const validation = validate(
+    { person_id: personId, ...options },
+    {
+      person_id: [rules.required('Person ID is required'), rules.uuid()],
+      desired_space_id: [rules.uuid()],
+      desired_move_in: [rules.date()],
+    }
+  );
+
+  if (!validation.valid) {
+    const firstError = Object.values(validation.errors)[0];
+    throw new Error(firstError);
+  }
+
   const {
     desired_space_id = null,
     desired_move_in = null,
@@ -224,6 +240,24 @@ async function startReview(applicationId, reviewedBy = null) {
  * Approve application with terms
  */
 async function approveApplication(applicationId, terms) {
+  // Validate inputs
+  const validation = validate(
+    { applicationId, ...terms },
+    {
+      applicationId: [rules.required('Application ID is required'), rules.uuid()],
+      spaceId: [rules.required('Space is required'), rules.uuid()],
+      rate: [rules.required('Rate is required'), rules.number({ positive: true, positiveMessage: 'Rate must be positive' })],
+      moveInDate: [rules.required('Move-in date is required'), rules.date()],
+      leaseEndDate: [rules.date(), rules.afterField('moveInDate', 'Lease end must be after move-in date')],
+      securityDepositAmount: [rules.number({ min: 0, minMessage: 'Security deposit cannot be negative' })],
+    }
+  );
+
+  if (!validation.valid) {
+    const firstError = Object.values(validation.errors)[0];
+    throw new Error(firstError);
+  }
+
   const {
     spaceId,
     rate,
@@ -277,6 +311,24 @@ async function approveApplication(applicationId, terms) {
  * Used for auto-save and explicit save on Terms tab
  */
 async function saveTerms(applicationId, terms) {
+  // Validate inputs (less strict than approve - allows partial saves)
+  const validation = validate(
+    { applicationId, ...terms },
+    {
+      applicationId: [rules.required('Application ID is required'), rules.uuid()],
+      spaceId: [rules.uuid()],
+      rate: [rules.number({ min: 0, minMessage: 'Rate cannot be negative' })],
+      moveInDate: [rules.date()],
+      leaseEndDate: [rules.date()],
+      securityDepositAmount: [rules.number({ min: 0, minMessage: 'Security deposit cannot be negative' })],
+    }
+  );
+
+  if (!validation.valid) {
+    const firstError = Object.values(validation.errors)[0];
+    throw new Error(firstError);
+  }
+
   const {
     spaceId,
     rate,

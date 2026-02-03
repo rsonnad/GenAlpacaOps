@@ -9,6 +9,7 @@
  */
 
 import { supabase } from './supabase.js';
+import { validate, rules } from './validation.js';
 
 // =============================================
 // STATUS CONSTANTS
@@ -193,6 +194,27 @@ function getPipelineStage(request) {
  * Create a new event hosting request
  */
 async function createRequest(personId, eventData) {
+  // Validate inputs
+  const validation = validate(
+    { person_id: personId, ...eventData },
+    {
+      person_id: [rules.required('Person ID is required'), rules.uuid()],
+      event_name: [rules.required('Event name is required'), rules.length({ max: 200 })],
+      event_date: [rules.required('Event date is required'), rules.date(), rules.futureDate('Event date must be in the future')],
+      event_start_time: [rules.required('Start time is required')],
+      event_end_time: [rules.required('End time is required')],
+      expected_guests: [rules.required('Expected guests is required'), rules.number({ min: 1, max: 500, integer: true })],
+      setup_staff_phone: [rules.phone()],
+      cleanup_staff_phone: [rules.phone()],
+      parking_manager_phone: [rules.phone()],
+    }
+  );
+
+  if (!validation.valid) {
+    const firstError = Object.values(validation.errors)[0];
+    throw new Error(firstError);
+  }
+
   const {
     organization_name = null,
     has_hosted_before = false,
@@ -312,6 +334,23 @@ async function startReview(requestId, reviewedBy = null) {
  * Approve event request with terms
  */
 async function approveRequest(requestId, terms) {
+  // Validate inputs
+  const validation = validate(
+    { requestId, ...terms },
+    {
+      requestId: [rules.required('Request ID is required'), rules.uuid()],
+      approved_max_guests: [rules.number({ min: 1, integer: true, minMessage: 'Max guests must be at least 1' })],
+      rental_fee: [rules.number({ min: 0, minMessage: 'Rental fee cannot be negative' })],
+      reservation_fee: [rules.number({ min: 0, minMessage: 'Reservation fee cannot be negative' })],
+      cleaning_deposit: [rules.number({ min: 0, minMessage: 'Cleaning deposit cannot be negative' })],
+    }
+  );
+
+  if (!validation.valid) {
+    const firstError = Object.values(validation.errors)[0];
+    throw new Error(firstError);
+  }
+
   const {
     approved_max_guests,
     rental_fee = DEFAULT_FEES.RENTAL_FEE,
@@ -377,6 +416,23 @@ async function approveRequest(requestId, terms) {
  * Save terms without changing request status (auto-save)
  */
 async function saveTerms(requestId, terms) {
+  // Validate inputs (less strict than approve - allows partial saves)
+  const validation = validate(
+    { requestId, ...terms },
+    {
+      requestId: [rules.required('Request ID is required'), rules.uuid()],
+      approved_max_guests: [rules.number({ min: 1, integer: true })],
+      rental_fee: [rules.number({ min: 0 })],
+      reservation_fee: [rules.number({ min: 0 })],
+      cleaning_deposit: [rules.number({ min: 0 })],
+    }
+  );
+
+  if (!validation.valid) {
+    const firstError = Object.values(validation.errors)[0];
+    throw new Error(firstError);
+  }
+
   const {
     approved_max_guests,
     rental_fee,
