@@ -493,6 +493,460 @@ npx supabase functions deploy signwell-webhook --project-ref aphrrfprbixmhissnjf
 npx supabase secrets set GEMINI_API_KEY=your_key_here --project-ref aphrrfprbixmhissnjfn
 ```
 
+## Technical Debt & Improvement Roadmap
+
+This section documents issues identified during a comprehensive codebase review, along with prioritized recommendations for improvement.
+
+### Codebase Statistics
+
+| Metric | Value |
+|--------|-------|
+| JavaScript | ~11,400 lines |
+| CSS | ~7,850 lines |
+| Edge Functions | 4 TypeScript files |
+| Total Files | 35+ source files |
+
+### Critical Priority (Security)
+
+#### 1. API Keys in Documentation
+**Issue**: Supabase ANON_KEY is exposed in documentation files (ARCHITECTURE.md, README.md, API.md, SKILL.md).
+
+**Status**: The ANON_KEY is designed for public client-side use and protected by RLS, but should be removed from documentation to follow security best practices.
+
+**Recommendation**:
+- Remove hardcoded keys from all markdown documentation
+- Use environment variable references in docs instead
+- Add `.env.example` file showing required variables
+
+#### 2. Row Level Security (RLS) Gaps
+**Issue**: Current RLS policies allow public read access to all tables, exposing sensitive data.
+
+**Current Policy** (line 267):
+```sql
+create policy "Public read access" on {table} for select using (true);
+```
+
+**Affected Tables**:
+- `people` - Personal contact information visible to anyone
+- `assignments` - Lease details, rates, and dates exposed
+- `rental_applications` - Application status and documents
+- `payments` - Payment history
+
+**Recommendation**:
+```sql
+-- Restrict people table to authenticated users' own records
+create policy "Users can read own record" on people
+  for select using (auth.uid()::text = id::text);
+
+-- Restrict assignments to staff/admin only
+create policy "Staff read assignments" on assignments
+  for select using (auth.jwt() ->> 'role' = 'staff');
+
+-- Storage: public read, authenticated write
+create policy "Authenticated uploads" on storage.objects
+  for insert with check (auth.role() = 'authenticated');
+```
+
+#### 3. Missing Webhook Signature Verification
+**File**: `supabase/functions/signwell-webhook/index.ts`
+
+**Issue**: SignWell webhook accepts any request without verifying the signature, allowing attackers to send fake events.
+
+**Recommendation**:
+```typescript
+import crypto from 'crypto';
+
+const signature = req.headers.get('X-SignWell-Signature');
+const expectedSig = crypto
+  .createHmac('sha256', webhookSecret)
+  .update(rawBody)
+  .digest('hex');
+
+if (signature !== expectedSig) {
+  return new Response('Invalid signature', { status: 401 });
+}
+```
+
+#### 4. Payment Data Logging
+**File**: `supabase/functions/record-payment/index.ts:42`
+
+**Issue**: Payment details logged to console, potentially exposing financial data in Edge Function logs.
+
+**Recommendation**: Remove or mask sensitive payment information in logs.
+
+### High Priority
+
+#### 5. HTML Injection via innerHTML
+**Files**: `app.js`, `spaces/app.js`, `spaces/admin/media.js` (25+ locations)
+
+**Issue**: User-provided data rendered via innerHTML without escaping. While data comes from trusted database, a compromised database could lead to XSS.
+
+**Example** (`app.js:420`):
+```javascript
+<div class="card-title">${space.name}</div>  // Unescaped
+```
+
+**Recommendation**: Add HTML escaping utility to `shared/`:
+```javascript
+// shared/utils.js
+export function escapeHtml(unsafe) {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+```
+
+#### 6. Missing Input Validation
+**Files**: `shared/rental-service.js`, `shared/event-service.js`
+
+**Issue**: Form submissions and API calls lack client-side validation.
+
+**Examples**:
+- No email format validation on rental applications
+- Date ranges not validated (start can be after end)
+- No maximum length on text fields
+
+**Recommendation**: Add validation schema library (e.g., Zod):
+```javascript
+const applicationSchema = z.object({
+  person_id: z.string().uuid(),
+  start_date: z.coerce.date(),
+  end_date: z.coerce.date(),
+  rate_amount: z.number().positive()
+}).refine(d => d.end_date > d.start_date, {
+  message: "End date must be after start date"
+});
+```
+
+#### 7. No Testing Infrastructure
+**Current State**: Zero unit tests, integration tests, or E2E tests.
+
+**Recommendation**:
+1. Add Jest for unit testing:
+   - Test availability calculation logic
+   - Test payment matching algorithms
+   - Test date formatting utilities
+2. Add Playwright for E2E:
+   - Login flow
+   - Create rental application
+   - Media upload workflow
+
+### Medium Priority
+
+#### 8. Code Duplication
+**Issue**: Duplicate code patterns found across modules.
+
+| Pattern | Locations | Lines Saved |
+|---------|-----------|-------------|
+| Toast notification | `media.js:13-41`, `users.js:10-38` | ~30 |
+| Status constants | `rental-service.js:14-56`, `event-service.js:14-67` | ~50 |
+| Date formatting | `app.js:370`, `spaces/app.js:343-346` | ~10 |
+| Template placeholders | `lease-template-service.js`, `event-template-service.js` | ~40 |
+
+**Recommendation**: Extract to shared modules:
+- `shared/components/toast.js` - Reusable toast notifications
+- `shared/constants.js` - All status enums and constants
+- `shared/date-utils.js` - Date formatting functions
+
+#### 9. Performance: N+1 Query Pattern
+**Files**: `app.js:87-118`, `spaces/app.js:84-155`
+
+**Issue**: Availability calculation iterates all assignments for each space.
+
+**Current Pattern**:
+```javascript
+spaces.forEach(space => {
+  const spaceAssignments = assignments.filter(a =>
+    a.assignment_spaces?.some(as => as.space_id === space.id)
+  );
+  // 10 spaces × 100 assignments = 1000 comparisons
+});
+```
+
+**Recommendation**: Pre-compute assignment mapping:
+```javascript
+const assignmentsBySpace = {};
+assignments.forEach(a => {
+  a.assignment_spaces.forEach(as => {
+    assignmentsBySpace[as.space_id] ||= [];
+    assignmentsBySpace[as.space_id].push(a);
+  });
+});
+// Then: const spaceAssignments = assignmentsBySpace[space.id] || [];
+```
+
+#### 10. Performance: Missing Image Lazy Loading
+**Files**: `spaces/app.js:349-420`
+
+**Issue**: All space images load immediately on page load, even below-fold content.
+
+**Recommendation**:
+```javascript
+// Add loading="lazy" to card images
+<img src="${photo.url}" alt="${space.name}" loading="lazy">
+```
+
+Also consider:
+- Generate thumbnail variants (200px, 400px)
+- Use WebP format with JPEG fallback
+- Implement Intersection Observer for complex lazy loading
+
+#### 11. Performance: Missing Database Indexes
+**Recommendation**: Add indexes for frequently queried columns:
+```sql
+CREATE INDEX idx_spaces_listed_secret ON spaces(is_listed, is_secret);
+CREATE INDEX idx_assignments_status_dates ON assignments(status, start_date, end_date);
+CREATE INDEX idx_media_spaces_space_id ON media_spaces(space_id);
+```
+
+#### 12. Console Logging in Production
+**Files**: 15+ files with development console.log statements
+
+**Key Locations**:
+- `shared/media-service.js:241-400` (25+ console calls)
+- `spaces/app.js:159, 164, 520, 541, 544`
+- `shared/auth.js:19, 28, 65`
+
+**Recommendation**: Implement conditional logging:
+```javascript
+// shared/logger.js
+const DEBUG = window.location.hostname === 'localhost';
+export const log = {
+  debug: (...args) => DEBUG && console.log(...args),
+  error: (...args) => console.error(...args),
+  warn: (...args) => console.warn(...args)
+};
+```
+
+#### 13. Accessibility Issues
+**Issue**: Multiple accessibility gaps identified.
+
+**Missing Elements**:
+- Alt text on some images (`app.js:740`, `media.js:206`)
+- ARIA labels on icon-only buttons (`spaces/index.html:49-59`)
+- Modal dialog roles and aria-labelledby attributes
+- Skip navigation link for keyboard users
+- Color contrast on muted text may not meet WCAG AA
+
+**Recommendation**:
+- Add `aria-label` to all icon buttons
+- Add `role="dialog"` and `aria-labelledby` to modals
+- Add skip link: `<a href="#main-content" class="skip-link">Skip to content</a>`
+- Test with screen reader (NVDA/VoiceOver)
+
+### Low Priority
+
+#### 14. Missing SEO Optimization
+**Files**: `spaces/index.html`, `index.html`
+
+**Issue**: Missing meta tags and structured data.
+
+**Recommendation**:
+```html
+<meta name="description" content="GenAlpaca Residency - Rental spaces in Cedar Creek, TX">
+<meta property="og:title" content="GenAlpaca Spaces">
+<meta property="og:image" content="https://...">
+```
+
+Add JSON-LD schema for spaces:
+```json
+{
+  "@context": "schema.org",
+  "@type": "Accommodation",
+  "name": "Skyloft",
+  "priceRange": "$1600/month"
+}
+```
+
+#### 15. Incomplete TypeScript Migration
+**Current State**: Only Edge Functions use TypeScript; frontend is JavaScript.
+
+**Recommendation**: Gradual migration path:
+1. Add `tsconfig.json` with `allowJs: true`
+2. Start with `shared/` services
+3. Add type definitions for Supabase schema
+4. Use `tsc --noEmit` for type checking
+
+#### 16. CSS Duplication
+**Issue**: ~7,850 lines of CSS with significant overlap.
+
+| File | Lines |
+|------|-------|
+| `styles.css` | 767 |
+| `spaces/styles.css` | 1,292 |
+| `spaces/admin/styles.css` | 1,606 |
+| `spaces/admin/rentals.css` | 1,405 |
+| `spaces/admin/media.css` | 730 |
+
+**Recommendation**: Consolidate with cascade:
+```
+styles/
+├── base.css          # Variables, typography, reset
+├── components.css    # Buttons, cards, modals
+├── pages/
+│   ├── spaces.css    # Public view specifics
+│   └── admin.css     # Admin-specific styles
+```
+
+Estimated reduction: 20-30% (~1,500-2,000 lines)
+
+#### 17. Incomplete Features (TODOs)
+**File**: `spaces/admin/manage.html`
+
+**Open TODOs**:
+- Line 711: "TODO: Implement full modal like rentals"
+- Line 755: "TODO: signwellService.getDocumentStatus()"
+- Line 761: "TODO: signwellService.resendRequest()"
+
+These indicate incomplete document status tracking and resend functionality.
+
+#### 18. No CI/CD Pipeline
+**Issue**: Manual deployment for Edge Functions with no automation.
+
+**Recommendation**: Add GitHub Actions workflow:
+```yaml
+name: Deploy
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+      - run: supabase functions deploy --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+```
+
+### Improvement Phases
+
+#### Phase 1: Security (Immediate)
+1. ~~Remove API keys from documentation~~ *(Leave ANON_KEY as designed for public use)*
+2. Implement proper RLS policies for sensitive tables
+3. Add webhook signature verification
+4. Remove payment logging from Edge Functions
+5. Add HTML escaping utility
+
+#### Phase 2: Code Quality (Next Sprint)
+1. Extract duplicate toast component to shared module
+2. Create `shared/constants.js` for all status enums
+3. Replace console.log with conditional logger
+4. Add input validation schemas
+
+#### Phase 3: Performance (Following Sprint)
+1. Add `loading="lazy"` to all images
+2. Create database indexes for common queries
+3. Optimize availability calculation with pre-computed mapping
+4. Implement image thumbnails for faster loading
+
+#### Phase 4: Best Practices (Ongoing)
+1. Add unit tests for critical business logic
+2. Add E2E tests for main workflows
+3. Improve accessibility (ARIA, alt text, keyboard nav)
+4. Add meta tags and structured data for SEO
+5. Gradual TypeScript migration
+
+### Architecture Improvements
+
+#### Current State Diagram
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     CURRENT ARCHITECTURE                        │
+│                                                                 │
+│  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐       │
+│  │  app.js     │     │ spaces/     │     │ spaces/admin│       │
+│  │  (legacy)   │     │ app.js      │     │ /*.js       │       │
+│  └──────┬──────┘     └──────┬──────┘     └──────┬──────┘       │
+│         │                   │                   │               │
+│         └───────────────────┼───────────────────┘               │
+│                             │                                   │
+│                             ▼                                   │
+│                    ┌────────────────┐                           │
+│                    │    shared/     │  ← Global mutable state   │
+│                    │  supabase.js   │    in each module         │
+│                    │  auth.js       │                           │
+│                    │  *-service.js  │                           │
+│                    └────────────────┘                           │
+│                                                                 │
+│  Issues:                                                        │
+│  • No single source of truth for state                          │
+│  • Consumer loads admin code unnecessarily                      │
+│  • Mix of export patterns (ES6 vs window globals)               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### Recommended State Management
+For this vanilla JS codebase, implement a simple centralized state pattern:
+
+```javascript
+// shared/store.js
+const state = {
+  spaces: [],
+  assignments: [],
+  isAdminMode: false,
+  selectedIds: new Set(),
+  loading: false,
+  error: null
+};
+
+const listeners = new Set();
+
+export function getState() {
+  return state;
+}
+
+export function setState(updates) {
+  Object.assign(state, updates);
+  listeners.forEach(fn => fn(state));
+}
+
+export function subscribe(listener) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+```
+
+#### Recommended API Pattern
+Standardize service return types:
+
+```javascript
+// shared/result.js
+export function ok(data) {
+  return { ok: true, data };
+}
+
+export function err(error) {
+  return { ok: false, error };
+}
+
+// Usage in services:
+export async function getSpaces() {
+  try {
+    const { data, error } = await supabase.from('spaces').select('*');
+    if (error) return err(error);
+    return ok(data);
+  } catch (e) {
+    return err(e);
+  }
+}
+
+// Usage in components:
+const result = await getSpaces();
+if (!result.ok) {
+  showToast(result.error.message, 'error');
+  return;
+}
+const spaces = result.data;
+```
+
 ## Related Documentation
 
 - `README.md` - Quick setup
