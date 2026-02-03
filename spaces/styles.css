@@ -360,8 +360,11 @@ h1 {
   min-width: 0;
 }
 
-.filter-checkboxes-group .filter-checkboxes .checkbox-label {
-  min-width: 0;
+.filter-checkboxes-group .filter-checkboxes .checkbox-label,
+.filter-checkboxes-group .checkbox-label {
+  min-width: auto;
+  width: auto;
+  padding: 0;
 }
 
 .filter-checkboxes {
@@ -394,13 +397,16 @@ h1 {
 }
 
 .filter-checkboxes input[type="checkbox"],
-.checkbox-label input[type="checkbox"] {
+.checkbox-label input[type="checkbox"],
+.filter-group input[type="checkbox"] {
   width: 1rem;
   height: 1rem;
   margin: 0;
+  padding: 0;
   flex-shrink: 0;
   cursor: pointer;
   accent-color: var(--accent);
+  min-width: 1rem;
 }
 
 .clear-btn {
