@@ -80,15 +80,26 @@ async function loadData() {
     spaces = spacesData || [];
     assignments = assignmentsData || [];
     photoRequests = requestsData || [];
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
+    // Pre-compute assignment mapping for O(n) instead of O(n*m) lookup
+    const assignmentsBySpaceId = {};
+    assignments.forEach(a => {
+      a.assignment_spaces?.forEach(as => {
+        if (!assignmentsBySpaceId[as.space_id]) {
+          assignmentsBySpaceId[as.space_id] = [];
+        }
+        assignmentsBySpaceId[as.space_id].push(a);
+      });
+    });
+
     // Map assignments to spaces and compute availability windows
     spaces.forEach(space => {
-      // Get all assignments for this space, sorted by start date
-      const spaceAssignments = assignments
-        .filter(a => a.assignment_spaces?.some(as => as.space_id === space.id))
+      // Get all assignments for this space, sorted by start date (using pre-computed mapping)
+      const spaceAssignments = (assignmentsBySpaceId[space.id] || [])
+        .slice() // Create copy to avoid mutating the original
         .sort((a, b) => {
           const aStart = a.start_date ? new Date(a.start_date) : new Date(0);
           const bStart = b.start_date ? new Date(b.start_date) : new Date(0);
@@ -404,8 +415,8 @@ function renderCards(spaces) {
     return `
       <div class="space-card" onclick="showSpaceDetail('${space.id}')">
         <div class="card-image">
-          ${photo 
-            ? `<img src="${photo.url}" alt="${space.name}">`
+          ${photo
+            ? `<img src="${photo.url}" alt="${space.name}" loading="lazy">`
             : `<div class="no-photo">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
@@ -528,7 +539,7 @@ function showSpaceDetail(spaceId) {
       ` : '';
       return `
         <div class="detail-photo">
-          <img src="${p.url}" alt="${p.caption || space.name}">
+          <img src="${p.url}" alt="${p.caption || space.name}" loading="lazy">
           ${orderControls}
         </div>
       `;

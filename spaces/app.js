@@ -1,5 +1,6 @@
 // Consumer view - Public spaces listing
 import { supabase } from '../shared/supabase.js';
+import { log } from '../shared/logger.js';
 
 // App state
 let spaces = [];
@@ -78,6 +79,17 @@ async function loadData(retryCount = 0) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Pre-compute assignment mapping for O(n) instead of O(n*m) lookup
+    const assignmentsBySpaceId = {};
+    assignments.forEach(a => {
+      a.assignment_spaces?.forEach(as => {
+        if (!assignmentsBySpaceId[as.space_id]) {
+          assignmentsBySpaceId[as.space_id] = [];
+        }
+        assignmentsBySpaceId[as.space_id].push(a);
+      });
+    });
+
     // Process spaces
     spaces = (spacesData || []).filter(s => !s.is_archived);
 
@@ -88,9 +100,9 @@ async function loadData(retryCount = 0) {
         .map(ms => ms.media ? { ...ms.media, display_order: ms.display_order, is_primary: ms.is_primary } : null)
         .filter(p => p && p.url);
 
-      // Compute availability from assignments
-      const spaceAssignments = assignments
-        .filter(a => a.assignment_spaces?.some(as => as.space_id === space.id))
+      // Compute availability from assignments (using pre-computed mapping)
+      const spaceAssignments = (assignmentsBySpaceId[space.id] || [])
+        .slice() // Create copy to avoid mutating the original
         .sort((a, b) => {
           const aStart = a.start_date ? new Date(a.start_date) : new Date(0);
           const bStart = b.start_date ? new Date(b.start_date) : new Date(0);
@@ -156,12 +168,12 @@ async function loadData(retryCount = 0) {
     });
 
   } catch (error) {
-    console.error('Error loading data:', error);
+    log.error('Error loading data:', error);
 
     // Retry on AbortError (network issues)
     if (error.name === 'AbortError' || error.message?.includes('aborted')) {
       if (retryCount < maxRetries) {
-        console.log(`Retrying... (attempt ${retryCount + 2}/${maxRetries + 1})`);
+        log.info(`Retrying... (attempt ${retryCount + 2}/${maxRetries + 1})`);
         await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
         return loadData(retryCount + 1);
       }
@@ -377,7 +389,7 @@ function renderCards(spacesToRender) {
       <div class="space-card" onclick="showSpaceDetail('${space.id}')">
         <div class="card-image">
           ${photo
-            ? `<img src="${photo.url}" alt="${space.name}">`
+            ? `<img src="${photo.url}" alt="${space.name}" loading="lazy">`
             : `<div class="no-photo">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
@@ -428,7 +440,7 @@ function renderTable(spacesToRender) {
 
     // Thumbnail
     const thumbnail = space.photos.length > 0
-      ? `<img src="${space.photos[0].url}" alt="" class="table-thumbnail" onclick="event.stopPropagation(); openLightbox('${space.photos[0].url}')" style="cursor: zoom-in;">`
+      ? `<img src="${space.photos[0].url}" alt="" class="table-thumbnail" loading="lazy" onclick="event.stopPropagation(); openLightbox('${space.photos[0].url}')" style="cursor: zoom-in;">`
       : `<div class="table-thumbnail-placeholder"></div>`;
 
     // Description (truncated)
@@ -517,7 +529,7 @@ async function fetchAndShowSpace(spaceId) {
 
     displaySpaceDetail(space);
   } catch (error) {
-    console.error('Error fetching space:', error);
+    log.error('Error fetching space:', error);
     alert('Failed to load space');
   }
 }
@@ -538,10 +550,10 @@ function displaySpaceDetail(space) {
   // Each entry: { name, photos }
   const ancestorPhotoSections = [];
   let currentParentName = space.parent?.name;
-  console.log('Starting parent chain walk from:', space.name, 'first parent:', currentParentName);
+  log.debug('Starting parent chain walk from:', space.name, 'first parent:', currentParentName);
   while (currentParentName) {
     const parentSpace = spaces.find(s => s.name === currentParentName);
-    console.log('Looking for:', currentParentName, 'found:', parentSpace?.name, 'photos:', parentSpace?.photos?.length);
+    log.debug('Looking for:', currentParentName, 'found:', parentSpace?.name, 'photos:', parentSpace?.photos?.length);
     if (parentSpace && parentSpace.photos && parentSpace.photos.length > 0) {
       ancestorPhotoSections.push({
         name: parentSpace.name,
@@ -550,14 +562,14 @@ function displaySpaceDetail(space) {
     }
     // Move up to the next parent
     const nextParent = parentSpace?.parent?.name || null;
-    console.log('Next parent:', nextParent);
+    log.debug('Next parent:', nextParent);
     currentParentName = nextParent;
   }
-  console.log('Ancestor sections:', ancestorPhotoSections.map(s => s.name));
+  log.debug('Ancestor sections:', ancestorPhotoSections.map(s => s.name));
 
   // Find child spaces (spaces whose parent is this space)
   const childSpaces = spaces.filter(s => s.parent?.name === space.name && s.photos && s.photos.length > 0);
-  console.log('Child spaces with photos:', childSpaces.map(s => s.name));
+  log.debug('Child spaces with photos:', childSpaces.map(s => s.name));
 
   // Combine all photos for lightbox gallery (space photos first, then children, then ancestors)
   const allPhotos = [...space.photos];
@@ -580,7 +592,7 @@ function displaySpaceDetail(space) {
         <div class="detail-photos-grid">
           ${space.photos.map(p => `
             <div class="detail-photo" onclick="openLightbox('${p.url}')" style="cursor: zoom-in;">
-              <img src="${p.url}" alt="${p.caption || space.name}">
+              <img src="${p.url}" alt="${p.caption || space.name}" loading="lazy">
             </div>
           `).join('')}
         </div>
@@ -597,7 +609,7 @@ function displaySpaceDetail(space) {
         <div class="detail-photos-grid">
           ${child.photos.map(p => `
             <div class="detail-photo" onclick="openLightbox('${p.url}')" style="cursor: zoom-in;">
-              <img src="${p.url}" alt="${p.caption || child.name}">
+              <img src="${p.url}" alt="${p.caption || child.name}" loading="lazy">
             </div>
           `).join('')}
         </div>
@@ -616,7 +628,7 @@ function displaySpaceDetail(space) {
         <div class="detail-photos-grid">
           ${section.photos.map(p => `
             <div class="detail-photo" onclick="openLightbox('${p.url}')" style="cursor: zoom-in;">
-              <img src="${p.url}" alt="${p.caption || section.name}">
+              <img src="${p.url}" alt="${p.caption || section.name}" loading="lazy">
             </div>
           `).join('')}
         </div>
