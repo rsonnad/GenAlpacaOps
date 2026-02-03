@@ -951,6 +951,8 @@
     </div>
   </main>
 
+  <!-- Supabase library must load before module script -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script type="module">
     // Import shared Supabase config (single source of truth)
     import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../../shared/supabase.js';
