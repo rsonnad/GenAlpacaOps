@@ -3,11 +3,164 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="../../favicon.png">
+  <link rel="apple-touch-icon" href="../../apple-touch-icon.png">
   <title>Apply - Alpaca Playhouse Austin</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    /* Site-wide Navigation Bar */
+    .site-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 2rem;
+      background: #2d3024;
+      color: white;
+    }
+
+    .site-nav__logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: white;
+    }
+
+    .site-nav__icon {
+      height: 32px;
+      width: auto;
+    }
+
+    .site-nav__wordmark {
+      height: 18px;
+      width: auto;
+    }
+
+    .site-nav__logo span:not(.site-nav__version) {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+
+    .site-nav__links {
+      display: flex;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      gap: 1.5rem;
+    }
+
+    .site-nav__links a {
+      color: rgba(255, 255, 255, 0.85);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    .site-nav__links a:hover,
+    .site-nav__links a.active {
+      color: white;
+    }
+
+    .site-nav__toggle {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.5rem;
+    }
+
+    .site-nav__toggle span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: white;
+      margin: 5px 0;
+    }
+
+    /* Mobile Site Navigation */
+    .site-nav-mobile {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #2d3024;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s, visibility 0.3s;
+    }
+
+    .site-nav-mobile.open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .site-nav-mobile__close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      font-size: 2rem;
+      color: white;
+      cursor: pointer;
+    }
+
+    .site-nav-mobile__links {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      text-align: center;
+    }
+
+    .site-nav-mobile__links li {
+      margin: 1.25rem 0;
+    }
+
+    .site-nav-mobile__links a {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+      font-size: 1.5rem;
+      color: white;
+      text-decoration: none;
+    }
+
+    .site-nav-mobile__links a.active {
+      color: var(--accent);
+    }
+
+    @media (max-width: 900px) {
+      .site-nav__links {
+        display: none;
+      }
+
+      .site-nav__toggle {
+        display: block;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .site-nav {
+        padding: 0.75rem 1rem;
+      }
+
+      .site-nav__logo span {
+        font-size: 0.95rem;
+      }
+
+      .site-nav__icon {
+        height: 28px;
+      }
+
+      .site-nav__wordmark {
+        display: none;
+      }
+    }
+
     :root {
       --bg: #faf9f7;
       --bg-card: #ffffff;
@@ -32,7 +185,7 @@
     }
 
     body {
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
       line-height: 1.5;
@@ -223,12 +376,12 @@
     /* Success state */
     .success-message {
       text-align: center;
-      padding: 3rem 2rem;
+      padding: 2rem;
     }
 
     .success-message .icon {
-      font-size: 4rem;
-      margin-bottom: 1rem;
+      font-size: 3.5rem;
+      margin-bottom: 0.75rem;
     }
 
     .success-message h2 {
@@ -237,15 +390,15 @@
       color: var(--success);
     }
 
-    .success-message p {
+    .success-message > p {
       color: var(--text-muted);
-      margin-bottom: 1.5rem;
-      max-width: 400px;
+      margin-bottom: 1rem;
+      max-width: 450px;
       margin-left: auto;
       margin-right: auto;
     }
 
-    .success-message a {
+    .success-message a.btn-primary {
       display: inline-block;
       padding: 0.75rem 1.5rem;
       background: var(--accent);
@@ -256,8 +409,94 @@
       transition: background 0.15s ease;
     }
 
-    .success-message a:hover {
+    .success-message a.btn-primary:hover {
       background: #327568;
+    }
+
+    /* Application Summary */
+    .application-summary {
+      background: var(--bg);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+      text-align: left;
+    }
+
+    .application-summary h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+      text-align: center;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+
+    .summary-row:last-child {
+      border-bottom: none;
+    }
+
+    .summary-row .label {
+      color: var(--text-muted);
+    }
+
+    .summary-row .value {
+      font-weight: 500;
+      color: var(--text);
+      text-align: right;
+    }
+
+    /* What's Next Section */
+    .whats-next {
+      background: var(--accent-light);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+      text-align: left;
+    }
+
+    .whats-next h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+      text-align: center;
+    }
+
+    .whats-next ol {
+      margin: 0;
+      padding-left: 1.25rem;
+    }
+
+    .whats-next li {
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+
+    .whats-next li:last-child {
+      margin-bottom: 0;
+    }
+
+    .questions-contact {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin: 1rem 0;
+    }
+
+    .questions-contact a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .questions-contact a:hover {
+      text-decoration: underline;
     }
 
     /* Error message */
@@ -273,6 +512,116 @@
     .loading {
       opacity: 0.6;
       pointer-events: none;
+    }
+
+    /* Application Fee Section */
+    .fee-section {
+      background: var(--accent-light);
+      border-left: 4px solid var(--accent);
+    }
+
+    .fee-display {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+    }
+
+    .fee-label {
+      font-weight: 500;
+    }
+
+    .fee-amount {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .fee-amount.free {
+      color: var(--success);
+    }
+
+    .fee-original {
+      text-decoration: line-through;
+      color: var(--text-muted);
+      font-size: 1rem;
+      margin-right: 0.5rem;
+    }
+
+    .discount-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-end;
+    }
+
+    .discount-row .form-group {
+      flex: 1;
+    }
+
+    .discount-row button {
+      padding: 0.625rem 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .discount-row button:hover {
+      background: var(--bg);
+    }
+
+    .code-message {
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      padding: 0.5rem;
+      border-radius: var(--radius);
+    }
+
+    .code-message.success {
+      background: var(--success-light);
+      color: var(--success);
+    }
+
+    .code-message.error {
+      background: var(--error-light);
+      color: var(--error);
+    }
+
+    /* Payment Card Section */
+    .payment-section {
+      display: none;
+    }
+
+    .payment-section.visible {
+      display: block;
+    }
+
+    #card-container {
+      min-height: 90px;
+      padding: 1rem;
+      background: var(--bg);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+    }
+
+    .payment-note {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 0.5rem;
+    }
+
+    .payment-note img {
+      height: 24px;
+      vertical-align: middle;
+      margin-left: 0.5rem;
     }
 
     @media (max-width: 600px) {
@@ -304,12 +653,271 @@
         width: 100%;
       }
     }
+
+    /* Ask a Question (Gemini-powered) */
+    .ask-section {
+      background: var(--accent-light);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      text-align: left;
+    }
+
+    .ask-section h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin: 0 0 0.5rem;
+      text-align: center;
+    }
+
+    .ask-section p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin: 0 0 0.75rem;
+      text-align: center;
+    }
+
+    .question-input-wrapper {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .question-input {
+      flex: 1;
+      padding: 0.625rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .question-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(61, 139, 122, 0.1);
+    }
+
+    .ask-btn {
+      padding: 0.625rem 1.25rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+
+    .ask-btn:hover {
+      background: #327a6a;
+    }
+
+    .ask-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .answer-container {
+      display: none;
+      margin-top: 1rem;
+      padding: 1rem;
+      background: white;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
+    .answer-container.visible {
+      display: block;
+    }
+
+    .answer-text {
+      line-height: 1.6;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+    }
+
+    .answer-feedback {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .answer-feedback span {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .feedback-btn {
+      padding: 0.375rem 0.75rem;
+      border: 1px solid var(--border);
+      background: white;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .feedback-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .feedback-btn--negative {
+      border-color: var(--error);
+      color: var(--error);
+    }
+
+    .feedback-btn--negative:hover {
+      background: var(--error-light);
+    }
+
+    .low-confidence-notice {
+      display: none;
+      margin-top: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      background: #fef3c7;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: #92400e;
+    }
+
+    .low-confidence-notice.visible {
+      display: block;
+    }
+
+    .site-nav__version {
+      font-size: 0.65rem;
+      color: rgba(255, 255, 255, 0.4);
+      font-weight: 400;
+      margin-left: -0.5rem;
+    }
+
+    .followup-form {
+      display: none;
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      background: #f9fafb;
+      border-radius: var(--radius);
+    }
+
+    .followup-form.visible {
+      display: block;
+    }
+
+    .followup-form p {
+      margin: 0 0 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .followup-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .followup-input {
+      padding: 0.375rem 0.625rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.85rem;
+    }
+
+    .followup-btn {
+      padding: 0.375rem 0.75rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .question-submitted {
+      display: none;
+      padding: 0.75rem;
+      background: var(--success-light);
+      border-radius: var(--radius);
+      color: var(--success);
+      font-size: 0.85rem;
+    }
+
+    .question-submitted.visible {
+      display: block;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid white;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 0.375rem;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 480px) {
+      .question-input-wrapper {
+        flex-direction: column;
+      }
+    }
   </style>
 </head>
 <body>
+  <!-- Site-wide Navigation -->
+  <nav class="site-nav">
+    <a href="/" class="site-nav__logo">
+      <img src="/assets/branding/alpaca-head-inverted.jpg" alt="Alpaca Playhouse Austin" class="site-nav__icon">
+      <img src="/assets/branding/wordmark-inverted.jpeg" alt="Alpaca Playhouse Austin" class="site-nav__wordmark">
+      <span class="site-nav__version">v260205.14</span>
+    </a>
+    <ul class="site-nav__links">
+      <li><a href="/visiting/">Visiting</a></li>
+      <li><a href="/spaces/" class="active">Rentals</a></li>
+      <li><a href="/spaces/hostevent/">Events</a></li>
+      <li><a href="/community/">Community</a></li>
+      <li><a href="/photos/">Photos</a></li>
+      <li><a href="/contact/">Contact</a></li>
+    </ul>
+    <button class="site-nav__toggle" id="siteNavToggle" aria-label="Toggle navigation">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- Mobile Site Navigation -->
+  <div class="site-nav-mobile" id="siteNavMobile">
+    <button class="site-nav-mobile__close" id="siteNavMobileClose">&times;</button>
+    <ul class="site-nav-mobile__links">
+      <li><a href="/visiting/">Visiting</a></li>
+      <li><a href="/spaces/" class="active">Rentals</a></li>
+      <li><a href="/spaces/hostevent/">Events</a></li>
+      <li><a href="/community/">Community</a></li>
+      <li><a href="/photos/">Photos</a></li>
+      <li><a href="/contact/">Contact</a></li>
+    </ul>
+  </div>
+
   <header>
     <h1>Alpaca Playhouse Austin</h1>
-    <p>Residency Application</p>
+    <p id="headerSubtitle">Community Fit Inquiry</p>
   </header>
 
   <main>
@@ -317,223 +925,408 @@
       <form id="applicationForm">
         <div id="errorBanner" class="error-banner hidden"></div>
 
-        <!-- Section 1: Basic Info -->
-        <div class="form-section">
-          <h2>Basic Information</h2>
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="first_name">First Name <span class="required">*</span></label>
-              <input type="text" id="first_name" name="first_name" required>
-            </div>
-            <div class="form-group">
-              <label for="last_name">Last Name <span class="required">*</span></label>
-              <input type="text" id="last_name" name="last_name" required>
-            </div>
-            <div class="form-group">
-              <label for="email">Email <span class="required">*</span></label>
-              <input type="email" id="email" name="email" required>
-            </div>
-            <div class="form-group">
-              <label for="phone">Phone</label>
-              <input type="tel" id="phone" name="phone">
-            </div>
-            <div class="form-group">
-              <label for="whatsapp">WhatsApp</label>
-              <input type="text" id="whatsapp" name="whatsapp" placeholder="Phone number">
-              <div class="checkbox-inline">
-                <input type="checkbox" id="whatsapp_same_as_phone">
-                <label for="whatsapp_same_as_phone">Same as phone</label>
+        <!-- ============================== -->
+        <!-- STEP 1: Community Fit Inquiry  -->
+        <!-- ============================== -->
+        <div id="step1Sections">
+          <div class="form-section">
+            <p style="margin-bottom: 1.25rem; color: var(--text-muted); font-size: 0.95rem; line-height: 1.6;">
+              Hello, happy you're here. We're building a lasting community and actively seeking long-term residents who want to call this place home. Please answer the questions below as best as you can. We will get back to you to schedule an intro call. See you soon.
+            </p>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="first_name">First Name <span class="required">*</span></label>
+                <input type="text" id="first_name" name="first_name" required>
+              </div>
+              <div class="form-group">
+                <label for="last_name">Last Name <span class="required">*</span></label>
+                <input type="text" id="last_name" name="last_name" required>
+              </div>
+              <div class="form-group">
+                <label for="email">Email <span class="required">*</span></label>
+                <input type="email" id="email" name="email" required>
+              </div>
+              <div class="form-group">
+                <label for="phone">Phone / WhatsApp <span class="required">*</span></label>
+                <input type="tel" id="phone" name="phone" placeholder="With + country code" required>
+              </div>
+              <div class="form-group">
+                <label for="date_of_birth">How old are you?</label>
+                <input type="text" id="date_of_birth" name="date_of_birth" placeholder="e.g. 28">
+              </div>
+              <div class="form-group full-width">
+                <label for="coliving_experience">Do you have experience with co-living? <span class="required">*</span></label>
+                <textarea id="coliving_experience" name="coliving_experience" rows="3" placeholder="If yes, describe it." required></textarea>
+              </div>
+              <div class="form-group full-width">
+                <label for="life_focus">What do you focus on now in your life? <span class="required">*</span></label>
+                <textarea id="life_focus" name="life_focus" rows="3" placeholder="Describe your current projects, goals, dreams." required></textarea>
+              </div>
+              <div class="form-group full-width">
+                <label for="visiting_guide_response">Did you read our <a href="https://www.alpacaplayhouse.com/visiting" target="_blank" style="color: var(--accent);">visiting guide</a>? <span class="required">*</span></label>
+                <textarea id="visiting_guide_response" name="visiting_guide_response" rows="3" placeholder="Read Alpaca Co.living community culture and tell us what stood out to you." required></textarea>
+              </div>
+              <div class="form-group full-width">
+                <label for="desired_timeframe">When &amp; for how long would you like to join? <span class="required">*</span></label>
+                <textarea id="desired_timeframe" name="desired_timeframe" rows="2" placeholder="Describe the time window you want to join Alpaca for. If open ended then include that information." required></textarea>
+              </div>
+              <div class="form-group full-width">
+                <label for="preferred_accommodation">Preferred accommodation type <span class="required">*</span></label>
+                <select id="preferred_accommodation" name="preferred_accommodation" required>
+                  <option value="">Select an option</option>
+                  <option value="bed_shared_room">Bed in a shared room (Skyloft/Spartan Trailer)</option>
+                  <option value="private_room">Private room</option>
+                  <option value="private_suite">Private suite / studio</option>
+                  <option value="rv_van">RV / Van spot</option>
+                  <option value="tent_camping">Tent / Camping</option>
+                  <option value="flexible">Flexible / Open to anything</option>
+                </select>
+              </div>
+              <div class="form-group full-width">
+                <label for="volunteer_interest">Would you like to contribute your time and skills to support Alpaca operations?</label>
+                <select id="volunteer_interest" name="volunteer_interest">
+                  <option value="">Select an option</option>
+                  <option value="yes_actively">Yes, I'd love to actively contribute</option>
+                  <option value="yes_sometimes">Yes, sometimes when I can</option>
+                  <option value="maybe">Maybe, I'd like to learn more</option>
+                  <option value="no">Not at this time</option>
+                </select>
+              </div>
+              <div class="form-group full-width">
+                <label for="photo_upload">Include your photo if you'd like</label>
+                <input type="file" id="photo_upload" name="photo_upload" accept="image/*" style="font-size: 0.9rem;">
+                <div class="hint">A casual photo helps us put a face to the name</div>
+              </div>
+              <div class="form-group full-width">
+                <label for="referral_source">How did you find this form? <span class="required">*</span></label>
+                <input type="text" id="referral_source" name="referral_source" placeholder="e.g. Friend, Google, Social Media" required>
               </div>
             </div>
-            <div class="form-group">
-              <label for="date_of_birth">Date of Birth</label>
-              <input type="date" id="date_of_birth" name="date_of_birth">
-            </div>
-            <div class="form-group">
-              <label for="gender">Gender</label>
-              <select id="gender" name="gender">
-                <option value="">Select...</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div class="form-group full-width">
-              <label for="current_address">Current Address</label>
-              <textarea id="current_address" name="current_address" rows="2"></textarea>
-            </div>
           </div>
         </div>
 
-        <!-- Section 2: Desired Housing -->
-        <div class="form-section">
-          <h2>Desired Housing</h2>
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="desired_space_id">Preferred Space</label>
-              <select id="desired_space_id" name="desired_space_id">
-                <option value="">Flexible / Unknown</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="desired_move_in">Desired Move-in Date</label>
-              <input type="date" id="desired_move_in" name="desired_move_in">
-            </div>
-            <div class="form-group full-width">
-              <label for="desired_term">Desired Term</label>
-              <input type="text" id="desired_term" name="desired_term" placeholder="e.g. 6 months, 1 year, flexible">
+        <!-- ============================== -->
+        <!-- STEP 2: Full Application       -->
+        <!-- (shown via ?continue=<app_id>) -->
+        <!-- ============================== -->
+        <div id="step2Sections" class="hidden">
+          <!-- Welcome banner -->
+          <div class="form-section">
+            <h2>Complete Your Application</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">
+              Welcome back, <strong id="step2Name"></strong>! We're excited to move forward.
+              Please fill in the remaining details to complete your full application.
+            </p>
+          </div>
+
+          <!-- Desired Housing -->
+          <div class="form-section">
+            <h2>Desired Housing</h2>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="desired_space_id">Preferred Space</label>
+                <select id="desired_space_id" name="desired_space_id">
+                  <option value="">Flexible / Unknown</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="desired_move_in">Desired Move-in Date <span class="required">*</span></label>
+                <input type="date" id="desired_move_in" name="desired_move_in" required>
+              </div>
+              <div class="form-group full-width">
+                <label for="desired_term">Desired Term <span class="required">*</span></label>
+                <input type="text" id="desired_term" name="desired_term" placeholder="e.g. 6 months, 1 year, flexible" required>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Section 3: Financial -->
-        <div class="form-section">
-          <h2>Financial Information</h2>
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="employment_status">Employment Status</label>
-              <input type="text" id="employment_status" name="employment_status" placeholder="e.g. Full-time, Self-employed">
-            </div>
-            <div class="form-group">
-              <label for="employer">Employer</label>
-              <input type="text" id="employer" name="employer" placeholder="Company or business name">
-            </div>
-            <div class="form-group">
-              <label for="monthly_income">Monthly Income ($)</label>
-              <input type="number" id="monthly_income" name="monthly_income" min="0" step="1">
-            </div>
-            <div class="form-group">
-              <label for="deposit_return_method">Preferred Deposit Return Method</label>
-              <select id="deposit_return_method" name="deposit_return_method">
-                <option value="">Select...</option>
-                <option value="zelle">Zelle</option>
-                <option value="venmo">Venmo</option>
-                <option value="paypal">PayPal</option>
-                <option value="check">Check</option>
-                <option value="cash">Cash</option>
-                <option value="other">Other</option>
-              </select>
+          <!-- Financial -->
+          <div class="form-section">
+            <h2>Financial Information</h2>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="employment_status">Employment Status <span class="required">*</span></label>
+                <input type="text" id="employment_status" name="employment_status" placeholder="e.g. Full-time, Self-employed" required>
+              </div>
+              <div class="form-group">
+                <label for="employer">Employer <span class="required">*</span></label>
+                <input type="text" id="employer" name="employer" placeholder="Company or business name" required>
+              </div>
+              <div class="form-group">
+                <label for="monthly_income">Monthly Income ($) <span class="required">*</span></label>
+                <input type="number" id="monthly_income" name="monthly_income" min="0" step="1" required>
+              </div>
+              <div class="form-group">
+                <label for="deposit_return_method">Preferred Deposit Return Method</label>
+                <select id="deposit_return_method" name="deposit_return_method">
+                  <option value="">Select...</option>
+                  <option value="zelle">Zelle</option>
+                  <option value="venmo">Venmo</option>
+                  <option value="paypal">PayPal</option>
+                  <option value="check">Check</option>
+                  <option value="cash">Cash</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Section 4: Previous Residence -->
-        <div class="form-section">
-          <h2>Previous Residence</h2>
-          <div class="form-grid">
-            <div class="form-group full-width">
-              <label for="prev_address">Address</label>
-              <textarea id="prev_address" name="prev_address" rows="2"></textarea>
-            </div>
-            <div class="form-group">
-              <label for="prev_start_date">Move-in Date</label>
-              <input type="date" id="prev_start_date" name="prev_start_date">
-            </div>
-            <div class="form-group">
-              <label for="prev_end_date">Move-out Date</label>
-              <input type="date" id="prev_end_date" name="prev_end_date">
-            </div>
-            <div class="form-group">
-              <label for="landlord_name">Landlord Name</label>
-              <input type="text" id="landlord_name" name="landlord_name">
-            </div>
-            <div class="form-group">
-              <label for="landlord_contact">Landlord Contact</label>
-              <input type="text" id="landlord_contact" name="landlord_contact" placeholder="Phone or email">
-            </div>
-            <div class="form-group full-width">
-              <label for="reason_for_leaving">Reason for Leaving</label>
-              <textarea id="reason_for_leaving" name="reason_for_leaving" rows="2"></textarea>
-            </div>
-            <div class="form-group full-width checkbox-group">
-              <input type="checkbox" id="prior_evictions" name="prior_evictions">
-              <label for="prior_evictions">I have had a prior eviction</label>
+          <!-- Previous Residence -->
+          <div class="form-section">
+            <h2>Previous Residence</h2>
+            <div class="form-grid">
+              <div class="form-group full-width">
+                <label for="prev_address">Address</label>
+                <textarea id="prev_address" name="prev_address" rows="2"></textarea>
+              </div>
+              <div class="form-group">
+                <label for="prev_start_date">Move-in Date</label>
+                <input type="date" id="prev_start_date" name="prev_start_date">
+              </div>
+              <div class="form-group">
+                <label for="prev_end_date">Move-out Date</label>
+                <input type="date" id="prev_end_date" name="prev_end_date">
+              </div>
+              <div class="form-group">
+                <label for="landlord_name">Landlord Name</label>
+                <input type="text" id="landlord_name" name="landlord_name">
+              </div>
+              <div class="form-group">
+                <label for="landlord_contact">Landlord Contact</label>
+                <input type="text" id="landlord_contact" name="landlord_contact" placeholder="Phone or email">
+              </div>
+              <div class="form-group full-width">
+                <label for="reason_for_leaving">Reason for Leaving</label>
+                <textarea id="reason_for_leaving" name="reason_for_leaving" rows="2"></textarea>
+              </div>
+              <div class="form-group full-width checkbox-group">
+                <input type="checkbox" id="prior_evictions" name="prior_evictions">
+                <label for="prior_evictions">I have had a prior eviction</label>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Section 5: Household -->
-        <div class="form-section">
-          <h2>Household</h2>
-          <div class="form-grid">
-            <div class="form-group full-width">
-              <label for="partner_email">Email of partner if applying together</label>
-              <input type="email" id="partner_email" name="partner_email" placeholder="Leave blank if not applicable">
-            </div>
-            <div class="form-group full-width">
-              <label for="kids_ages">Children's Ages</label>
-              <input type="text" id="kids_ages" name="kids_ages" placeholder="e.g. 4, 7, 12 (leave blank if none)">
+          <!-- Household -->
+          <div class="form-section">
+            <h2>Household</h2>
+            <div class="form-grid">
+              <div class="form-group full-width">
+                <label for="partner_email">Email of partner if applying together</label>
+                <input type="email" id="partner_email" name="partner_email" placeholder="Leave blank if not applicable">
+              </div>
+              <div class="form-group full-width">
+                <label for="kids_ages">Children's Ages</label>
+                <input type="text" id="kids_ages" name="kids_ages" placeholder="e.g. 4, 7, 12 (leave blank if none)">
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Section 6: Property Details -->
-        <div class="form-section">
-          <h2>Property Details</h2>
-          <div class="form-grid">
-            <div class="form-group full-width">
-              <label for="vehicles">Vehicles</label>
-              <textarea id="vehicles" name="vehicles" rows="2" placeholder="Describe type and size (e.g. Honda Civic sedan, Ford F-150 truck)"></textarea>
-            </div>
-            <div class="form-group full-width">
-              <label for="pets">Pets</label>
-              <textarea id="pets" name="pets" rows="2" placeholder="Type and details (e.g. 2 cats, 1 medium dog - golden retriever)"></textarea>
-            </div>
-            <div class="form-group full-width">
-              <label for="allergies">Allergies</label>
-              <input type="text" id="allergies" name="allergies" placeholder="Any allergies we should know about">
+          <!-- Property Details -->
+          <div class="form-section">
+            <h2>Property Details</h2>
+            <div class="form-grid">
+              <div class="form-group full-width">
+                <label for="vehicles">Vehicles</label>
+                <textarea id="vehicles" name="vehicles" rows="2" placeholder="Describe type and size (e.g. Honda Civic sedan, Ford F-150 truck)"></textarea>
+              </div>
+              <div class="form-group full-width">
+                <label for="pets">Pets</label>
+                <textarea id="pets" name="pets" rows="2" placeholder="Type and details (e.g. 2 cats, 1 medium dog - golden retriever)"></textarea>
+              </div>
+              <div class="form-group full-width">
+                <label for="allergies">Allergies</label>
+                <input type="text" id="allergies" name="allergies" placeholder="Any allergies we should know about">
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Section 7: Social Profiles -->
-        <div class="form-section">
-          <h2>Social Profiles <span style="font-weight: 400; color: var(--text-muted);">(Optional)</span></h2>
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="instagram">Instagram</label>
-              <input type="text" id="instagram" name="instagram" placeholder="@username">
-            </div>
-            <div class="form-group">
-              <label for="facebook">Facebook</label>
-              <input type="text" id="facebook" name="facebook" placeholder="Profile URL or name">
-            </div>
-            <div class="form-group">
-              <label for="x_handle">X (Twitter)</label>
-              <input type="text" id="x_handle" name="x_handle" placeholder="@handle">
-            </div>
-            <div class="form-group">
-              <label for="myspace">MySpace</label>
-              <input type="text" id="myspace" name="myspace" placeholder="Profile URL">
+          <!-- Social Profiles -->
+          <div class="form-section">
+            <h2>Social Profiles <span style="font-weight: 400; color: var(--text-muted);">(Optional)</span></h2>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="instagram">Instagram</label>
+                <input type="text" id="instagram" name="instagram" placeholder="@username">
+              </div>
+              <div class="form-group">
+                <label for="facebook">Facebook</label>
+                <input type="text" id="facebook" name="facebook" placeholder="Profile URL or name">
+              </div>
+              <div class="form-group">
+                <label for="x_handle">X (Twitter)</label>
+                <input type="text" id="x_handle" name="x_handle" placeholder="@handle">
+              </div>
+              <div class="form-group">
+                <label for="myspace">MySpace</label>
+                <input type="text" id="myspace" name="myspace" placeholder="Profile URL">
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Section 8: Referral -->
-        <div class="form-section">
-          <h2>Referral</h2>
-          <div class="form-grid">
-            <div class="form-group full-width">
-              <label for="referral_source">How did you hear about us?</label>
-              <input type="text" id="referral_source" name="referral_source" placeholder="e.g. Friend, Google, Social Media">
+          <!-- Application Fee -->
+          <div class="form-section fee-section">
+            <h2>Application Fee</h2>
+            <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem;">
+              A non-refundable application fee is required to process your application.
+            </p>
+            <div class="fee-display">
+              <span class="fee-label">Application Fee</span>
+              <div>
+                <span class="fee-original hidden" id="feeOriginal"></span>
+                <span class="fee-amount" id="feeAmount">Loading...</span>
+              </div>
+            </div>
+            <div class="discount-row">
+              <div class="form-group">
+                <label for="discount_code">Have a partner code?</label>
+                <input type="text" id="discount_code" name="discount_code" placeholder="Enter partner code" style="text-transform: uppercase;">
+              </div>
+              <button type="button" id="applyCodeBtn">Apply</button>
+            </div>
+            <div id="codeMessage" class="code-message hidden"></div>
+            <p class="payment-note" style="margin-top: 1rem;">
+              <span id="secureTestTrigger" style="cursor: default;">Secure</span> payment powered by Square
+            </p>
+          </div>
+
+          <!-- Payment Section (shown when fee > $0) -->
+          <div class="form-section payment-section" id="paymentSection">
+            <h2>Payment</h2>
+            <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem;">
+              Enter your card details to pay the application fee.
+            </p>
+            <div id="card-container">
+              <!-- Square Card Element will be inserted here -->
             </div>
           </div>
         </div>
 
         <div class="form-actions">
-          <button type="submit" class="btn-submit" id="submitBtn">Submit Application</button>
+          <button type="submit" class="btn-submit" id="submitBtn">Submit Inquiry</button>
         </div>
       </form>
     </div>
 
-    <!-- Success Message (hidden by default) -->
+    <!-- Inquiry Success Message (hidden by default) -->
+    <div class="form-container hidden" id="inquirySuccessContainer">
+      <div class="success-message">
+        <div class="icon">&#129433;</div>
+        <h2>Inquiry Received!</h2>
+        <p>Thank you for your interest in the Alpaca community. We'll review your inquiry and be in touch soon to schedule an intro call.</p>
+
+        <div class="application-summary">
+          <h3>Your Inquiry Summary</h3>
+          <div class="summary-row">
+            <span class="label">Accommodation</span>
+            <span class="value" id="inquirySummaryAccomm">Flexible</span>
+          </div>
+          <div class="summary-row">
+            <span class="label">Timeframe</span>
+            <span class="value" id="inquirySummaryTimeframe">-</span>
+          </div>
+          <div class="summary-row">
+            <span class="label">Referral</span>
+            <span class="value" id="inquirySummaryReferral">-</span>
+          </div>
+        </div>
+
+        <div class="whats-next">
+          <h3>What Happens Next</h3>
+          <ol>
+            <li>We'll review your community fit inquiry</li>
+            <li>If it looks like a good match, we'll send you a link to complete a full application</li>
+            <li>After application review, we'll arrange a visit or move-in</li>
+          </ol>
+        </div>
+
+        <!-- Ask a Question (Gemini-powered) -->
+        <div class="ask-section">
+          <h3>Have a question?</h3>
+          <p>Get instant answers about rentals, the community, and more.</p>
+
+          <div class="question-input-wrapper">
+            <input type="text" id="questionInput" class="question-input" placeholder="What would you like to know?" autocomplete="off">
+            <button id="askBtn" class="ask-btn">Ask</button>
+          </div>
+
+          <div id="answerContainer" class="answer-container">
+            <div id="answerText" class="answer-text"></div>
+
+            <div id="lowConfidenceNotice" class="low-confidence-notice">
+              I'm not fully confident in this answer. If this didn't help, let us know and we'll get back to you.
+            </div>
+
+            <div class="answer-feedback">
+              <span>Was this helpful?</span>
+              <button class="feedback-btn" onclick="handleFeedback(true)">Yes, thanks!</button>
+              <button class="feedback-btn feedback-btn--negative" onclick="handleFeedback(false)">Not quite</button>
+            </div>
+
+            <div id="followupForm" class="followup-form">
+              <p>Sorry about that! Leave your info and we'll get back to you with an answer.</p>
+              <div class="followup-fields">
+                <input type="text" id="followupName" class="followup-input" placeholder="Your name">
+                <input type="email" id="followupEmail" class="followup-input" placeholder="Email">
+                <input type="tel" id="followupPhone" class="followup-input" placeholder="Phone (optional)">
+              </div>
+              <button class="followup-btn" onclick="submitFollowup()">Submit to a Human</button>
+            </div>
+
+            <div id="questionSubmitted" class="question-submitted">
+              Thanks! We've received your question and will get back to you.
+            </div>
+          </div>
+        </div>
+
+        <p class="questions-contact">Or email us at <a href="mailto:alpacaplayhouse@gmail.com">alpacaplayhouse@gmail.com</a></p>
+
+        <a href="https://alpacaplayhouse.com/community/" class="btn-primary">Learn About Our Community</a>
+      </div>
+    </div>
+
+    <!-- Full Application Success Message (hidden by default) -->
     <div class="form-container hidden" id="successContainer">
       <div class="success-message">
         <div class="icon">&#129433;</div>
         <h2>Application Submitted!</h2>
-        <p>Thank you for your interest in Alpaca Playhouse Austin. We've received your application and will be in touch soon.</p>
-        <p>In the meantime, please read about our community:</p>
-        <a href="https://alpacaplayhouse.com">Visit alpacaplayhouse.com</a>
+        <p>Thank you for completing your application for Alpaca Playhouse Austin. We've received it and will be in touch with all due haste.</p>
+
+        <div class="application-summary">
+          <h3>Your Application Summary</h3>
+          <div class="summary-row">
+            <span class="label">Space</span>
+            <span class="value" id="summarySpace">Flexible (we'll find the best fit)</span>
+          </div>
+          <div class="summary-row" id="summaryRateRow" style="display: none;">
+            <span class="label">Monthly Rate</span>
+            <span class="value" id="summaryRate"></span>
+          </div>
+          <div class="summary-row" id="summaryMoveInRow" style="display: none;">
+            <span class="label">Desired Move-in</span>
+            <span class="value" id="summaryMoveIn"></span>
+          </div>
+          <div class="summary-row" id="summaryTermRow" style="display: none;">
+            <span class="label">Desired Term</span>
+            <span class="value" id="summaryTerm"></span>
+          </div>
+          <div class="summary-row" id="summaryFeeRow" style="display: none;">
+            <span class="label">Application Fee</span>
+            <span class="value" id="summaryFee"></span>
+          </div>
+        </div>
+
+        <div class="whats-next">
+          <h3>What Happens Next</h3>
+          <ol>
+            <li>We'll review your application with all due haste</li>
+            <li>If approved, we'll send you a lease agreement to sign electronically</li>
+            <li>Upon signing, you'll pay a reservation deposit (typically one month's rent)</li>
+          </ol>
+        </div>
+
+        <p class="questions-contact">Questions? Email <a href="mailto:alpacaplayhouse@gmail.com">alpacaplayhouse@gmail.com</a></p>
+
+        <a href="https://alpacaplayhouse.com/community/" class="btn-primary">Learn About Our Community</a>
       </div>
     </div>
   </main>
@@ -541,134 +1334,362 @@
   <!-- Load Supabase library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script type="module">
-    // Import shared Supabase config (single source of truth)
     import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../../shared/supabase.js';
+    import { askQuestion, submitUnansweredQuestion } from '../../shared/chat-widget.js';
+    import { saveVisitor, getVisitor } from '../../shared/visitor-identity.js';
     const SUPABASE_KEY = SUPABASE_ANON_KEY;
+    const FEE_TYPE = 'rental_application';
+
+    // Determine if this is Step 2 (returning applicant)
+    const urlParams = new URLSearchParams(window.location.search);
+    const continueAppId = urlParams.get('continue');
+    const isStep2 = !!continueAppId;
+
+    // State
+    let feeAmount = 0;
+    let originalAmount = 0;
+    let appliedCode = null;
+    let squareCard = null;
+    let squarePayments = null;
+    let continuePersonId = null;
+    let submittedFirstName = '';
+    let submittedEmail = '';
 
     // Elements
     const form = document.getElementById('applicationForm');
     const formContainer = document.getElementById('formContainer');
     const successContainer = document.getElementById('successContainer');
+    const inquirySuccessContainer = document.getElementById('inquirySuccessContainer');
     const errorBanner = document.getElementById('errorBanner');
     const submitBtn = document.getElementById('submitBtn');
     const spaceSelect = document.getElementById('desired_space_id');
-    const phoneInput = document.getElementById('phone');
-    const whatsappInput = document.getElementById('whatsapp');
-    const whatsappSameCheckbox = document.getElementById('whatsapp_same_as_phone');
 
-    // Load dwelling spaces for dropdown
+    // =============================================
+    // STEP 2 INITIALIZATION
+    // =============================================
+    async function initStep2() {
+      if (!isStep2) return;
+
+      try {
+        // Fetch the application + person data
+        const appResp = await fetch(
+          `${SUPABASE_URL}/rest/v1/rental_applications?id=eq.${continueAppId}&select=*,person:person_id(*)`,
+          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+        );
+        if (!appResp.ok) throw new Error('Failed to load application');
+        const apps = await appResp.json();
+        const appData = apps[0];
+
+        if (!appData || appData.application_status !== 'inquiry') {
+          showError('This application link is no longer valid or has already been completed.');
+          submitBtn.style.display = 'none';
+          return;
+        }
+
+        continuePersonId = appData.person_id;
+        const person = appData.person;
+
+        // Update UI for Step 2
+        document.getElementById('headerSubtitle').textContent = 'Complete Your Application';
+        document.getElementById('step2Name').textContent =
+          `${person.first_name || ''} ${person.last_name || ''}`.trim();
+        document.getElementById('step1Sections').classList.add('hidden');
+        document.getElementById('step2Sections').classList.remove('hidden');
+        submitBtn.textContent = 'Submit Application';
+
+        // Load spaces and fee settings for Step 2
+        await loadSpaces();
+        await loadFeeSettings();
+
+      } catch (error) {
+        console.error('Error loading application for Step 2:', error);
+        showError('Could not load your application. Please check your link or contact us.');
+        submitBtn.style.display = 'none';
+      }
+    }
+
+    // =============================================
+    // FEE & PAYMENT (Step 2 only)
+    // =============================================
+    async function loadFeeSettings() {
+      const feeAmountEl = document.getElementById('feeAmount');
+      if (!feeAmountEl) return;
+      try {
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/fee_settings?fee_type=eq.${FEE_TYPE}&is_active=eq.true&select=default_amount`,
+          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+        );
+        if (!response.ok) throw new Error('Failed to load fee settings');
+        const [settings] = await response.json();
+        if (settings) {
+          originalAmount = parseFloat(settings.default_amount);
+          feeAmount = originalAmount;
+          updateFeeDisplay();
+        }
+      } catch (error) {
+        console.error('Error loading fee settings:', error);
+        if (feeAmountEl) feeAmountEl.textContent = 'Error loading fee';
+      }
+    }
+
+    function updateFeeDisplay() {
+      const feeAmountEl = document.getElementById('feeAmount');
+      const feeOriginalEl = document.getElementById('feeOriginal');
+      const paymentSection = document.getElementById('paymentSection');
+      if (!feeAmountEl) return;
+
+      if (feeAmount === 0) {
+        feeAmountEl.textContent = 'FREE';
+        feeAmountEl.classList.add('free');
+        if (paymentSection) paymentSection.classList.remove('visible');
+      } else {
+        feeAmountEl.textContent = `$${feeAmount.toFixed(2)}`;
+        feeAmountEl.classList.remove('free');
+        if (paymentSection) paymentSection.classList.add('visible');
+        initializeSquare();
+      }
+      if (appliedCode && originalAmount !== feeAmount) {
+        feeOriginalEl.textContent = `$${originalAmount.toFixed(2)}`;
+        feeOriginalEl.classList.remove('hidden');
+      } else {
+        feeOriginalEl.classList.add('hidden');
+      }
+    }
+
+    async function validateCode(code) {
+      if (!code) return null;
+      try {
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/fee_codes?code=eq.${code.toUpperCase()}&fee_type=eq.${FEE_TYPE}&is_active=eq.true&select=*`,
+          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+        );
+        if (!response.ok) throw new Error('Failed to validate code');
+        const [codeData] = await response.json();
+        if (!codeData) return { valid: false, message: 'Invalid partner code' };
+        if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
+          return { valid: false, message: 'Partner code has expired' };
+        }
+        if (codeData.usage_limit !== null && codeData.times_used >= codeData.usage_limit) {
+          return { valid: false, message: 'Partner code has reached its usage limit' };
+        }
+        return {
+          valid: true,
+          price: parseFloat(codeData.price),
+          message: codeData.price === 0 ? 'Application fee waived!' : `Partner code applied! Fee: $${codeData.price.toFixed(2)}`
+        };
+      } catch (error) {
+        console.error('Error validating code:', error);
+        return { valid: false, message: 'Error validating code' };
+      }
+    }
+
+    // Apply code button handler (Step 2)
+    const applyCodeBtn = document.getElementById('applyCodeBtn');
+    if (applyCodeBtn) {
+      applyCodeBtn.addEventListener('click', async () => {
+        const discountCodeInput = document.getElementById('discount_code');
+        const codeMessage = document.getElementById('codeMessage');
+        const code = discountCodeInput.value.trim();
+        if (!code) {
+          codeMessage.classList.add('hidden');
+          appliedCode = null;
+          feeAmount = originalAmount;
+          updateFeeDisplay();
+          return;
+        }
+        applyCodeBtn.disabled = true;
+        applyCodeBtn.textContent = 'Checking...';
+        const result = await validateCode(code);
+        applyCodeBtn.disabled = false;
+        applyCodeBtn.textContent = 'Apply';
+        codeMessage.textContent = result.message;
+        codeMessage.classList.remove('hidden', 'success', 'error');
+        codeMessage.classList.add(result.valid ? 'success' : 'error');
+        if (result.valid) {
+          appliedCode = code.toUpperCase();
+          feeAmount = result.price;
+        } else {
+          appliedCode = null;
+          feeAmount = originalAmount;
+        }
+        updateFeeDisplay();
+      });
+    }
+
+    async function initializeSquare() {
+      if (squarePayments) return;
+      try {
+        const configResponse = await fetch(
+          `${SUPABASE_URL}/rest/v1/square_config?select=sandbox_app_id,production_app_id,sandbox_location_id,production_location_id,test_mode`,
+          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+        );
+        if (!configResponse.ok) throw new Error('Failed to load Square config');
+        const [config] = await configResponse.json();
+        const isTestMode = config.test_mode;
+        const appId = isTestMode ? config.sandbox_app_id : config.production_app_id;
+        const locationId = isTestMode ? config.sandbox_location_id : config.production_location_id;
+        const sdkUrl = isTestMode
+          ? 'https://sandbox.web.squarecdn.com/v1/square.js'
+          : 'https://web.squarecdn.com/v1/square.js';
+        await loadScript(sdkUrl);
+        squarePayments = window.Square.payments(appId, locationId);
+        squareCard = await squarePayments.card();
+        await squareCard.attach('#card-container');
+      } catch (error) {
+        console.error('Error initializing Square:', error);
+        const cardContainer = document.getElementById('card-container');
+        if (cardContainer) {
+          cardContainer.innerHTML = '<p style="color: var(--error); text-align: center;">Payment system unavailable. Please try again later.</p>';
+        }
+      }
+    }
+
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${src}"]`)) {
+          const checkInterval = setInterval(() => {
+            if (window.Square) { clearInterval(checkInterval); resolve(); }
+          }, 100);
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
     async function loadSpaces() {
       try {
         const response = await fetch(
           `${SUPABASE_URL}/rest/v1/spaces?can_be_dwelling=eq.true&is_archived=eq.false&is_listed=eq.true&select=id,name&order=name`,
-          {
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Authorization': `Bearer ${SUPABASE_KEY}`
-            }
-          }
+          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
         );
-
         if (!response.ok) throw new Error('Failed to load spaces');
-
         const spaces = await response.json();
-        spaces.forEach(space => {
-          const option = document.createElement('option');
-          option.value = space.id;
-          option.textContent = space.name;
-          spaceSelect.appendChild(option);
-        });
+        if (spaceSelect) {
+          spaces.forEach(space => {
+            const option = document.createElement('option');
+            option.value = space.id;
+            option.textContent = space.name;
+            spaceSelect.appendChild(option);
+          });
+        }
       } catch (error) {
         console.error('Error loading spaces:', error);
       }
     }
 
-    // WhatsApp same as phone checkbox
-    whatsappSameCheckbox.addEventListener('change', () => {
-      if (whatsappSameCheckbox.checked) {
-        whatsappInput.value = phoneInput.value;
-        whatsappInput.disabled = true;
-      } else {
-        whatsappInput.disabled = false;
-      }
-    });
-
-    // Update WhatsApp when phone changes (if checkbox is checked)
-    phoneInput.addEventListener('input', () => {
-      if (whatsappSameCheckbox.checked) {
-        whatsappInput.value = phoneInput.value;
-      }
-    });
-
-    // Form submission
+    // =============================================
+    // FORM SUBMISSION
+    // =============================================
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-
-      // Clear previous errors
       errorBanner.classList.add('hidden');
       document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
 
-      // Validate required fields
-      const firstName = document.getElementById('first_name').value.trim();
-      const lastName = document.getElementById('last_name').value.trim();
-      const email = document.getElementById('email').value.trim();
-
-      let hasError = false;
-
-      if (!firstName) {
-        document.getElementById('first_name').classList.add('error');
-        hasError = true;
+      if (isStep2) {
+        await submitFullApplication();
+      } else {
+        await submitInquiry();
       }
-      if (!lastName) {
-        document.getElementById('last_name').classList.add('error');
-        hasError = true;
-      }
-      if (!email) {
-        document.getElementById('email').classList.add('error');
-        hasError = true;
-      }
+    });
 
-      if (hasError) {
-        showError('Please fill in all required fields.');
-        return;
-      }
-
-      // Disable form while submitting
+    // =============================================
+    // STEP 1: Community Fit Inquiry Submission
+    // =============================================
+    async function submitInquiry() {
+      // Show immediate feedback
       submitBtn.disabled = true;
       submitBtn.textContent = 'Submitting...';
       form.classList.add('loading');
 
+      const firstName = getValue('first_name');
+      const lastName = getValue('last_name');
+      const email = getValue('email');
+      const phone = getValue('phone');
+
+      let hasError = false;
+      if (!firstName) { document.getElementById('first_name').classList.add('error'); hasError = true; }
+      if (!lastName) { document.getElementById('last_name').classList.add('error'); hasError = true; }
+      if (!email) { document.getElementById('email').classList.add('error'); hasError = true; }
+      if (!phone) { document.getElementById('phone').classList.add('error'); hasError = true; }
+
+      // Validate required community fit fields
+      const requiredFields = ['coliving_experience', 'life_focus', 'visiting_guide_response', 'desired_timeframe', 'preferred_accommodation', 'referral_source'];
+      for (const field of requiredFields) {
+        if (!getValue(field)) {
+          document.getElementById(field).classList.add('error');
+          hasError = true;
+        }
+      }
+
+      if (hasError) {
+        showError('Please fill in all required fields.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Inquiry';
+        form.classList.remove('loading');
+        return;
+      }
+
       try {
-        // Build person data
+        // Upload photo if provided
+        let photoUrl = null;
+        const photoFile = document.getElementById('photo_upload')?.files[0];
+        if (photoFile) {
+          try {
+            const fileName = `applicant-photos/${Date.now()}-${photoFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+            const uploadResp = await fetch(
+              `${SUPABASE_URL}/storage/v1/object/housephotos/${fileName}`,
+              {
+                method: 'POST',
+                headers: {
+                  'apikey': SUPABASE_KEY,
+                  'Authorization': `Bearer ${SUPABASE_KEY}`,
+                  'Content-Type': photoFile.type,
+                },
+                body: photoFile
+              }
+            );
+            if (uploadResp.ok) {
+              photoUrl = `${SUPABASE_URL}/storage/v1/object/public/housephotos/${fileName}`;
+            }
+          } catch (photoError) {
+            console.error('Photo upload failed:', photoError);
+            // Don't fail the submission if photo upload fails
+          }
+        }
+
+        // Parse date_of_birth: field is now a text input for age (e.g. "28"),
+        // but the DB column is DATE type. Only send if it looks like a valid date.
+        const dobValue = getValue('date_of_birth');
+        const dobDate = dobValue ? new Date(dobValue) : null;
+        const isValidDate = dobDate && !isNaN(dobDate.getTime()) && dobValue.includes('-');
+
+        // Build person data (Step 1 fields only)
         const personData = {
           first_name: firstName,
           last_name: lastName,
           email: email,
-          phone: getValue('phone'),
-          whatsapp: getValue('whatsapp'),
-          date_of_birth: getValue('date_of_birth') || null,
-          gender: getValue('gender') || null,
-          current_address: getValue('current_address'),
-          desired_space_id: getValue('desired_space_id') || null,
-          desired_move_in: getValue('desired_move_in') || null,
-          desired_term: getValue('desired_term'),
-          employment_status: getValue('employment_status'),
-          employer: getValue('employer'),
-          monthly_income: getValue('monthly_income') ? parseFloat(getValue('monthly_income')) : null,
-          deposit_return_method: getValue('deposit_return_method') || null,
-          partner_email: getValue('partner_email'),
-          kids_ages: getValue('kids_ages'),
-          vehicles: getValue('vehicles'),
-          pets: getValue('pets'),
-          allergies: getValue('allergies'),
-          prior_evictions: document.getElementById('prior_evictions').checked,
-          instagram: getValue('instagram'),
-          facebook: getValue('facebook'),
-          x_handle: getValue('x_handle'),
-          myspace: getValue('myspace'),
+          phone: phone,
+          whatsapp: phone,
+          date_of_birth: isValidDate ? dobValue : null,
+          coliving_experience: getValue('coliving_experience'),
+          life_focus: getValue('life_focus'),
+          visiting_guide_response: getValue('visiting_guide_response'),
+          desired_timeframe: getValue('desired_timeframe'),
+          preferred_accommodation: getValue('preferred_accommodation'),
+          volunteer_interest: getValue('volunteer_interest') || null,
+          photo_url: photoUrl,
           referral_source: getValue('referral_source'),
           status: 'candidate'
         };
+
+        // If the user entered an age instead of a date, include it in notes
+        if (dobValue && !isValidDate) {
+          personData.notes = `Age: ${dobValue}`;
+        }
 
         // Insert person
         const personResponse = await fetch(`${SUPABASE_URL}/rest/v1/people`, {
@@ -684,18 +1705,15 @@
 
         if (!personResponse.ok) {
           const errorData = await personResponse.json();
-          throw new Error(errorData.message || 'Failed to submit application');
+          throw new Error(errorData.message || 'Failed to submit inquiry');
         }
 
         const [person] = await personResponse.json();
 
-        // Create rental application record
+        // Create rental application with status='inquiry'
         const applicationData = {
           person_id: person.id,
-          desired_space_id: getValue('desired_space_id') || null,
-          desired_move_in: getValue('desired_move_in') || null,
-          desired_term: getValue('desired_term') || null,
-          application_status: 'submitted'
+          application_status: 'inquiry'
         };
 
         const applicationResponse = await fetch(`${SUPABASE_URL}/rest/v1/rental_applications`, {
@@ -710,44 +1728,19 @@
         });
 
         if (!applicationResponse.ok) {
-          const errorData = await applicationResponse.json();
-          console.error('Failed to create rental application:', errorData);
-          // Continue anyway - person was created, admin can manually create application
-        }
-
-        // Insert previous residence if provided
-        const prevAddress = getValue('prev_address');
-        if (prevAddress) {
-          const residenceData = {
-            person_id: person.id,
-            address: prevAddress,
-            start_date: getValue('prev_start_date') || null,
-            end_date: getValue('prev_end_date') || null,
-            landlord_name: getValue('landlord_name'),
-            landlord_contact: getValue('landlord_contact'),
-            reason_for_leaving: getValue('reason_for_leaving')
-          };
-
-          await fetch(`${SUPABASE_URL}/rest/v1/previous_residences`, {
-            method: 'POST',
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Authorization': `Bearer ${SUPABASE_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(residenceData)
-          });
+          console.error('Failed to create rental application');
         }
 
         // Send admin notification email
+        const accommLabels = {
+          'bed_shared_room': 'Bed in a shared room',
+          'private_room': 'Private room',
+          'private_suite': 'Private suite / studio',
+          'rv_van': 'RV / Van spot',
+          'tent_camping': 'Tent / Camping',
+          'flexible': 'Flexible / Open to anything',
+        };
         try {
-          // Get the selected space name if one was selected
-          let spaceName = null;
-          const selectedSpace = spaceSelect.options[spaceSelect.selectedIndex];
-          if (selectedSpace && selectedSpace.value) {
-            spaceName = selectedSpace.textContent;
-          }
-
           await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
             method: 'POST',
             headers: {
@@ -755,38 +1748,372 @@
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              type: 'admin_rental_application',
+              type: 'contact_form',
               to: 'alpacaplayhouse@gmail.com',
               data: {
-                first_name: firstName,
-                last_name: lastName,
+                name: `${firstName} ${lastName}`,
                 email: email,
-                phone: getValue('phone'),
-                current_location: getValue('current_address'),
-                space_name: spaceName,
-                desired_move_in: getValue('desired_move_in'),
-                desired_lease_length: getValue('desired_term'),
-                employment_status: getValue('employment_status'),
-                employer: getValue('employer'),
-                monthly_income: getValue('monthly_income'),
-                about_yourself: null,
-                why_interested: getValue('referral_source') ? `Referral: ${getValue('referral_source')}` : null,
-                additional_notes: [
-                  getValue('vehicles') ? `Vehicles: ${getValue('vehicles')}` : null,
-                  getValue('pets') ? `Pets: ${getValue('pets')}` : null,
-                  getValue('allergies') ? `Allergies: ${getValue('allergies')}` : null,
-                  getValue('kids_ages') ? `Children's ages: ${getValue('kids_ages')}` : null,
-                  document.getElementById('prior_evictions').checked ? 'Has prior evictions' : null
-                ].filter(Boolean).join('\n') || null
+                phone: phone,
+                subject: 'Community Fit Inquiry',
+                message: [
+                  `New Community Fit Inquiry from ${firstName} ${lastName}`,
+                  '',
+                  `Email: ${email}`,
+                  `Phone: ${phone}`,
+                  `Age: ${dobValue || 'Not provided'}`,
+                  '',
+                  `Preferred Accommodation: ${accommLabels[getValue('preferred_accommodation')] || getValue('preferred_accommodation')}`,
+                  `Desired Timeframe: ${getValue('desired_timeframe')}`,
+                  `Volunteer Interest: ${getValue('volunteer_interest') || 'Not specified'}`,
+                  `Referral: ${getValue('referral_source')}`,
+                  '',
+                  `Co-living Experience:`,
+                  getValue('coliving_experience'),
+                  '',
+                  `Life Focus / Goals:`,
+                  getValue('life_focus'),
+                  '',
+                  `Visiting Guide Response:`,
+                  getValue('visiting_guide_response'),
+                  photoUrl ? `\nPhoto: ${photoUrl}` : '',
+                ].join('\n')
               }
             })
           });
         } catch (emailError) {
           console.error('Failed to send admin notification email:', emailError);
-          // Don't fail the submission if email fails
         }
 
-        // Show success
+        // Save for ask box and persist for future visits
+        submittedFirstName = firstName;
+        submittedEmail = email;
+        saveVisitor({ name: firstName, email, phone });
+
+        // Populate inquiry success summary
+        document.getElementById('inquirySummaryAccomm').textContent =
+          accommLabels[getValue('preferred_accommodation')] || getValue('preferred_accommodation') || 'Flexible';
+        document.getElementById('inquirySummaryTimeframe').textContent = getValue('desired_timeframe') || '-';
+        document.getElementById('inquirySummaryReferral').textContent = getValue('referral_source') || '-';
+
+        // Pre-populate followup form with submitted info
+        const followupNameEl = document.getElementById('followupName');
+        const followupEmailEl = document.getElementById('followupEmail');
+        const followupPhoneEl = document.getElementById('followupPhone');
+        if (followupNameEl) followupNameEl.value = firstName;
+        if (followupEmailEl) followupEmailEl.value = email;
+        if (followupPhoneEl) followupPhoneEl.value = phone;
+
+        // Show inquiry success
+        formContainer.classList.add('hidden');
+        inquirySuccessContainer.classList.remove('hidden');
+
+      } catch (error) {
+        console.error('Submission error:', error);
+        showError(error.message || 'Something went wrong. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Inquiry';
+        form.classList.remove('loading');
+      }
+    }
+
+    // =============================================
+    // ASK A QUESTION (Gemini-powered, same as contact page)
+    // =============================================
+    let currentQuestion = '';
+    let currentAnswer = '';
+    let isLowConfidence = false;
+
+    const questionInput = document.getElementById('questionInput');
+    const askBtn = document.getElementById('askBtn');
+    const answerContainer = document.getElementById('answerContainer');
+    const answerTextEl = document.getElementById('answerText');
+    const lowConfidenceNotice = document.getElementById('lowConfidenceNotice');
+    const followupForm = document.getElementById('followupForm');
+    const questionSubmitted = document.getElementById('questionSubmitted');
+
+    if (askBtn) {
+      askBtn.addEventListener('click', handleAskQuestion);
+    }
+    if (questionInput) {
+      questionInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleAskQuestion();
+      });
+    }
+
+    async function handleAskQuestion() {
+      const question = questionInput.value.trim();
+      if (!question) return;
+
+      currentQuestion = question;
+
+      // Show loading state
+      askBtn.disabled = true;
+      askBtn.innerHTML = '<span class="loading-spinner"></span>Thinking...';
+
+      // Reset answer UI
+      answerContainer.classList.remove('visible');
+      lowConfidenceNotice.classList.remove('visible');
+      followupForm.classList.remove('visible');
+      questionSubmitted.classList.remove('visible');
+      const feedbackEl = document.querySelector('.answer-feedback');
+      if (feedbackEl) feedbackEl.style.display = '';
+
+      try {
+        const result = await askQuestion(question);
+        currentAnswer = result.answer;
+        isLowConfidence = !result.confident;
+
+        answerTextEl.textContent = result.answer;
+        answerContainer.classList.add('visible');
+
+        if (!result.confident) {
+          lowConfidenceNotice.classList.add('visible');
+          // Auto-submit low confidence questions for review
+          await submitUnansweredQuestion(question, submittedEmail || null, 'low_confidence', submittedFirstName || null);
+        }
+      } catch (error) {
+        answerTextEl.textContent = "Sorry, I had trouble getting an answer. Leave your info below and we'll get back to you.";
+        answerContainer.classList.add('visible');
+        lowConfidenceNotice.classList.remove('visible');
+        document.querySelector('.answer-feedback').style.display = 'none';
+        followupForm.classList.add('visible');
+      } finally {
+        askBtn.disabled = false;
+        askBtn.textContent = 'Ask';
+      }
+    }
+
+    // Feedback handlers
+    window.handleFeedback = function(helpful) {
+      if (helpful) {
+        document.querySelector('.answer-feedback').style.display = 'none';
+        questionSubmitted.textContent = 'Great! Glad we could help.';
+        questionSubmitted.classList.add('visible');
+      } else {
+        followupForm.classList.add('visible');
+        if (!isLowConfidence) {
+          submitUnansweredQuestion(currentQuestion, submittedEmail || null, 'user_feedback', submittedFirstName || null);
+        }
+      }
+    };
+
+    window.submitFollowup = async function() {
+      const name = document.getElementById('followupName').value.trim();
+      const email = document.getElementById('followupEmail').value.trim();
+      const phone = document.getElementById('followupPhone').value.trim();
+
+      if (!name && !email && !phone) {
+        document.getElementById('followupName').focus();
+        return;
+      }
+
+      try {
+        await submitUnansweredQuestion(currentQuestion, email || null, 'user_feedback', name || null, phone || null);
+      } catch (e) {
+        console.error('Error submitting question:', e);
+      }
+
+      followupForm.classList.remove('visible');
+      questionSubmitted.textContent = "Thanks! We'll get back to you with an answer.";
+      questionSubmitted.classList.add('visible');
+      document.querySelector('.answer-feedback').style.display = 'none';
+    };
+
+    // =============================================
+    // STEP 2: Full Application Submission
+    // =============================================
+    async function submitFullApplication() {
+      // Validate required Step 2 fields
+      let hasError = false;
+      const step2Required = ['desired_move_in', 'desired_term', 'employment_status', 'employer', 'monthly_income'];
+      for (const field of step2Required) {
+        if (!getValue(field)) {
+          document.getElementById(field).classList.add('error');
+          hasError = true;
+        }
+      }
+
+      if (hasError) {
+        showError('Please fill in all required fields.');
+        const firstError = document.querySelector('#step2Sections .error');
+        if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = feeAmount > 0 ? 'Processing Payment...' : 'Submitting...';
+      form.classList.add('loading');
+
+      try {
+        // Build person update data
+        const personUpdate = {
+          gender: getValue('gender') || null,
+          current_address: getValue('current_address'),
+          employment_status: getValue('employment_status'),
+          employer: getValue('employer'),
+          monthly_income: getValue('monthly_income') ? parseFloat(getValue('monthly_income')) : null,
+          deposit_return_method: getValue('deposit_return_method') || null,
+          partner_email: getValue('partner_email'),
+          kids_ages: getValue('kids_ages'),
+          vehicles: getValue('vehicles'),
+          pets: getValue('pets'),
+          allergies: getValue('allergies'),
+          prior_evictions: document.getElementById('prior_evictions')?.checked || false,
+          instagram: getValue('instagram'),
+          facebook: getValue('facebook'),
+          x_handle: getValue('x_handle'),
+          myspace: getValue('myspace'),
+        };
+
+        // PATCH existing person record
+        await fetch(`${SUPABASE_URL}/rest/v1/people?id=eq.${continuePersonId}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(personUpdate)
+        });
+
+        // PATCH rental application to 'submitted'
+        const appUpdate = {
+          application_status: 'submitted',
+          desired_space_id: getValue('desired_space_id') || null,
+          desired_move_in: getValue('desired_move_in') || null,
+          desired_term: getValue('desired_term') || null,
+          submitted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        await fetch(`${SUPABASE_URL}/rest/v1/rental_applications?id=eq.${continueAppId}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(appUpdate)
+        });
+
+        // Process payment if fee > 0
+        if (feeAmount > 0) {
+          if (!squareCard) throw new Error('Payment system not ready. Please refresh and try again.');
+          const tokenResult = await squareCard.tokenize();
+          if (tokenResult.status !== 'OK') {
+            throw new Error(tokenResult.errors?.[0]?.message || 'Card payment failed');
+          }
+
+          // Get person email for receipt
+          const personResp = await fetch(`${SUPABASE_URL}/rest/v1/people?id=eq.${continuePersonId}&select=email,first_name,last_name`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+          });
+          const [personInfo] = await personResp.json();
+          const buyerEmail = personInfo?.email || '';
+          const buyerName = `${personInfo?.first_name || ''} ${personInfo?.last_name || ''}`.trim();
+
+          const paymentRecordResponse = await fetch(`${SUPABASE_URL}/rest/v1/square_payments`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({
+              payment_type: FEE_TYPE,
+              reference_type: 'rental_application',
+              reference_id: continueAppId,
+              amount: feeAmount,
+              fee_code_used: appliedCode,
+              original_amount: originalAmount,
+              status: 'pending'
+            })
+          });
+          if (!paymentRecordResponse.ok) throw new Error('Failed to create payment record');
+          const [paymentRecord] = await paymentRecordResponse.json();
+
+          const processResponse = await fetch(`${SUPABASE_URL}/functions/v1/process-square-payment`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sourceId: tokenResult.token,
+              amount: Math.round(feeAmount * 100),
+              paymentRecordId: paymentRecord.id,
+              buyerEmail: buyerEmail,
+              note: `Rental Application Fee - ${buyerName}`
+            })
+          });
+          const processResult = await processResponse.json();
+
+          if (!processResult.success) {
+            await fetch(`${SUPABASE_URL}/rest/v1/square_payments?id=eq.${paymentRecord.id}`, {
+              method: 'PATCH',
+              headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: 'failed', error_message: processResult.error, updated_at: new Date().toISOString() })
+            });
+            throw new Error(processResult.error || 'Payment failed');
+          }
+
+          await fetch(`${SUPABASE_URL}/rest/v1/square_payments?id=eq.${paymentRecord.id}`, {
+            method: 'PATCH',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'completed', square_payment_id: processResult.paymentId, square_order_id: processResult.orderId, square_receipt_url: processResult.receiptUrl, updated_at: new Date().toISOString() })
+          });
+
+          await fetch(`${SUPABASE_URL}/rest/v1/rental_applications?id=eq.${continueAppId}`, {
+            method: 'PATCH',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ application_fee_paid: true, application_fee_amount: feeAmount, application_fee_code: appliedCode })
+          });
+
+          if (appliedCode) {
+            await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_fee_code_usage`, {
+              method: 'POST',
+              headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ code_id: appliedCode })
+            });
+          }
+        } else if (feeAmount === 0) {
+          await fetch(`${SUPABASE_URL}/rest/v1/square_payments`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ payment_type: FEE_TYPE, reference_type: 'rental_application', reference_id: continueAppId, amount: 0, fee_code_used: appliedCode, original_amount: originalAmount, status: 'completed' })
+          });
+
+          await fetch(`${SUPABASE_URL}/rest/v1/rental_applications?id=eq.${continueAppId}`, {
+            method: 'PATCH',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ application_fee_paid: true, application_fee_amount: 0, application_fee_code: appliedCode })
+          });
+        }
+
+        // Insert previous residence if provided
+        const prevAddress = getValue('prev_address');
+        if (prevAddress) {
+          await fetch(`${SUPABASE_URL}/rest/v1/previous_residences`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              person_id: continuePersonId,
+              address: prevAddress,
+              start_date: getValue('prev_start_date') || null,
+              end_date: getValue('prev_end_date') || null,
+              landlord_name: getValue('landlord_name'),
+              landlord_contact: getValue('landlord_contact'),
+              reason_for_leaving: getValue('reason_for_leaving')
+            })
+          });
+        }
+
+        // Populate success summary
+        let spaceName = null;
+        if (spaceSelect) {
+          const selectedSpace = spaceSelect.options[spaceSelect.selectedIndex];
+          if (selectedSpace && selectedSpace.value) spaceName = selectedSpace.textContent;
+        }
+        populateSuccessSummary(spaceName, feeAmount);
+
         formContainer.classList.add('hidden');
         successContainer.classList.remove('hidden');
 
@@ -797,7 +2124,33 @@
         submitBtn.textContent = 'Submit Application';
         form.classList.remove('loading');
       }
-    });
+    }
+
+    function populateSuccessSummary(spaceName, feePaid) {
+      if (spaceName) {
+        document.getElementById('summarySpace').textContent = spaceName;
+      } else {
+        document.getElementById('summarySpace').textContent = 'Flexible (we\'ll find the best fit)';
+      }
+      const moveIn = getValue('desired_move_in');
+      if (moveIn) {
+        const moveInDate = new Date(moveIn + 'T12:00:00');
+        document.getElementById('summaryMoveIn').textContent = moveInDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        document.getElementById('summaryMoveInRow').style.display = 'flex';
+      }
+      const term = getValue('desired_term');
+      if (term) {
+        document.getElementById('summaryTerm').textContent = term;
+        document.getElementById('summaryTermRow').style.display = 'flex';
+      }
+      if (feePaid > 0) {
+        document.getElementById('summaryFee').textContent = `$${feePaid.toFixed(2)} paid`;
+        document.getElementById('summaryFeeRow').style.display = 'flex';
+      } else if (appliedCode) {
+        document.getElementById('summaryFee').textContent = 'Waived';
+        document.getElementById('summaryFeeRow').style.display = 'flex';
+      }
+    }
 
     function getValue(id) {
       const el = document.getElementById(id);
@@ -810,8 +2163,66 @@
       errorBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    // Initialize
-    loadSpaces();
+    // =============================================
+    // TEST DATA FILL
+    // =============================================
+    const secureTestTrigger = document.getElementById('secureTestTrigger');
+    if (secureTestTrigger) {
+      secureTestTrigger.addEventListener('click', () => {
+        if (isStep2) {
+          // Step 2 test data
+          document.getElementById('desired_move_in').value = '2030-01-01';
+          document.getElementById('desired_term').value = '6 months';
+          document.getElementById('employment_status').value = 'Self-employed';
+          document.getElementById('employer').value = 'Test Company LLC';
+          document.getElementById('monthly_income').value = '5000';
+          document.getElementById('deposit_return_method').value = 'zelle';
+          document.getElementById('prev_address').value = '1100 Congress Ave, Austin, TX 78701';
+          document.getElementById('prev_start_date').value = '2025-01-01';
+          document.getElementById('prev_end_date').value = '2029-12-31';
+          document.getElementById('landlord_name').value = 'Jane Landlord';
+          document.getElementById('landlord_contact').value = '512-555-9999';
+          document.getElementById('reason_for_leaving').value = 'Looking for community living';
+          document.getElementById('vehicles').value = 'Honda Civic sedan';
+          document.getElementById('pets').value = 'None';
+          document.getElementById('allergies').value = 'None';
+          document.getElementById('instagram').value = '@testuser';
+          document.getElementById('referral_source').value = 'Testing';
+          console.log('Test data filled for Step 2');
+        } else {
+          // Step 1 test data
+          document.getElementById('first_name').value = 'Test';
+          document.getElementById('last_name').value = 'Inquirer';
+          document.getElementById('email').value = 'test@example.com';
+          document.getElementById('phone').value = '+1-512-555-0123';
+          document.getElementById('date_of_birth').value = '28';
+          document.getElementById('coliving_experience').value = 'I lived in a co-living house in Portland for 2 years.';
+          document.getElementById('life_focus').value = 'Building a sustainable tech startup and practicing meditation.';
+          document.getElementById('visiting_guide_response').value = 'Yes, I loved the community values section.';
+          document.getElementById('desired_timeframe').value = 'Starting March 2030, for 6+ months';
+          document.getElementById('preferred_accommodation').value = 'private_room';
+          document.getElementById('volunteer_interest').value = 'yes_sometimes';
+          document.getElementById('referral_source').value = 'Testing';
+          console.log('Test data filled for Step 1');
+        }
+      });
+    }
+
+    // =============================================
+    // INITIALIZE
+    // =============================================
+    if (isStep2) {
+      initStep2();
+    }
+
+    // Mobile navigation toggle
+    const siteNavToggle = document.getElementById('siteNavToggle');
+    const siteNavMobile = document.getElementById('siteNavMobile');
+    const siteNavMobileClose = document.getElementById('siteNavMobileClose');
+    if (siteNavToggle && siteNavMobile) {
+      siteNavToggle.addEventListener('click', () => siteNavMobile.classList.add('open'));
+      siteNavMobileClose.addEventListener('click', () => siteNavMobile.classList.remove('open'));
+    }
   </script>
 </body>
 </html>
