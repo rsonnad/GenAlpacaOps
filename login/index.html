@@ -7,21 +7,26 @@
   <link rel="apple-touch-icon" href="../apple-touch-icon.png">
   <title>Sign In - AlpacAPPs</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
+    
     :root {
-      --bg: #faf9f7;
-      --bg-card: #ffffff;
-      --text: #2d3142;
-      --text-muted: #7a7d8c;
-      --border: #e8e9ed;
-      --accent: #3d8b7a;
-      --accent-light: #e5f4f1;
+      --bg: #f8f7f4;
+      --bg-card: #fefefe;
+      --text: #1f1a1c;
+      --text-muted: #6b6568;
+      --border: #e8e6e1;
+      --accent: #d48835;
+      --accent-hover: #b8752a;
+      --accent-light: #fdf4e8;
       --success: #2d8659;
       --success-light: #e5f4ed;
       --error: #e07a5f;
       --error-light: #fdf0ec;
       --radius: 8px;
-      --shadow: 0 1px 3px rgba(45,49,66,0.06), 0 1px 2px rgba(45,49,66,0.08);
-      --shadow-lg: 0 4px 12px rgba(45,49,66,0.08), 0 2px 4px rgba(45,49,66,0.06);
+      --radius-lg: 12px;
+      --shadow: 0 2px 8px rgba(31, 26, 28, 0.08);
+      --shadow-lg: 0 4px 16px rgba(31, 26, 28, 0.12);
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     * {
@@ -31,15 +36,17 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: var(--bg);
       color: var(--text);
-      line-height: 1.5;
+      line-height: 1.7;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 2rem;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
     /* Hide everything until JS decides what to show — prevents login form flash */
@@ -54,10 +61,23 @@
 
     .login-card {
       background: var(--bg-card);
-      border-radius: var(--radius);
+      border-radius: var(--radius-lg);
       box-shadow: var(--shadow-lg);
-      padding: 2.5rem;
+      padding: 3rem;
       text-align: center;
+      border: 1px solid var(--border);
+      animation: fadeInUp 0.4s ease-out;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .login-card__logo {
@@ -67,9 +87,11 @@
     }
 
     h1 {
-      font-size: 1.75rem;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(1.75rem, 4vw, 2.25rem);
       font-weight: 700;
       margin-bottom: 0.25rem;
+      letter-spacing: -0.03em;
     }
 
     .subtitle {
@@ -132,35 +154,47 @@
 
     .input-group input {
       width: 100%;
-      padding: 0.75rem;
-      border: 1px solid var(--border);
+      padding: var(--space-md, 1rem);
+      border: 2px solid var(--border);
       border-radius: var(--radius);
       font-family: inherit;
       font-size: 1rem;
-      transition: border-color 0.15s ease;
+      transition: var(--transition);
+      min-height: 44px;
+      background: var(--bg-card);
     }
 
     .input-group input:focus {
       outline: none;
       border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(212, 136, 53, 0.15);
     }
 
     .btn-primary {
       width: 100%;
-      padding: 0.875rem 1.5rem;
+      padding: var(--space-md, 1rem) var(--space-xl, 2rem);
       background: var(--accent);
       color: white;
-      border: none;
+      border: 2px solid var(--accent);
       border-radius: var(--radius);
       font-family: inherit;
       font-size: 1rem;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: var(--transition);
+      min-height: 44px;
+      box-shadow: var(--shadow-sm, 0 1px 2px rgba(31, 26, 28, 0.04));
     }
 
     .btn-primary:hover {
-      background: #2f6d5f;
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+      box-shadow: var(--shadow);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
     }
 
     .btn-primary:disabled {
@@ -205,21 +239,23 @@
       justify-content: center;
       gap: 0.75rem;
       width: 100%;
-      padding: 0.875rem 1.5rem;
+      padding: var(--space-md, 1rem) var(--space-xl, 2rem);
       background: var(--bg-card);
-      border: 1px solid var(--border);
+      border: 2px solid var(--border);
       border-radius: var(--radius);
       font-family: inherit;
       font-size: 1rem;
       font-weight: 500;
       color: var(--text);
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: var(--transition);
+      min-height: 44px;
     }
 
     .btn-google:hover {
-      border-color: var(--text-muted);
+      border-color: var(--accent);
       box-shadow: var(--shadow);
+      transform: translateY(-1px);
     }
 
     .btn-google svg {
@@ -281,22 +317,25 @@
 
     .btn-secondary {
       display: inline-block;
-      padding: 0.625rem 1.25rem;
-      background: var(--bg);
+      padding: var(--space-md, 1rem) var(--space-xl, 2rem);
+      background: transparent;
       color: var(--text);
-      border: 1px solid var(--border);
+      border: 2px solid var(--border);
       border-radius: var(--radius);
       font-family: inherit;
-      font-size: 0.875rem;
-      font-weight: 500;
+      font-size: 0.9375rem;
+      font-weight: 600;
       cursor: pointer;
       text-decoration: none;
-      transition: all 0.15s ease;
+      transition: var(--transition);
       margin-top: 1rem;
+      min-height: 44px;
     }
 
     .btn-secondary:hover {
-      border-color: var(--text-muted);
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-light);
     }
 
     .hidden {

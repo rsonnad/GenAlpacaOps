@@ -12,10 +12,16 @@
 
 .camera-card {
   background: var(--bg-card);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg, 12px);
   overflow: hidden;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
+  transition: var(--transition, all 0.2s ease);
+}
+
+.camera-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
 .camera-card__label {
@@ -36,13 +42,21 @@
 }
 
 .quality-select {
-  font-size: 0.7rem;
-  padding: 0.15rem 0.3rem;
-  border-radius: 4px;
-  border: 1px solid var(--border);
-  background: var(--bg);
+  font-size: 0.75rem;
+  padding: var(--space-xs, 0.25rem) var(--space-sm, 0.5rem);
+  border-radius: var(--radius, 8px);
+  border: 2px solid var(--border);
+  background: var(--bg-card);
   color: var(--text);
   cursor: pointer;
+  transition: var(--transition, all 0.2s ease);
+  min-height: 32px;
+}
+
+.quality-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(212, 136, 53, 0.15);
 }
 
 .camera-card__label .status-dot {
@@ -694,14 +708,16 @@
 .lighting-group-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.75rem 1rem;
+  border-radius: var(--radius-lg, 12px);
+  padding: var(--space-lg, 1.5rem) var(--space-xl, 2rem);
   box-shadow: var(--shadow);
-  transition: border-color 0.15s;
+  transition: var(--transition, all 0.2s ease);
 }
 
 .lighting-group-card:hover {
   border-color: var(--accent);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
 .lighting-group-card.loading {
@@ -1648,15 +1664,17 @@ span.sonos-library-item__star.starred {
 .sonos-zone-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem 1.25rem;
+  border-radius: var(--radius-lg, 12px);
+  padding: var(--space-xl, 2rem) var(--space-xl, 2rem);
   box-shadow: var(--shadow);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: var(--transition, all 0.2s ease);
   position: relative;
 }
 
 .sonos-zone-card:hover {
   border-color: var(--accent);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
 .sonos-zone-card.playing {
@@ -2918,15 +2936,17 @@ span.sonos-library-item__star.starred {
 .car-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow);
-  transition: border-color 0.15s;
+  transition: var(--transition, all 0.2s ease);
   display: flex;
   flex-direction: row;
 }
 
 .car-card:hover {
   border-color: var(--accent);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
 /* Left: Car image (AI-generated or SVG fallback) */
@@ -3213,13 +3233,18 @@ span.sonos-library-item__star.starred {
 
 .laundry-card {
   background: var(--bg-card);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg, 12px);
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
-  padding: 1.25rem;
+  padding: var(--space-xl, 2rem);
   display: flex;
   flex-direction: column;
-  transition: border-color 0.3s;
+  transition: var(--transition, all 0.2s ease);
+}
+
+.laundry-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
 .laundry-card.running {
@@ -3585,14 +3610,16 @@ span.sonos-library-item__star.starred {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-left: 3px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.25rem;
+  border-radius: var(--radius-lg, 12px);
+  padding: var(--space-xl, 2rem);
   box-shadow: var(--shadow);
-  transition: border-color 0.15s;
+  transition: var(--transition, all 0.2s ease);
 }
 
 .thermostat-card:hover {
   border-color: var(--accent);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
 .thermostat-card.heating {
@@ -4957,14 +4984,16 @@ span.sonos-library-item__star.starred {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-left: 3px solid var(--available);
-  border-radius: var(--radius);
-  padding: 1rem;
+  border-radius: var(--radius-lg, 12px);
+  padding: var(--space-xl, 2rem);
   box-shadow: var(--shadow);
-  transition: border-color 0.15s;
+  transition: var(--transition, all 0.2s ease);
 }
 
 .sensor-card:hover {
   border-color: var(--accent);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
 .sensor-card--offline {

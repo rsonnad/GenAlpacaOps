@@ -53,7 +53,7 @@
 }
 
 .manage-tab {
-  padding: 1rem 2rem;
+  padding: var(--space-md, 1rem) var(--space-xl, 2rem);
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
@@ -63,17 +63,19 @@
   font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: var(--transition, all 0.2s ease);
   text-decoration: none;
+  position: relative;
 }
 
 .manage-tab:hover {
-  color: var(--text);
+  color: var(--accent);
 }
 
 .manage-tab.active {
   color: var(--accent);
   border-bottom-color: var(--accent);
+  font-weight: 600;
 }
 
 .manage-panel {
@@ -86,10 +88,16 @@
 
 .section {
   background: var(--bg-card);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow);
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-lg, 1.5rem);
   overflow: hidden;
+  border: 1px solid var(--border);
+  transition: var(--transition, all 0.2s ease);
+}
+
+.section:hover {
+  box-shadow: var(--shadow-lg);
 }
 
 .section-header {
@@ -161,11 +169,14 @@
 
 .filter-group input[type="text"],
 .filter-group select {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
+  padding: var(--space-md, 1rem);
+  border: 2px solid var(--border);
   border-radius: var(--radius);
   font-family: inherit;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
+  background: var(--bg-card);
+  transition: var(--transition, all 0.2s ease);
+  min-height: 44px;
 }
 
 .filter-group input[type="text"] {
@@ -180,6 +191,7 @@
 .filter-group select:focus {
   outline: none;
   border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(212, 136, 53, 0.15);
 }
 
 .filter-checkboxes-group {
@@ -286,20 +298,24 @@
 
 /* Button danger */
 .btn-danger {
-  padding: 0.375rem 0.75rem;
-  border: 1px solid var(--occupied);
+  padding: var(--space-sm, 0.5rem) var(--space-md, 1rem);
+  border: 2px solid var(--occupied);
   background: var(--bg-card);
   color: var(--occupied);
   border-radius: var(--radius);
   font-family: inherit;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: var(--transition, all 0.2s ease);
+  min-height: 36px;
 }
 
 .btn-danger:hover {
   background: var(--occupied);
   color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(143, 61, 75, 0.3);
 }
 
 /* Admin only notice */
