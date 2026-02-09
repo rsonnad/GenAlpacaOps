@@ -4,15 +4,17 @@
    Large text for distance readability
    ============================================= */
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
-  --tv-bg: #0a0809;
-  --tv-card: #161214;
-  --tv-card-border: #251f22;
-  --tv-text: #f5f4ed;
-  --tv-text-secondary: #c4b8bc;
-  --tv-text-muted: #6e6467;
-  --tv-accent: #e99c48;
-  --tv-accent-soft: rgba(233, 156, 72, 0.12);
+  --tv-bg: #0f0c0b;
+  --tv-card: #1b1715;
+  --tv-card-border: #2c2522;
+  --tv-text: #f8f6f2;
+  --tv-text-secondary: #c9bfb6;
+  --tv-text-muted: #7e746e;
+  --tv-accent: #c78c4a;
+  --tv-accent-soft: rgba(199, 140, 74, 0.14);
   --tv-green: #5cb85c;
   --tv-radius: 16px;
 }
@@ -34,7 +36,7 @@ html, body {
 body {
   background: var(--tv-bg);
   color: var(--tv-text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
 /* Anti-burn-in */

@@ -5,23 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/png" href="../favicon.png">
   <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap">
   <title>Sign In - AlpacAPPs</title>
   <style>
     :root {
-      --bg: #faf9f7;
+      --bg: #f7f5f1;
       --bg-card: #ffffff;
-      --text: #2d3142;
-      --text-muted: #7a7d8c;
-      --border: #e8e9ed;
-      --accent: #3d8b7a;
-      --accent-light: #e5f4f1;
-      --success: #2d8659;
-      --success-light: #e5f4ed;
-      --error: #e07a5f;
-      --error-light: #fdf0ec;
-      --radius: 8px;
-      --shadow: 0 1px 3px rgba(45,49,66,0.06), 0 1px 2px rgba(45,49,66,0.08);
-      --shadow-lg: 0 4px 12px rgba(45,49,66,0.08), 0 2px 4px rgba(45,49,66,0.06);
+      --text: #26201e;
+      --text-muted: #6b625c;
+      --border: #e5ded4;
+      --accent: #c78c4a;
+      --accent-light: #f6e7d6;
+      --success: #2f8f57;
+      --success-light: #e5f3ea;
+      --error: #c35a4f;
+      --error-light: #fde9e6;
+      --radius: 10px;
+      --shadow: 0 2px 8px rgba(31,27,25,0.08);
+      --shadow-lg: 0 12px 28px rgba(31,27,25,0.14);
+      --font-heading: 'Playfair Display', 'Times New Roman', serif;
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
     }
 
     * {
@@ -31,10 +36,10 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+      font-family: var(--font-body);
       background: var(--bg);
       color: var(--text);
-      line-height: 1.5;
+      line-height: 1.6;
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -68,7 +73,8 @@
 
     h1 {
       font-size: 1.75rem;
-      font-weight: 700;
+      font-weight: 600;
+      font-family: var(--font-heading);
       margin-bottom: 0.25rem;
     }
 
@@ -156,11 +162,12 @@
       font-size: 1rem;
       font-weight: 500;
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: all 0.2s ease;
+      min-height: 44px;
     }
 
     .btn-primary:hover {
-      background: #2f6d5f;
+      background: #b37739;
     }
 
     .btn-primary:disabled {
@@ -214,7 +221,8 @@
       font-weight: 500;
       color: var(--text);
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: all 0.2s ease;
+      min-height: 44px;
     }
 
     .btn-google:hover {
@@ -291,7 +299,8 @@
       font-weight: 500;
       cursor: pointer;
       text-decoration: none;
-      transition: all 0.15s ease;
+      transition: all 0.2s ease;
+      min-height: 44px;
       margin-top: 1rem;
     }
 

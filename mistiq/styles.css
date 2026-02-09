@@ -4,25 +4,27 @@
  * A warm, spa-like aesthetic with beige/cream tones
  */
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+
 /* =============================================
    CSS VARIABLES
    ============================================= */
 
 :root {
   /* Colors - Warm, earthy palette */
-  --mistiq-bg: #f9f6f1;
-  --mistiq-bg-alt: #f0ebe3;
-  --mistiq-text: #3d3d3d;
-  --mistiq-text-light: #6b6b6b;
-  --mistiq-accent: #8b7355;
-  --mistiq-accent-dark: #6d5a45;
-  --mistiq-gold: #c4a77d;
+  --mistiq-bg: #f8f6f2;
+  --mistiq-bg-alt: #efeae2;
+  --mistiq-text: #2b2624;
+  --mistiq-text-light: #6b625c;
+  --mistiq-accent: #c78c4a;
+  --mistiq-accent-dark: #b37739;
+  --mistiq-gold: #d2b487;
   --mistiq-cream: #fdfbf7;
   --mistiq-warm: #e8ddd0;
 
   /* Typography */
-  --mistiq-font-heading: 'Cormorant Garamond', Georgia, serif;
-  --mistiq-font-body: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mistiq-font-heading: 'Playfair Display', 'Times New Roman', serif;
+  --mistiq-font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Spacing */
   --mistiq-space-xs: 0.25rem;
@@ -82,6 +84,11 @@ a {
 
 a:hover {
   color: var(--mistiq-accent-dark);
+}
+
+:focus-visible {
+  outline: 2px solid rgba(199, 140, 74, 0.5);
+  outline-offset: 2px;
 }
 
 img {

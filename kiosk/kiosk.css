@@ -4,15 +4,17 @@
    Dark theme, no scroll, anti-burn-in
    ============================================= */
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
-  --kiosk-bg: #110e10;
-  --kiosk-card: #1e1a1c;
-  --kiosk-card-border: #2e282b;
-  --kiosk-text: #f5f4ed;
-  --kiosk-text-secondary: #c4b8bc;
-  --kiosk-text-muted: #8a7e82;
-  --kiosk-accent: #e99c48;
-  --kiosk-accent-soft: rgba(233, 156, 72, 0.15);
+  --kiosk-bg: #13100f;
+  --kiosk-card: #1f1b19;
+  --kiosk-card-border: #302825;
+  --kiosk-text: #f8f6f2;
+  --kiosk-text-secondary: #c9bfb6;
+  --kiosk-text-muted: #8d837c;
+  --kiosk-accent: #c78c4a;
+  --kiosk-accent-soft: rgba(199, 140, 74, 0.18);
   --kiosk-green: #5cb85c;
   --kiosk-blue: #5b9bd5;
   --kiosk-radius: 14px;
@@ -36,7 +38,7 @@ html, body {
 body {
   background: var(--kiosk-bg);
   color: var(--kiosk-text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
 /* Anti-burn-in: subtle pixel shift */

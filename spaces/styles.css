@@ -1,27 +1,34 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+
 :root {
-  /* Warm alpaca palette */
-  --bg: #f5f4ed;
+  /* Modern warm neutral palette */
+  --bg: #f7f5f1;
   --bg-card: #ffffff;
-  --text: #2e2226;
-  --text-muted: #6b5e62;
-  --border: #dfdeb8;
-  --accent: #e99c48;
-  --accent-light: #fdf1e0;
-  --occupied: #8f3d4b;
-  --occupied-light: #f5e6e9;
-  --available: #54a326;
-  --available-light: #e8f5e0;
-  --success: #54a326;
-  --success-light: #e8f5e0;
-  --error: #8f3d4b;
-  --error-light: #f5e6e9;
-  --secret: #7c6a9a;
-  --secret-light: #f3effc;
-  --unlisted: #6b5e62;
-  --unlisted-light: #f5f4ed;
-  --radius: 6px;
-  --shadow: 0 1px 3px rgba(46,34,38,0.08), 0 1px 2px rgba(46,34,38,0.06);
-  --shadow-lg: 0 4px 12px rgba(46,34,38,0.10), 0 2px 4px rgba(46,34,38,0.06);
+  --bg-muted: #efeae2;
+  --bg-dark: #1f1b19;
+  --text: #26201e;
+  --text-muted: #6b625c;
+  --border: #e5ded4;
+  --accent: #c78c4a;
+  --accent-light: #f6e7d6;
+  --accent-dark: #b37739;
+  --occupied: #9a3f4f;
+  --occupied-light: #f4e3e6;
+  --available: #2f8f57;
+  --available-light: #e5f3ea;
+  --success: #2f8f57;
+  --success-light: #e5f3ea;
+  --error: #9a3f4f;
+  --error-light: #f4e3e6;
+  --secret: #6d5b8f;
+  --secret-light: #efeaf7;
+  --unlisted: #6b625c;
+  --unlisted-light: #f2eee8;
+  --radius: 8px;
+  --shadow: 0 2px 8px rgba(31,27,25,0.08);
+  --shadow-lg: 0 12px 28px rgba(31,27,25,0.14);
+  --font-heading: 'Playfair Display', 'Times New Roman', serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
 }
 
 * {
@@ -30,12 +37,39 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  font-family: var(--font-body);
   background: var(--bg);
   color: var(--text);
-  line-height: 1.5;
+  line-height: 1.6;
   min-height: 100vh;
+}
+
+a {
+  color: var(--text);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--accent);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(199, 140, 74, 0.6);
+  outline-offset: 2px;
 }
 
 /* ===== HEADER LOGO (admin + resident pages) ===== */
@@ -71,8 +105,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 2rem;
-  background: #2e2226;
+  padding: 0.9rem 2rem;
+  background: var(--bg-dark);
   color: white;
 }
 
@@ -121,7 +155,7 @@ body {
   color: rgba(255, 255, 255, 0.85);
   text-decoration: none;
   font-size: 0.9rem;
-  transition: color 0.2s;
+  transition: color 0.2s ease;
 }
 
 .site-nav__links a:hover {
@@ -151,7 +185,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #2e2226;
+  background: var(--bg-dark);
   z-index: 200;
   display: flex;
   flex-direction: column;
@@ -240,12 +274,13 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
+  padding: 1.25rem 2rem;
   background: var(--bg-card);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 50;
+  box-shadow: 0 8px 20px rgba(31, 27, 25, 0.06);
 }
 
 .header-left {
@@ -255,9 +290,16 @@ header {
 }
 
 h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  font-family: var(--font-heading);
+}
+
+h2, h3 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.01em;
+  line-height: 1.3;
 }
 
 .mode-badge {
@@ -290,7 +332,7 @@ h1 {
 }
 
 .view-toggle button {
-  padding: 0.5rem;
+  padding: 0.55rem;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -299,7 +341,7 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .view-toggle button:hover {
@@ -313,7 +355,7 @@ h1 {
 }
 
 .admin-toggle {
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1.1rem;
   border: 1px solid var(--border);
   background: var(--bg-card);
   border-radius: var(--radius);
@@ -321,7 +363,8 @@ h1 {
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
+  min-height: 44px;
 }
 
 .admin-toggle:hover {
@@ -335,27 +378,30 @@ h1 {
 }
 
 .apply-link {
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1.1rem;
   background: var(--accent);
   color: white;
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 600;
   border-radius: var(--radius);
-  transition: background 0.15s ease;
+  transition: all 0.2s ease;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .apply-link:hover {
-  background: #d48835;
+  background: var(--accent-dark);
 }
 
 .staff-link {
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1.1rem;
   color: var(--text-muted);
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 500;
-  transition: color 0.15s ease;
+  transition: color 0.2s ease;
 }
 
 .staff-link:hover {
@@ -366,7 +412,7 @@ h1 {
 .filters {
   display: flex;
   gap: 1rem;
-  padding: 1rem 2rem;
+  padding: 1.25rem 2rem;
   background: var(--bg-card);
   border-bottom: 1px solid var(--border);
   align-items: flex-end;
@@ -389,13 +435,14 @@ h1 {
 
 .filter-group input,
 .filter-group select {
-  padding: 0.5rem 0.75rem;
+  padding: 0.6rem 0.8rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   font-family: inherit;
   font-size: 0.875rem;
   background: var(--bg);
   min-width: 140px;
+  transition: all 0.2s ease;
 }
 
 .filter-group input:focus,
@@ -461,14 +508,14 @@ h1 {
 }
 
 .clear-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1rem;
   border: none;
   background: transparent;
   color: var(--text-muted);
   font-family: inherit;
   font-size: 0.875rem;
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: color 0.2s ease;
   height: 34px;
   display: flex;
   align-items: center;
@@ -488,8 +535,8 @@ body.admin-mode .admin-only {
 
 /* Main content */
 main {
-  padding: 2rem;
-  max-width: 1600px;
+  padding: 2.5rem;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -907,7 +954,7 @@ tr:last-child td {
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(26, 22, 20, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1046,6 +1093,7 @@ tr:last-child td {
   font-family: inherit;
   font-size: 0.95rem;
   resize: vertical;
+  transition: all 0.2s ease;
 }
 
 .modal-body textarea:focus,
@@ -1063,7 +1111,7 @@ tr:last-child td {
 }
 
 .btn-primary {
-  padding: 0.625rem 1.25rem;
+  padding: 0.7rem 1.35rem;
   background: var(--accent);
   color: white;
   border: none;
@@ -1072,11 +1120,12 @@ tr:last-child td {
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: all 0.2s ease;
+  min-height: 44px;
 }
 
 .btn-primary:hover {
-  background: #d48835;
+  background: var(--accent-dark);
 }
 
 .btn-primary:disabled {
@@ -1085,7 +1134,7 @@ tr:last-child td {
 }
 
 .btn-secondary {
-  padding: 0.625rem 1.25rem;
+  padding: 0.7rem 1.35rem;
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
@@ -1094,7 +1143,8 @@ tr:last-child td {
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
+  min-height: 44px;
 }
 
 .btn-secondary:hover {

@@ -275,6 +275,45 @@ function initSiteComponents() {
       });
     });
   }
+
+  // Reveal animations on scroll
+  initRevealAnimations();
+}
+
+/**
+ * Reveal content sections as they enter the viewport.
+ */
+function initRevealAnimations() {
+  const revealTargets = document.querySelectorAll(
+    '.aap-section, .aap-content, .aap-links-section, .aap-links-grid, .aap-hero__content'
+  );
+
+  if (!revealTargets.length) return;
+
+  if (typeof IntersectionObserver === 'undefined') {
+    revealTargets.forEach((el) => el.classList.add('is-visible'));
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    (entries, obs) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          obs.unobserve(entry.target);
+        }
+      });
+    },
+    {
+      threshold: 0.15,
+      rootMargin: '0px 0px -10% 0px',
+    }
+  );
+
+  revealTargets.forEach((el) => {
+    el.classList.add('aap-reveal');
+    observer.observe(el);
+  });
 }
 
 // =============================================
