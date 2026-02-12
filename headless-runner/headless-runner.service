@@ -1,0 +1,19 @@
+[Unit]
+Description=Claude Headless Runner (GitHub webhook)
+After=network.target
+
+[Service]
+Type=simple
+User=bugfixer
+Environment=HOME=/home/bugfixer
+WorkingDirectory=/opt/headless-runner
+EnvironmentFile=/opt/headless-runner/.env
+ExecStart=/usr/bin/node /opt/headless-runner/headless_runner.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=headless-runner
+
+[Install]
+WantedBy=multi-user.target

@@ -572,7 +572,15 @@ When the user says **"Run headless"** followed by a task description, you MUST f
 - Do NOT execute the task yourself — just write the instructions file and push
 - Do NOT modify any other files in the repo
 - If the user does NOT say "Run headless", execute the task normally (default behavior)
-- The DigitalOcean droplet watches this path and picks up new instruction files automatically
+- The DigitalOcean droplet receives a GitHub webhook on push to main, detects new instruction files, pulls, runs Claude Code with the instructions, commits the results, and pushes back to main
+- A notification email is sent to team@ on completion or failure
+
+**How it works (DO side):**
+- `headless-runner` service on DO droplet listens for GitHub push webhooks (port 9100)
+- Caddy proxies `cam.alpacaplayhouse.com/hooks/github-push` → localhost:9100
+- On push to main, checks if any files were added to `claude-headless-instructions/`
+- If yes: pulls, reads instruction file, spawns Claude Code, commits results + deletes instruction file, pushes to main
+- See `headless-runner/SETUP.md` for full deployment instructions
 
 **Example interaction:**
 > User: "Run headless: Fix the laundry page polling interval to 10 seconds instead of 15"
@@ -866,7 +874,7 @@ The accounting admin page (`spaces/admin/accounting.html`) should show:
 - Bug fixer repo is a clone of this repo, used for verification screenshots
 - Uses `SKILL.md` for API knowledge
 - Queries Supabase directly for tenant/space info
-- **Workers on droplet:** Bug Scout (`bug-fixer.service`), Tesla Poller (`tesla-poller.service`), Image Gen (`image-gen.service`), LG Poller (`lg-poller.service`), Feature Builder (`feature-builder.service`)
+- **Workers on droplet:** Bug Scout (`bug-fixer.service`), Tesla Poller (`tesla-poller.service`), Image Gen (`image-gen.service`), LG Poller (`lg-poller.service`), Feature Builder (`feature-builder.service`), Headless Runner (`headless-runner.service`)
 
 ### Home Automation (Sonos, UniFi, Cameras)
 - Full documentation in `HOMEAUTOMATION.md`

@@ -1,0 +1,13 @@
+{
+  "name": "headless-runner",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "GitHub webhook listener — runs Claude Code on instruction files pushed to claude-headless-instructions/",
+  "main": "headless_runner.js",
+  "scripts": {
+    "start": "node headless_runner.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.3"
+  }
+}
