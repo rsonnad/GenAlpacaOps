@@ -546,6 +546,38 @@ const messages = await smsService.getConversation(personId);
 - Occupied with end date: "Available: Mar 15" (when it becomes available)
 - Occupied indefinitely: "Available: TBD"
 
+## Run Headless (Claude Headless Instructions)
+
+When the user says **"Run headless"** followed by a task description, you MUST follow this protocol instead of executing the task directly:
+
+1. **Write the instructions** to a new markdown file in `claude-headless-instructions/`
+   - Filename format: `YYYYMMDD-HHMMSS-slug.md` (e.g., `20260212-143022-fix-laundry-polling.md`)
+   - The slug should be a short kebab-case summary of the task (3-5 words max)
+   - The file content should be the full task description/instructions as provided by the user
+
+2. **Commit** the file:
+   ```
+   git add claude-headless-instructions/<filename>.md
+   git commit -m "headless: <short description>"
+   ```
+
+3. **Push to main**:
+   ```
+   git push origin main
+   ```
+
+4. **Confirm** to the user that the headless job was dispatched, including the filename
+
+**Important:**
+- Do NOT execute the task yourself — just write the instructions file and push
+- Do NOT modify any other files in the repo
+- If the user does NOT say "Run headless", execute the task normally (default behavior)
+- The DigitalOcean droplet watches this path and picks up new instruction files automatically
+
+**Example interaction:**
+> User: "Run headless: Fix the laundry page polling interval to 10 seconds instead of 15"
+> Claude: Writes `claude-headless-instructions/20260212-143022-fix-laundry-polling.md`, commits, pushes to main, confirms dispatch
+
 ## Deployment
 
 This site deploys directly to GitHub Pages from the `main` branch. There is no build step, PR process, or branch protection - just push to main and it's live.
