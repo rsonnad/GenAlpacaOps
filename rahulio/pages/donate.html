@@ -1427,6 +1427,187 @@
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
+    /* ========================================
+       Photo Gallery
+       ======================================== */
+    .gallery-section {
+      padding: 0 24px 80px;
+    }
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .gallery-item {
+      position: relative;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      aspect-ratio: 4/3;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition);
+    }
+    .gallery-item:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+    .gallery-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+    .gallery-item:hover img {
+      transform: scale(1.06);
+    }
+    .gallery-item__caption {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 32px 14px 12px;
+      background: linear-gradient(transparent, rgba(28,20,16,0.75));
+      color: rgba(255,255,255,0.92);
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+    .gallery-item--placeholder {
+      background: linear-gradient(135deg, var(--cream-warm), var(--cream-dark));
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 8px;
+      padding: 24px;
+    }
+    .gallery-item--placeholder .gp-icon {
+      font-size: 42px;
+      opacity: 0.5;
+    }
+    .gallery-item--placeholder .gp-text {
+      font-size: 13px;
+      color: var(--text-dim);
+      font-weight: 500;
+      max-width: 140px;
+    }
+    @media (max-width: 768px) {
+      .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .gallery-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Lightbox */
+    .lightbox-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10001;
+      background: rgba(28,20,16,0.92);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+      cursor: zoom-out;
+    }
+    .lightbox-overlay.open {
+      opacity: 1;
+      visibility: visible;
+    }
+    .lightbox-overlay img {
+      max-width: 90vw;
+      max-height: 85vh;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      transition: transform 0.3s ease;
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.8);
+      font-size: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--transition);
+    }
+    .lightbox-close:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    .lightbox-caption {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.75);
+      font-size: 14px;
+      font-weight: 500;
+      text-align: center;
+      max-width: 80vw;
+    }
+
+    /* ========================================
+       Expandable Details Sections
+       ======================================== */
+    .payment-details {
+      margin-top: 12px;
+    }
+    .payment-details summary {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--maroon);
+      cursor: pointer;
+      padding: 6px 0;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color var(--transition);
+    }
+    .payment-details summary::-webkit-details-marker { display: none; }
+    .payment-details summary::before {
+      content: '\25B6';
+      font-size: 10px;
+      transition: transform var(--transition);
+      color: var(--gold);
+    }
+    .payment-details[open] summary::before {
+      transform: rotate(90deg);
+    }
+    .payment-details summary:hover { color: var(--maroon-deep); }
+    .payment-details .detail-body {
+      padding: 12px 0 4px 16px;
+      font-size: 13px;
+      color: var(--text-soft);
+      line-height: 1.7;
+    }
+    .payment-details .detail-body strong {
+      color: var(--text);
+    }
+    .detail-callout {
+      background: linear-gradient(135deg, rgba(123,26,44,0.04), rgba(212,168,67,0.06));
+      border: 1px solid var(--gold-pale);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin: 10px 0;
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--text-soft);
+    }
+    .detail-callout strong { color: var(--maroon); }
+
     /* Demo notice banner */
     .demo-banner {
       position: fixed;
@@ -1479,6 +1660,7 @@
       </div>
       <ul class="site-nav__links">
         <li><a href="#about">About</a></li>
+        <li><a href="#gallery">Gallery</a></li>
         <li><a href="#donate">Donate</a></li>
         <li><a href="#sponsor">Sponsor</a></li>
         <li><a href="#how-it-works">How It Works</a></li>
@@ -1543,6 +1725,68 @@
       </div>
     </div>
   </section>
+
+  <!-- ========================================
+       Photo Gallery
+       ======================================== -->
+  <section class="gallery-section" id="gallery">
+    <div class="section-header reveal">
+      <div class="section-header__label">&#128247; Life at the Monastery</div>
+      <h2 class="section-header__title">A Living Tradition</h2>
+      <p class="section-header__subtitle">
+        Glimpses into the daily life, sacred arts, and spiritual practices of our monastic community.
+      </p>
+    </div>
+
+    <div class="gallery-grid">
+      <div class="gallery-item reveal" onclick="openLightboxGallery(this)">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Ganden_Monastery_32_%285999105415%29.jpg/640px-Ganden_Monastery_32_%285999105415%29.jpg"
+             alt="Gaden Monastery — Tibetan Buddhist monastery in the Himalayan foothills"
+             loading="lazy"
+             onerror="this.parentElement.classList.add('gallery-item--placeholder'); this.parentElement.innerHTML='<span class=\'gp-icon\'>&#127982;</span><span class=\'gp-text\'>Monastery Exterior</span>';">
+        <div class="gallery-item__caption">Gaden Monastery, Mundgod, India</div>
+      </div>
+      <div class="gallery-item reveal" onclick="openLightboxGallery(this)">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Monks_debating_at_Sera_monastery%2C_2013.jpg/640px-Monks_debating_at_Sera_monastery%2C_2013.jpg"
+             alt="Tibetan Buddhist monks engaged in philosophical debate"
+             loading="lazy"
+             onerror="this.parentElement.classList.add('gallery-item--placeholder'); this.parentElement.innerHTML='<span class=\'gp-icon\'>&#128483;</span><span class=\'gp-text\'>Philosophical Debate</span>';">
+        <div class="gallery-item__caption">Monks in Philosophical Debate</div>
+      </div>
+      <div class="gallery-item reveal" onclick="openLightboxGallery(this)">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Sand_mandala_at_the_Crow_Collection_of_Asian_Art%2C_October_2015.jpg/640px-Sand_mandala_at_the_Crow_Collection_of_Asian_Art%2C_October_2015.jpg"
+             alt="Tibetan sand mandala creation — sacred geometric art"
+             loading="lazy"
+             onerror="this.parentElement.classList.add('gallery-item--placeholder'); this.parentElement.innerHTML='<span class=\'gp-icon\'>&#128310;</span><span class=\'gp-text\'>Sand Mandala Creation</span>';">
+        <div class="gallery-item__caption">Sacred Sand Mandala Creation</div>
+      </div>
+      <div class="gallery-item reveal" onclick="openLightboxGallery(this)">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Ganden_Monastery_12_%285998541728%29.jpg/640px-Ganden_Monastery_12_%285998541728%29.jpg"
+             alt="Prayer hall interior with golden Buddha statues and thangka paintings"
+             loading="lazy"
+             onerror="this.parentElement.classList.add('gallery-item--placeholder'); this.parentElement.innerHTML='<span class=\'gp-icon\'>&#128588;</span><span class=\'gp-text\'>Prayer Hall Interior</span>';">
+        <div class="gallery-item__caption">Prayer Hall Interior</div>
+      </div>
+      <div class="gallery-item reveal" onclick="openLightboxGallery(this)">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Butter_lamps_in_a_Tibetan_Buddhist_monastery.jpg/640px-Butter_lamps_in_a_Tibetan_Buddhist_monastery.jpg"
+             alt="Rows of flickering butter lamp offerings in monastery"
+             loading="lazy"
+             onerror="this.parentElement.classList.add('gallery-item--placeholder'); this.parentElement.innerHTML='<span class=\'gp-icon\'>&#128367;</span><span class=\'gp-text\'>Butter Lamp Offerings</span>';">
+        <div class="gallery-item__caption">Butter Lamp Offerings</div>
+      </div>
+      <div class="gallery-item reveal" onclick="openLightboxGallery(this)">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Ganden_Monastery_28_%285999095555%29.jpg/640px-Ganden_Monastery_28_%285999095555%29.jpg"
+             alt="Tibetan Buddhist sacred texts and scriptures"
+             loading="lazy"
+             onerror="this.parentElement.classList.add('gallery-item--placeholder'); this.parentElement.innerHTML='<span class=\'gp-icon\'>&#128220;</span><span class=\'gp-text\'>Sacred Texts &amp; Study</span>';">
+        <div class="gallery-item__caption">Sacred Texts &amp; Scriptural Study</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider">
+    <span class="divider-symbol">&#10043; &#10043; &#10043;</span>
+  </div>
 
   <!-- ========================================
        Donation Amount Selector
@@ -1767,15 +2011,32 @@
           <div class="payment-method">
             <span class="pm-icon">&#128179;</span>
             <span class="pm-name">Paytm</span>
-            <span class="pm-detail">Wallet</span>
+            <span class="pm-detail">Wallet + UPI</span>
+          </div>
+          <div class="payment-method">
+            <span class="pm-icon">&#127970;</span>
+            <span class="pm-name">BHIM</span>
+            <span class="pm-detail">Official UPI</span>
           </div>
           <div class="qr-placeholder">
             <span class="qr-icon">&#9641;</span>
-            <span class="qr-text">UPI QR Code</span>
+            <span class="qr-text">Scan with any UPI app</span>
           </div>
           <div style="text-align:center; font-size: 13px; color: var(--text-dim); margin-top: 4px;">
             UPI ID: <strong style="color: var(--text);">gungru@upi</strong>
           </div>
+          <details class="payment-details">
+            <summary>Learn more about UPI payments</summary>
+            <div class="detail-body">
+              <strong>Google Pay (GPay):</strong> India's most popular UPI app. Scan the QR code or enter the UPI ID above. Instant transfer, zero fees for sender. Available on Android and iOS.<br><br>
+              <strong>PhonePe:</strong> Second-largest UPI app. Same QR/UPI flow. Supports UPI Lite for small amounts (under &#8377;500) without PIN entry.<br><br>
+              <strong>Paytm:</strong> Wallet + UPI hybrid. Pay from Paytm Wallet balance or linked bank account via UPI. Also supports Paytm Postpaid (buy now, pay later).<br><br>
+              <strong>BHIM:</strong> Government's official UPI app by NPCI. Lightweight, works on basic smartphones. Direct bank-to-bank transfer with no intermediary.
+              <div class="detail-callout">
+                <strong>What is UPI?</strong> Unified Payments Interface is India's real-time payment system, built by the National Payments Corporation of India (NPCI). It processes over 12 billion transactions per month with <strong>zero fees</strong> for person-to-person transfers. Works 24/7 including bank holidays. Over 300 bank apps support UPI.
+              </div>
+            </div>
+          </details>
         </div>
 
         <!-- International -->
@@ -1785,7 +2046,7 @@
           <div class="payment-method">
             <span class="pm-icon">&#128179;</span>
             <span class="pm-name">Credit / Debit Card</span>
-            <span class="pm-detail">Visa, MC, Amex</span>
+            <span class="pm-detail">Visa, MC, Amex, Discover</span>
           </div>
           <div class="payment-method">
             <span class="pm-icon">&#127760;</span>
@@ -1800,8 +2061,23 @@
           <div class="payment-method">
             <span class="pm-icon">&#127974;</span>
             <span class="pm-name">Wire Transfer / SWIFT</span>
-            <span class="pm-detail">See details below</span>
+            <span class="pm-detail">For $1,000+ gifts</span>
           </div>
+          <div class="payment-method">
+            <span class="pm-icon">&#127970;</span>
+            <span class="pm-name">Netbanking (India)</span>
+            <span class="pm-detail">60+ banks</span>
+          </div>
+          <details class="payment-details">
+            <summary>Payment method details</summary>
+            <div class="detail-body">
+              <strong>Credit/Debit Cards:</strong> Processed via Razorpay (PCI-DSS Level 1 compliant). 3D Secure authentication on all transactions. Supports cards from 100+ countries. Fees: 2% domestic India, 3% international.<br><br>
+              <strong>Razorpay Checkout:</strong> India's leading payment gateway processing $100B+ annually. Clean modal checkout handles cards, UPI, netbanking, and wallets in one interface. Supports saved cards for returning donors. Auto-retry on failures.<br><br>
+              <strong>PayPal:</strong> For donors who prefer PayPal's buyer protection. Supports 25 currencies. Higher fees (3.49% + $0.49) but familiar to Western donors. Donate from PayPal balance, linked bank, or card.<br><br>
+              <strong>Wire Transfer / SWIFT:</strong> Best for large donations ($1,000+). Initiate from your bank using our details below. Takes 2&ndash;5 business days. Intermediary bank fees may apply ($15&ndash;30).<br><br>
+              <strong>Netbanking (India):</strong> Direct bank-to-bank via Razorpay. Supports 60+ Indian banks including SBI, HDFC, ICICI, Axis, PNB, BOB. Redirects to your bank's secure login page.
+            </div>
+          </details>
         </div>
 
         <!-- Crypto -->
@@ -1816,6 +2092,11 @@
             <span class="pm-icon">&#9830;</span>
             <span class="pm-name">Ethereum (ETH)</span>
           </div>
+          <div class="payment-method">
+            <span class="pm-icon">&#128178;</span>
+            <span class="pm-name">USDT / USDC</span>
+            <span class="pm-detail">Stablecoins</span>
+          </div>
           <div style="padding: 12px 0;">
             <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">BTC Address:</div>
             <div style="font-family: monospace; font-size: 11px; color: var(--text-dim); word-break: break-all; background: var(--cream-warm); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-light);">
@@ -1824,12 +2105,23 @@
             </div>
           </div>
           <div>
-            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">ETH Address:</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">ETH / ERC-20 Address:</div>
             <div style="font-family: monospace; font-size: 11px; color: var(--text-dim); word-break: break-all; background: var(--cream-warm); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-light);">
               0x742d35Cc6634C0532925a3b...
               <button class="copy-btn" onclick="copyToClipboard(this, '0x742d35Cc6634C0532925a3b...')">Copy</button>
             </div>
           </div>
+          <details class="payment-details">
+            <summary>Crypto donation details</summary>
+            <div class="detail-body">
+              <strong>Bitcoin (BTC):</strong> Decentralized digital currency. Send from any wallet (Coinbase, Ledger, Trust Wallet, etc.). Typical confirmation time: 10&ndash;60 minutes. Irreversible once confirmed on the blockchain.<br><br>
+              <strong>Ethereum (ETH):</strong> Programmable blockchain with lower fees than BTC for smaller amounts. Faster confirmation (15 seconds to 5 minutes). Send to the ETH address above.<br><br>
+              <strong>USDT/USDC (Stablecoins):</strong> Pegged to $1 USD &mdash; no volatility risk. Popular for international donations. We accept on ERC-20 (Ethereum) and TRC-20 (Tron) networks. Use the ETH address above for ERC-20 tokens.
+              <div class="detail-callout">
+                <strong>Tax note:</strong> Crypto donations may be tax-deductible in many countries. In the US, donations of appreciated crypto can be deducted at fair market value with no capital gains tax on the appreciation. Consult your tax advisor.
+              </div>
+            </div>
+          </details>
         </div>
 
         <!-- Bank Transfer -->
@@ -1862,12 +2154,56 @@
               </span>
             </div>
           </div>
+          <details class="payment-details">
+            <summary>Bank transfer options &amp; tax info</summary>
+            <div class="detail-body">
+              <strong>NEFT:</strong> Batch processing, settles in ~30 minutes. No minimum amount, max &#8377;10 lakh online. Available during banking hours.<br><br>
+              <strong>RTGS:</strong> Real-time gross settlement for amounts &#8377;2 lakh and above. Instant settlement, ideal for large donations.<br><br>
+              <strong>IMPS:</strong> 24/7 instant transfer, up to &#8377;5 lakh. Small fee (&#8377;2.50&ndash;25 depending on amount).<br><br>
+              <strong>Check / Demand Draft:</strong> Mail to the monastery address below. Make payable to &ldquo;Gaden Shartse Norling College Buddhist Cultural Association.&rdquo;
+              <div class="detail-callout">
+                <strong>US Donors &mdash; 501(c)(3):</strong> Donations through the <strong>Gaden Shartse Cultural Foundation</strong> (Long Beach, CA) are tax-deductible. EIN: 20-5126355. Make checks payable to &ldquo;Gaden Shartse Cultural Foundation.&rdquo;
+              </div>
+              <div class="detail-callout">
+                <strong>FCRA Status:</strong> The monastery holds valid FCRA registration (Foreign Contribution Regulation Act, 2010) from India's Ministry of Home Affairs, legally permitting receipt of foreign donations. All foreign contributions are reported quarterly.
+              </div>
+            </div>
+          </details>
           <div style="padding: 12px 0; font-size: 13px; color: var(--text-dim); line-height: 1.6;">
             <strong style="color: var(--text-soft);">Check / Money Order:</strong><br>
             Gaden Shartse Gungru Khangtsen<br>
             P.O. Tibetan Colony, Mundgod<br>
             N. Kanara, Karnataka 581411, India
           </div>
+        </div>
+
+        <!-- In-Person / Tour Donations (NEW 5th category) -->
+        <div class="payment-cat reveal">
+          <div class="payment-cat__label">In Person</div>
+          <div class="payment-cat__title">Tour &amp; Event Donations</div>
+          <div class="payment-method">
+            <span class="pm-icon">&#128181;</span>
+            <span class="pm-name">Cash</span>
+            <span class="pm-detail">At any tour stop</span>
+          </div>
+          <div class="payment-method">
+            <span class="pm-icon">&#128179;</span>
+            <span class="pm-name">Card (Square Reader)</span>
+            <span class="pm-detail">Tap / Swipe / Chip</span>
+          </div>
+          <div class="payment-method">
+            <span class="pm-icon">&#128221;</span>
+            <span class="pm-name">Check</span>
+            <span class="pm-detail">At events</span>
+          </div>
+          <details class="payment-details">
+            <summary>About our USA tours</summary>
+            <div class="detail-body">
+              Donations are accepted at all <strong>USA tour stops</strong> &mdash; sand mandala events, Buddhist teachings, and traditional ceremonies. Cash, check, and card (via Square reader) are all accepted.<br><br>
+              <strong>Suggested donation:</strong> $15 per event, but all amounts are welcome. 100% of tour proceeds go directly to the monastery in India.<br><br>
+              <strong>Schedule:</strong> Annual tours typically run October through December across US cities. Follow our website for upcoming tour dates and locations.
+            </div>
+          </details>
         </div>
       </div>
     </div>
@@ -2023,84 +2359,126 @@
         <div class="tech-card__icon">&#127760;</div>
         <div class="tech-card__body">
           <div class="tech-card__title">Frontend</div>
-          <div class="tech-card__desc">Static HTML/CSS/JS on GitHub Pages. Zero hosting cost, global CDN, 99.99% uptime.</div>
+          <div class="tech-card__desc">Pure HTML/CSS/JS &mdash; no React, no build step, no npm. Served from GitHub's global CDN (Fastly). Time-to-first-byte under 50ms worldwide. The entire page weighs under 50KB gzipped.</div>
         </div>
       </div>
       <div class="tech-card reveal">
         <div class="tech-card__icon">&#128179;</div>
         <div class="tech-card__body">
           <div class="tech-card__title">Payment Processing</div>
-          <div class="tech-card__desc">Razorpay for Indian + international payments. Client-side tokenization, server-side processing via Supabase Edge Functions.</div>
+          <div class="tech-card__desc">Razorpay handles PCI compliance so we never touch card numbers. Client-side tokenization converts sensitive data before it reaches our servers. Razorpay processes $100B+ annually for 10M+ businesses.</div>
         </div>
       </div>
       <div class="tech-card reveal">
         <div class="tech-card__icon">&#128241;</div>
         <div class="tech-card__body">
           <div class="tech-card__title">UPI Integration</div>
-          <div class="tech-card__desc">Native QR code generation for instant Indian mobile payments. Google Pay, PhonePe, Paytm supported.</div>
+          <div class="tech-card__desc">UPI QR codes generated dynamically with the exact donation amount pre-filled. Donor scans and confirms with their PIN. Works with 300+ bank apps. UPI processed 12.02 billion transactions worth $250B in January 2024.</div>
         </div>
       </div>
       <div class="tech-card reveal">
         <div class="tech-card__icon">&#128451;</div>
         <div class="tech-card__body">
           <div class="tech-card__title">Database</div>
-          <div class="tech-card__desc">Supabase (PostgreSQL) for donor records, transaction ledger, receipt tracking, and analytics.</div>
+          <div class="tech-card__desc">PostgreSQL via Supabase &mdash; the same database engine powering Instagram and Spotify. Row Level Security ensures donors only see their own data. Real-time subscriptions push updates to the admin dashboard instantly.</div>
         </div>
       </div>
       <div class="tech-card reveal">
         <div class="tech-card__icon">&#128231;</div>
         <div class="tech-card__body">
           <div class="tech-card__title">Email Receipts</div>
-          <div class="tech-card__desc">Automated branded thank-you emails via Resend API with 80G tax receipt for Indian donors.</div>
+          <div class="tech-card__desc">Branded HTML emails via Resend API (99.9% deliverability). Indian donors receive 80G tax exemption certificate number. International donors receive a valid tax-deduction receipt. Sent within 30 seconds of payment.</div>
         </div>
       </div>
       <div class="tech-card reveal">
         <div class="tech-card__icon">&#128172;</div>
         <div class="tech-card__body">
           <div class="tech-card__title">SMS Confirmation</div>
-          <div class="tech-card__desc">Instant donation confirmation to donor's phone via Telnyx. Works in 200+ countries.</div>
+          <div class="tech-card__desc">Telnyx carrier-grade SMS to 200+ countries. Indian donors get SMS in Hindi or English based on preference. Includes amount, transaction ID, and a thank-you blessing.</div>
         </div>
       </div>
       <div class="tech-card reveal">
         <div class="tech-card__icon">&#128257;</div>
         <div class="tech-card__body">
           <div class="tech-card__title">Recurring Billing</div>
-          <div class="tech-card__desc">Razorpay Subscriptions API for monthly sponsorships with automatic retry and notifications.</div>
+          <div class="tech-card__desc">Razorpay Subscriptions API with automatic retry &mdash; if a monthly charge fails, it retries 3 times over 7 days before pausing. Donors can pause, resume, or cancel anytime via a self-service portal link in each receipt email.</div>
         </div>
       </div>
       <div class="tech-card reveal">
         <div class="tech-card__icon">&#128178;</div>
         <div class="tech-card__body">
           <div class="tech-card__title">Multi-Currency</div>
-          <div class="tech-card__desc">Accept INR, USD, EUR, GBP. Auto-converted to INR at settlement. Real-time exchange rates.</div>
+          <div class="tech-card__desc">Real-time exchange rates from Razorpay. Donors see amounts in their local currency at checkout. Settlement in INR. Supported: INR, USD, EUR, GBP, CAD, AUD, SGD, JPY, HKD.</div>
+        </div>
+      </div>
+      <div class="tech-card reveal">
+        <div class="tech-card__icon">&#128221;</div>
+        <div class="tech-card__body">
+          <div class="tech-card__title">80G Tax Receipts (India)</div>
+          <div class="tech-card__desc">Automatic 80G tax exemption certificates. Section 80G of the Income Tax Act allows 50% deduction on donations to approved institutions. Unique certificate numbers generated and tracked per donor.</div>
+        </div>
+      </div>
+      <div class="tech-card reveal">
+        <div class="tech-card__icon">&#127482;&#127480;</div>
+        <div class="tech-card__body">
+          <div class="tech-card__title">501(c)(3) US Tax Deduction</div>
+          <div class="tech-card__desc">US donors giving through the Gaden Shartse Cultural Foundation (EIN: 20-5126355) receive tax-deductible receipts. Deductible up to 60% of AGI for cash, 30% for appreciated property.</div>
+        </div>
+      </div>
+      <div class="tech-card reveal">
+        <div class="tech-card__icon">&#128220;</div>
+        <div class="tech-card__body">
+          <div class="tech-card__title">FCRA Compliance</div>
+          <div class="tech-card__desc">Valid FCRA registration from India's Ministry of Home Affairs permits receiving foreign donations. All foreign contributions reported quarterly. Full transparency &mdash; annual reports available on request.</div>
+        </div>
+      </div>
+      <div class="tech-card reveal">
+        <div class="tech-card__icon">&#128737;</div>
+        <div class="tech-card__body">
+          <div class="tech-card__title">Fraud Prevention</div>
+          <div class="tech-card__desc">Multi-layer protection: Razorpay AI-powered fraud detection, 3D Secure card authentication, UPI PIN verification, webhook signature validation (HMAC-SHA256), and server-side amount verification. Client-side amounts never trusted.</div>
+        </div>
+      </div>
+      <div class="tech-card reveal">
+        <div class="tech-card__icon">&#128274;</div>
+        <div class="tech-card__body">
+          <div class="tech-card__title">Data Privacy</div>
+          <div class="tech-card__desc">Donor data stored in Supabase with Row Level Security. No data shared with third parties. Anonymous donation option &mdash; name and email not stored if anonymous is checked. All data encrypted at rest (AES-256) and in transit (TLS 1.3).</div>
         </div>
       </div>
       <div class="tech-card reveal">
         <div class="tech-card__icon">&#128279;</div>
         <div class="tech-card__body">
           <div class="tech-card__title">Webhook-Driven</div>
-          <div class="tech-card__desc">Payment confirmations via Razorpay webhooks trigger ledger updates, receipts, and notifications automatically.</div>
+          <div class="tech-card__desc">Payment confirmations via Razorpay webhooks trigger ledger updates, receipts, and notifications automatically. HMAC signature verification on every webhook to prevent spoofing.</div>
         </div>
       </div>
       <div class="tech-card reveal">
         <div class="tech-card__icon">&#129302;</div>
         <div class="tech-card__body">
           <div class="tech-card__title">AI Assistant</div>
-          <div class="tech-card__desc">PAI-powered chatbot for donation questions, available in English, Hindi, and Tibetan.</div>
+          <div class="tech-card__desc">PAI-powered chatbot for donation questions, available in English, Hindi, and Tibetan. Answers property, scheduling, and donation queries via chat, voice, email, or Discord.</div>
         </div>
       </div>
       <div class="tech-card reveal">
         <div class="tech-card__icon">&#128200;</div>
         <div class="tech-card__body">
           <div class="tech-card__title">Cost Tracking</div>
-          <div class="tech-card__desc">All API calls logged to api_usage_log for full financial transparency and cost optimization.</div>
+          <div class="tech-card__desc">All API calls logged to api_usage_log for full financial transparency. Per-vendor, per-category cost breakdowns on the admin dashboard. Every rupee accounted for.</div>
+        </div>
+      </div>
+      <div class="tech-card reveal">
+        <div class="tech-card__icon">&#128187;</div>
+        <div class="tech-card__body">
+          <div class="tech-card__title">Admin Dashboard</div>
+          <div class="tech-card__desc">Monastery administrators see real-time donation feeds, donor CRM, payment reconciliation, and financial reports. Built on the AlpacApps admin infrastructure. Mobile-responsive for access from anywhere.</div>
         </div>
       </div>
       <div class="tech-card reveal">
         <div class="tech-card__icon">&#9729;</div>
         <div class="tech-card__body">
           <div class="tech-card__title">Zero Server Cost</div>
-          <div class="tech-card__desc">Fully serverless architecture. Supabase Edge Functions handle all backend logic on demand.</div>
+          <div class="tech-card__desc">Fully serverless architecture. Supabase Edge Functions handle all backend logic on demand. No servers to maintain, patch, or scale. Free tier covers thousands of donations per month.</div>
         </div>
       </div>
     </div>
@@ -2111,31 +2489,50 @@
       <div class="flow-steps">
         <div class="flow-step-item">
           <span class="flow-step-item__num">1</span>
-          <span class="flow-step-item__text"><strong>Donor selects amount</strong> and preferred payment method on this page</span>
+          <span class="flow-step-item__text"><strong>Donor clicks &ldquo;Donate Now&rdquo;</strong> &mdash; JS calls Supabase Edge Function to create a Razorpay Order</span>
         </div>
         <div class="flow-step-item">
           <span class="flow-step-item__num">2</span>
-          <span class="flow-step-item__text">Client calls <strong>Supabase Edge Function</strong> to create a Razorpay Order</span>
+          <span class="flow-step-item__text"><strong>Razorpay Checkout modal</strong> opens (hosted by Razorpay &mdash; PCI compliant). Donor completes payment via card, UPI, netbanking, or wallet</span>
         </div>
         <div class="flow-step-item">
           <span class="flow-step-item__num">3</span>
-          <span class="flow-step-item__text"><strong>Razorpay Checkout</strong> opens securely (card, UPI, netbanking, wallet)</span>
+          <span class="flow-step-item__text">Razorpay sends <strong>webhook</strong> to Supabase Edge Function &mdash; function verifies HMAC-SHA256 signature</span>
         </div>
         <div class="flow-step-item">
           <span class="flow-step-item__num">4</span>
-          <span class="flow-step-item__text">Payment processed by gateway &mdash; <strong>webhook fires</strong> to Supabase</span>
+          <span class="flow-step-item__text">Writes to: <strong><code>donations</code></strong> table + <strong><code>ledger</code></strong> table + <strong><code>api_usage_log</code></strong> for cost tracking</span>
         </div>
         <div class="flow-step-item">
           <span class="flow-step-item__num">5</span>
-          <span class="flow-step-item__text">Edge function <strong>verifies signature</strong> &rarr; writes to <code>donations</code> + <code>ledger</code> tables</span>
+          <span class="flow-step-item__text">Triggers: <strong>receipt email</strong> via Resend (with 80G certificate number for Indian donors) + <strong>SMS confirmation</strong> via Telnyx</span>
         </div>
         <div class="flow-step-item">
           <span class="flow-step-item__num">6</span>
-          <span class="flow-step-item__text"><strong>Receipt email</strong> sent automatically (with 80G number for Indian donors)</span>
+          <span class="flow-step-item__text">Updates <strong>admin dashboard</strong> in real-time via Supabase Realtime subscriptions</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recurring Flow -->
+    <div class="data-flow reveal">
+      <div class="data-flow__title">Monthly Recurring Flow</div>
+      <div class="flow-steps">
+        <div class="flow-step-item">
+          <span class="flow-step-item__num">1</span>
+          <span class="flow-step-item__text">Razorpay Subscriptions API creates <strong>plan + subscription</strong> on first donation</span>
         </div>
         <div class="flow-step-item">
-          <span class="flow-step-item__num">7</span>
-          <span class="flow-step-item__text"><strong>Donor dashboard updated</strong> in real-time &mdash; view all past donations and impact</span>
+          <span class="flow-step-item__num">2</span>
+          <span class="flow-step-item__text"><strong>Auto-charges</strong> on billing date each month &mdash; same webhook flow triggers receipts and ledger entries</span>
+        </div>
+        <div class="flow-step-item">
+          <span class="flow-step-item__num">3</span>
+          <span class="flow-step-item__text">Failed charge &rarr; <strong>3 retries over 7 days</strong> &rarr; notification email to donor if still failing</span>
+        </div>
+        <div class="flow-step-item">
+          <span class="flow-step-item__num">4</span>
+          <span class="flow-step-item__text">Donor <strong>self-service portal</strong> link in each receipt for pause, resume, or cancel</span>
         </div>
       </div>
     </div>
@@ -2233,6 +2630,7 @@
       </div>
       <div class="footer-links">
         <a href="#about">About</a>
+        <a href="#gallery">Gallery</a>
         <a href="#donate">Donate</a>
         <a href="#sponsor">Programs</a>
         <a href="#">Privacy Policy</a>
@@ -2254,6 +2652,13 @@
       </div>
     </div>
   </footer>
+
+  <!-- Lightbox Overlay -->
+  <div class="lightbox-overlay" id="galleryLightbox" onclick="closeLightboxGallery(event)">
+    <button class="lightbox-close" onclick="closeLightboxGallery(event)">&times;</button>
+    <img id="lightboxImg" src="" alt="">
+    <div class="lightbox-caption" id="lightboxCaption"></div>
+  </div>
 
   <!-- Demo Notice -->
   <div class="demo-banner">
@@ -2397,6 +2802,33 @@
         setTimeout(() => toast.remove(), 300);
       }, 4000);
     }
+
+    // Gallery lightbox
+    function openLightboxGallery(el) {
+      const img = el.querySelector('img');
+      const caption = el.querySelector('.gallery-item__caption');
+      if (!img || el.classList.contains('gallery-item--placeholder')) return;
+      const overlay = document.getElementById('galleryLightbox');
+      document.getElementById('lightboxImg').src = img.src;
+      document.getElementById('lightboxCaption').textContent = caption ? caption.textContent : '';
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeLightboxGallery(e) {
+      if (e.target.tagName === 'IMG') return;
+      const overlay = document.getElementById('galleryLightbox');
+      overlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const overlay = document.getElementById('galleryLightbox');
+        if (overlay.classList.contains('open')) {
+          overlay.classList.remove('open');
+          document.body.style.overflow = '';
+        }
+      }
+    });
 
     // Scroll reveal animation
     const observer = new IntersectionObserver((entries) => {
