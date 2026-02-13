@@ -359,8 +359,8 @@ function renderHistory(requests) {
     const showRetry = ['failed', 'completed', 'review'].includes(latestStatus);
     const retryLabel = latestStatus === 'failed' ? '↻ Try Again' : '↻ Modify';
 
-    // Version badge for completed+deployed builds
-    const versionBadge = latestStatus === 'completed' && latest.deployed_version
+    // Version badge for completed+deployed builds (show for both completed and review status)
+    const versionBadge = ['completed', 'review'].includes(latestStatus) && latest.deployed_version
       ? `<span class="appdev-version-badge">${escapeHtml(latest.deployed_version)}</span>` : '';
 
     // Active progress bar (replaces the old separate banner)
