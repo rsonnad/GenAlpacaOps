@@ -414,6 +414,9 @@ function renderHistory(requests) {
     const versionBadge = latest.deployed_version
       ? `<span class="appdev-version-badge">${escapeHtml(latest.deployed_version)}</span>` : '';
 
+    // Show delete button for non-active requests
+    const showDelete = !isActive;
+
     // Active progress bar (replaces the old separate banner)
     let activeProgress = '';
     if (isActive) {
@@ -437,6 +440,7 @@ function renderHistory(requests) {
             ${versionBadge}
             ${chain.length > 1 ? `<span class="appdev-followup-badge">${chain.length - 1} follow-up${chain.length > 2 ? 's' : ''}</span>` : ''}
             ${showRetry ? `<button class="appdev-retry-header-btn" onclick="event.stopPropagation();window._tryAgain(${JSON.stringify(req.description).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;')})" title="Load this request into the editor">${retryLabel}</button>` : ''}
+            ${showDelete ? `<button class="appdev-delete-header-btn" onclick="event.stopPropagation();window._deleteRequest('${req.id}', ${JSON.stringify(req.description).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;')})" title="Delete this request">🗑️ Delete</button>` : ''}
             <span class="appdev-request-time">${formatTimeAgo(req.created_at)}</span>
             <svg class="appdev-request-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
@@ -555,6 +559,30 @@ function tryAgain(description) {
   showToast('Request text loaded. Edit and resubmit when ready.', 'info');
 }
 window._tryAgain = tryAgain;
+
+async function deleteRequest(requestId, description) {
+  const truncated = description.substring(0, 60) + (description.length > 60 ? '...' : '');
+
+  if (!confirm(`Delete this request?\n\n"${truncated}"\n\nThis cannot be undone.`)) {
+    return;
+  }
+
+  try {
+    // Delete the request and all its follow-ups
+    const { error } = await supabase
+      .from('feature_requests')
+      .delete()
+      .or(`id.eq.${requestId},parent_request_id.eq.${requestId}`);
+
+    if (error) throw error;
+
+    showToast('Request deleted', 'success');
+    await loadHistory();
+  } catch (err) {
+    showToast(`Failed to delete: ${err.message}`, 'error');
+  }
+}
+window._deleteRequest = deleteRequest;
 
 function buildCompletionDetails(req) {
   const parts = [];
