@@ -435,9 +435,12 @@ function renderTimelineItem(req) {
   // Completed
   if (req.status === 'completed' && req.completed_at) {
     const details = buildCompletionDetails(req);
+    const deployLabel = req.deploy_decision === 'auto_merged'
+      ? (req.deployed_version ? `Deployed as ${req.deployed_version}` : 'Deployed')
+      : 'Completed';
     items.push({
       time: req.completed_at,
-      label: req.deploy_decision === 'auto_merged' ? 'Deployed' : 'Completed',
+      label: deployLabel,
       detail: null,
       class: 'success',
       html: details,
@@ -510,9 +513,11 @@ function buildCompletionDetails(req) {
       ${!isUpToDate ? `<p class="appdev-refresh-hint">${getHardRefreshInstructions()}</p>` : ''}
     </div>`);
   } else if (req.deploy_decision === 'auto_merged' && !req.deployed_version) {
-    parts.push(`<div class="appdev-detail-section">
+    parts.push(`<div class="appdev-detail-section appdev-version-section appdev-version-stale">
       <h4>Deployed Version</h4>
-      <p style="color:var(--text-muted)">Version pending — CI is still assigning a version number.</p>
+      <p style="color:#92400e;font-weight:600">⏳ Version assignment pending...</p>
+      <p style="font-size:0.75rem;color:#78350f;margin-top:0.25rem">The feature was deployed to main, but CI is still assigning the version number. Refresh this page in a few moments to see the version.</p>
+      <button class="appdev-try-again-btn" onclick="window.location.reload()" style="margin-top:0.5rem">🔄 Refresh Page</button>
     </div>`);
   }
 
