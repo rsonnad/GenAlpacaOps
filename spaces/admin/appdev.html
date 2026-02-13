@@ -208,6 +208,20 @@
       white-space: nowrap;
       align-self: center;
     }
+    .appdev-request-requester {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      padding: 0.35rem 0.75rem;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .appdev-request-requester strong {
+      color: var(--text);
+      font-weight: 600;
+    }
     .appdev-request-chevron {
       color: var(--text-muted);
       transition: transform 0.2s;
@@ -645,7 +659,7 @@
       </div>
 
       <!-- History -->
-      <h2 class="appdev-history-header">Build History</h2>
+      <h2 class="appdev-history-header">Request History</h2>
       <div id="historyContainer">
         <div class="appdev-empty">No feature requests yet. Describe something above and hit submit.</div>
       </div>

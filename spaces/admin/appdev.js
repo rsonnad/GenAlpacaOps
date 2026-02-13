@@ -414,6 +414,13 @@ function renderHistory(requests) {
     const versionBadge = latest.deployed_version
       ? `<span class="appdev-version-badge">${escapeHtml(latest.deployed_version)}</span>` : '';
 
+    // Requester info section
+    const requesterInfo = req.requester_name || req.requester_email || 'Unknown';
+    const requesterSection = `
+      <div class="appdev-request-requester">
+        <span>Requested by <strong>${escapeHtml(requesterInfo)}</strong>${req.requester_email && req.requester_name ? ` (${escapeHtml(req.requester_email)})` : ''}</span>
+      </div>`;
+
     // Active progress bar (replaces the old separate banner)
     let activeProgress = '';
     if (isActive) {
@@ -441,6 +448,7 @@ function renderHistory(requests) {
             <svg class="appdev-request-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
         </div>
+        ${requesterSection}
         ${activeProgress}
         <div class="appdev-request-body">
           <div class="appdev-request-desc">${escapeHtml(req.description)}</div>
