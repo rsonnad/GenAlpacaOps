@@ -1,12 +1,12 @@
 {
-  "version": "v260905.01 1:24p",
-  "release": 1843,
-  "sha": "8e787db7da",
-  "fullSha": "8e787db7da9682fd459c934f69fc1c1cc4e1e93e",
+  "version": "v260908.01 5:00p",
+  "release": 1844,
+  "sha": "2d4bd49044",
+  "fullSha": "2d4bd490443243f088a816275920ed2733f04bbe",
   "actor": "rsonnad",
   "source": "github-main-push",
   "model": "ci",
-  "machine": "runnervmejwal",
-  "pushedAt": "2026-09-05T18:24:57+00:00",
-  "commits": [{"sha":"8e787db7da","message":"feat(people): add vehicle_renter person_type; keep rental contracts out of git","author":"Paca"}]
+  "machine": "runnervmlun5p",
+  "pushedAt": "2026-09-08T22:00:44+00:00",
+  "commits": [{"sha":"2d4bd49044","message":"Fix stale AlpacApps backups: find aws on PATH and email only after 2 days of failed auto-repair.","author":"Otto"}]
 }
