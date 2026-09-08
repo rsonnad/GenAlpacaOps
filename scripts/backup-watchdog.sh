@@ -1,24 +1,34 @@
 #!/bin/bash
 # backup-watchdog.sh — Self-healing backup monitor.
 #
-# Checks for failed backup triggers, collects error context, and sends
-# the problem to Claude CLI on Alpuca to diagnose, fix, and re-invoke.
-# Loops until all services have a recent successful backup.
+# Detects stale/failed AlpacApps backups on Alpuca, applies deterministic
+# repairs, re-queues the poller, and (last resort) asks Claude CLI to fix.
+# Emails rahulioson@gmail.com via Resend only after 2 days of still being
+# unable to get backups working. Repeats at most once per 24h after that.
 #
 # Runs hourly via cron on Alpuca:
 #   30 * * * * PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin /Users/alpuca/scripts/backup-watchdog.sh >> /Users/alpuca/logs/backup-watchdog.log 2>&1
 #
-# Requires: claude CLI, ~/.env-alpacapps, curl, jq
+# Requires: ~/.env-alpacapps, curl, python3. Optional: claude CLI, Resend key.
 
 set -uo pipefail
 
 export PATH="/opt/homebrew/opt/libpq/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
 LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')] [backup-watchdog]"
-LOG_FILE="$HOME/logs/backup-watchdog.log"
 LOCK_FILE="/tmp/backup-watchdog.lock"
-MAX_RETRIES=3
-RETRY_DELAY=300  # 5 minutes between retries
+STATE_FILE="$HOME/logs/backup-watchdog-state.json"
+HEARTBEAT_FILE="$HOME/logs/backup-trigger-poller.heartbeat"
+ALERT_EMAIL="rahulioson@gmail.com"
+ALERT_FROM="notifications@alpacaplayhouse.com"
+UNHEALTHY_SECS=$((2 * 24 * 3600))   # email only after 2 days of failed repair
+EMAIL_COOLDOWN_SECS=$((24 * 3600))  # at most one email per day after that
+POLLER_STALE_SECS=900               # 15 min — cron is */5
+WEEKLY_STALE_DAYS=9                 # weekly job; warn if last success >9 days
+DAILY_STALE_DAYS=2
+SB_URL="${SUPABASE_URL:-https://aphrrfprbixmhissnjfn.supabase.co}"
+
+mkdir -p "$HOME/logs"
 
 # Load env
 ENVFILE="$HOME/.env-alpacapps"
@@ -26,7 +36,7 @@ if [ -f "$ENVFILE" ]; then
   export $(grep -v '^#' "$ENVFILE" | grep '=' | xargs) 2>/dev/null || true
 fi
 
-SB_URL="${SUPABASE_URL:-https://aphrrfprbixmhissnjfn.supabase.co}"
+SB_URL="${SUPABASE_URL:-$SB_URL}"
 SB_KEY="${SUPABASE_SERVICE_ROLE_KEY:-}"
 
 if [ -z "$SB_KEY" ]; then
@@ -48,279 +58,394 @@ fi
 echo $$ > "$LOCK_FILE"
 trap 'rm -f "$LOCK_FILE"' EXIT
 
-# ── Check for recent failures ────────────────────────────────────────
-echo "$LOG_PREFIX Checking for failed backup triggers in last 24h..."
-
-SINCE=$(date -u -v-24H +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)
-
-FAILED=$(curl -sf "$SB_URL/rest/v1/backup_triggers?status=eq.failed&completed_at=gte.$SINCE&order=completed_at.desc" \
-  -H "apikey: $SB_KEY" \
-  -H "Authorization: Bearer $SB_KEY" 2>/dev/null)
-
-if [ -z "$FAILED" ] || [ "$FAILED" = "[]" ]; then
-  echo "$LOG_PREFIX No failed triggers in last 24h — all healthy"
-  exit 0
-fi
-
-FAIL_COUNT=$(echo "$FAILED" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
-echo "$LOG_PREFIX Found $FAIL_COUNT failed trigger(s)"
-
-# ── Check which services need attention ──────────────────────────────
-# Get unique failed services that don't have a more recent success
-SERVICES_NEEDING_FIX=$(echo "$FAILED" | python3 -c "
-import sys, json
-failed = json.load(sys.stdin)
-services = set()
-for t in failed:
-    services.add(t['service'])
-for s in sorted(services):
-    print(s)
-")
-
-if [ -z "$SERVICES_NEEDING_FIX" ]; then
-  echo "$LOG_PREFIX All failed services have subsequent successes — OK"
-  exit 0
-fi
-
-# Check if each failed service has a recent success (would mean it self-healed)
-NEEDS_FIX=""
-for SVC in $SERVICES_NEEDING_FIX; do
-  RECENT_SUCCESS=$(curl -sf "$SB_URL/rest/v1/backup_triggers?service=eq.$SVC&status=eq.completed&completed_at=gte.$SINCE&limit=1" \
+sb_get() {
+  curl -sf "$SB_URL/rest/v1/$1" \
     -H "apikey: $SB_KEY" \
-    -H "Authorization: Bearer $SB_KEY" 2>/dev/null)
+    -H "Authorization: Bearer $SB_KEY"
+}
 
-  if [ -z "$RECENT_SUCCESS" ] || [ "$RECENT_SUCCESS" = "[]" ]; then
-    NEEDS_FIX="$NEEDS_FIX $SVC"
-    echo "$LOG_PREFIX   $SVC — NEEDS FIX (no recent success)"
-  else
-    echo "$LOG_PREFIX   $SVC — OK (has recent success after failure)"
-  fi
-done
+iso_now() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
 
-NEEDS_FIX=$(echo "$NEEDS_FIX" | xargs)  # trim whitespace
-if [ -z "$NEEDS_FIX" ]; then
-  echo "$LOG_PREFIX All services self-healed — nothing to do"
-  exit 0
-fi
+now_epoch=$(date +%s)
 
-# ── Collect diagnostic context ───────────────────────────────────────
-echo "$LOG_PREFIX Collecting diagnostic context for: $NEEDS_FIX"
+# ── Collect last successful backup per service ───────────────────────
+echo "$LOG_PREFIX Checking backup freshness (not just 24h trigger failures)..."
+
+FILES_JSON=$(sb_get "backup_files?select=service,backup_date,filename,size_bytes&order=backup_date.desc&limit=200" 2>/dev/null || echo "[]")
+TRIGGERS_JSON=$(sb_get "backup_triggers?select=id,service,status,requested_at,completed_at,result,notes&order=requested_at.desc&limit=50" 2>/dev/null || echo "[]")
 
 DIAG_FILE="/tmp/backup-watchdog-diag.txt"
-cat > "$DIAG_FILE" << 'HEADER'
-# Backup Watchdog — Failure Diagnosis Request
+NEEDS_FIX=$(FILES_JSON="$FILES_JSON" TRIGGERS_JSON="$TRIGGERS_JSON" \
+  WEEKLY_STALE_DAYS="$WEEKLY_STALE_DAYS" DAILY_STALE_DAYS="$DAILY_STALE_DAYS" \
+  HEARTBEAT_FILE="$HEARTBEAT_FILE" POLLER_STALE_SECS="$POLLER_STALE_SECS" \
+  WEEKLY_LOG="$HOME/logs/alpacapps-backup.log" NOW="$now_epoch" python3 - << 'PY'
+import json, os, sys, time
+from datetime import datetime, timezone
 
-You are running on Alpuca (Mac Mini M4, 192.168.1.200).
-RVAULT20 is a USB drive mounted at /Volumes/RVAULT20.
-Backup scripts are in ~/scripts/.
-Env vars are in ~/.env-alpacapps (already loaded — do NOT modify secrets).
+now = int(os.environ["NOW"])
+weekly_days = int(os.environ["WEEKLY_STALE_DAYS"])
+daily_days = int(os.environ["DAILY_STALE_DAYS"])
 
-HEADER
+services = {
+    "supabase-db": weekly_days,
+    "cloudflare-r2": weekly_days,
+    "cloudflare-d1": weekly_days,
+    "github-repo": weekly_days,
+    "haos-vm-image": daily_days,
+}
 
-echo "## FAILED SERVICES THAT NEED FIXING:" >> "$DIAG_FILE"
-echo "$NEEDS_FIX" >> "$DIAG_FILE"
-echo "" >> "$DIAG_FILE"
+try:
+    files = json.loads(os.environ.get("FILES_JSON") or "[]")
+except Exception:
+    files = []
+try:
+    triggers = json.loads(os.environ.get("TRIGGERS_JSON") or "[]")
+except Exception:
+    triggers = []
 
-# Add failed trigger details with full result JSON
-echo "## Failed trigger details (last 24h):" >> "$DIAG_FILE"
-echo "$FAILED" | python3 -c "
-import sys, json
-for t in json.load(sys.stdin):
-    print(f\"  Service: {t['service']}\")
-    print(f\"  Status: {t['status']}\")
-    print(f\"  Requested: {t.get('requested_at','?')}\")
-    print(f\"  Completed: {t.get('completed_at','?')}\")
-    r = t.get('result')
-    if r:
-        if isinstance(r, str):
-            print(f\"  Result: {r}\")
-        else:
-            print(f\"  Result: {json.dumps(r)}\")
-    notes = t.get('notes','')
-    if notes:
-        print(f\"  Notes: {notes}\")
-    print()
-" >> "$DIAG_FILE"
+latest = {}
+for row in files:
+    svc = row.get("service")
+    if svc in services and svc not in latest:
+        latest[svc] = row
 
-# Add recent log tails (more lines for better context)
-echo "## Recent backup-trigger-poller.log (last 60 lines):" >> "$DIAG_FILE"
-tail -60 "$HOME/logs/backup-trigger-poller.log" >> "$DIAG_FILE" 2>/dev/null
+problems = []
 
-echo "" >> "$DIAG_FILE"
-echo "## Recent alpacapps-backup.log (last 30 lines):" >> "$DIAG_FILE"
-tail -30 "$HOME/logs/alpacapps-backup.log" >> "$DIAG_FILE" 2>/dev/null
+def age_days(iso):
+    if not iso:
+        return None
+    try:
+        dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+        return (datetime.now(timezone.utc) - dt).total_seconds() / 86400.0
+    except Exception:
+        return None
 
-echo "" >> "$DIAG_FILE"
-echo "## Recent watchdog log (last 20 lines):" >> "$DIAG_FILE"
-tail -20 "$HOME/logs/backup-watchdog.log" >> "$DIAG_FILE" 2>/dev/null
+for svc, max_days in services.items():
+    row = latest.get(svc)
+    if not row:
+        problems.append(f"{svc}: no successful backup_files row on record")
+        continue
+    days = age_days(row.get("backup_date"))
+    if days is None:
+        problems.append(f"{svc}: unreadable backup_date {row.get('backup_date')}")
+    elif days > max_days:
+        problems.append(f"{svc}: last success {row.get('backup_date')} ({days:.1f}d ago, limit {max_days}d) file={row.get('filename')}")
 
-# Add comprehensive system state
-echo "" >> "$DIAG_FILE"
-echo "## System state:" >> "$DIAG_FILE"
-echo "RVAULT20 mounted: $(mount | grep -c -i rvault20 || echo 0)" >> "$DIAG_FILE"
-echo "RVAULT20 free space: $(df -h /Volumes/RVAULT20 2>/dev/null | tail -1 | awk '{print $4}' || echo 'N/A')" >> "$DIAG_FILE"
-echo "pg_dump: $(which pg_dump 2>/dev/null || echo 'not in PATH')" >> "$DIAG_FILE"
-echo "aws: $(which aws 2>/dev/null || echo 'not in PATH')" >> "$DIAG_FILE"
-echo "jq: $(which jq 2>/dev/null || echo 'not in PATH')" >> "$DIAG_FILE"
-echo "git: $(which git 2>/dev/null || echo 'not in PATH')" >> "$DIAG_FILE"
-echo "HAOS img: $(ls ~/homeassistant-vm/haos_generic-aarch64*.img 2>/dev/null || echo 'not found')" >> "$DIAG_FILE"
-echo "SUPABASE_DB_URL set: $([ -n "${SUPABASE_DB_URL:-}" ] && echo 'yes' || echo 'no')" >> "$DIAG_FILE"
-echo "SUPABASE_SERVICE_ROLE_KEY set: $([ -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ] && echo 'yes' || echo 'no')" >> "$DIAG_FILE"
-echo "CLOUDFLARE_API_TOKEN set: $([ -n "${CLOUDFLARE_API_TOKEN:-}" ] && echo 'yes' || echo 'no')" >> "$DIAG_FILE"
-echo "R2_ACCOUNT_ID set: $([ -n "${R2_ACCOUNT_ID:-}" ] && echo 'yes' || echo 'no')" >> "$DIAG_FILE"
-echo "D1_DATABASE_ID: ${D1_DATABASE_ID:-not set}" >> "$DIAG_FILE"
-echo "Network — Cloudflare API: $(curl -sf --max-time 5 -o /dev/null -w '%{http_code}' https://api.cloudflare.com/client/v4/user/tokens/verify -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN:-none}" 2>/dev/null || echo 'unreachable')" >> "$DIAG_FILE"
-echo "Network — GitHub: $(curl -sf --max-time 5 -o /dev/null -w '%{http_code}' https://github.com 2>/dev/null || echo 'unreachable')" >> "$DIAG_FILE"
+# Stuck pending/running triggers (>30 min)
+stuck_cut = 30 * 60
+for t in triggers:
+    st = t.get("status")
+    if st not in ("pending", "running"):
+        continue
+    ts = t.get("requested_at") or t.get("started_at")
+    days = age_days(ts)
+    if days is not None and days * 86400 > stuck_cut:
+        problems.append(f"trigger {t.get('id')} {t.get('service')} stuck {st} since {ts}")
 
-# Include the relevant sections of the backup script for each failing service
-echo "" >> "$DIAG_FILE"
-echo "## Relevant script sections (from ~/scripts/backup-trigger-poller.sh):" >> "$DIAG_FILE"
-for FAILING_SVC in $NEEDS_FIX; do
-  echo "" >> "$DIAG_FILE"
-  echo "### ---- $FAILING_SVC section ----" >> "$DIAG_FILE"
-  # Extract the case block for this service
-  sed -n "/^    ${FAILING_SVC})/,/^    ;;$/p" "$HOME/scripts/backup-trigger-poller.sh" >> "$DIAG_FILE" 2>/dev/null
-done
+# Poller heartbeat
+hb = os.environ.get("HEARTBEAT_FILE")
+stale_secs = int(os.environ.get("POLLER_STALE_SECS") or "900")
+if hb and os.path.exists(hb):
+    age = now - int(os.path.getmtime(hb))
+    if age > stale_secs:
+        problems.append(f"poller heartbeat stale ({age}s old, limit {stale_secs}s)")
+elif hb:
+    problems.append("poller heartbeat file missing — cron may not be firing")
 
-# Include per-service live diagnostic tests
-echo "" >> "$DIAG_FILE"
-echo "## Live diagnostic tests (run just now):" >> "$DIAG_FILE"
-for FAILING_SVC in $NEEDS_FIX; do
-  echo "" >> "$DIAG_FILE"
-  echo "### $FAILING_SVC:" >> "$DIAG_FILE"
-  case "$FAILING_SVC" in
-    cloudflare-d1)
-      D1_DB="${D1_DATABASE_ID:-98d0e680-8abe-4ce3-a941-70cb391adbf8}"
-      D1_TEST=$(curl -sf "https://api.cloudflare.com/client/v4/accounts/${R2_ACCOUNT_ID:-}/d1/database/${D1_DB}/export" \
-        -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN:-}" \
-        -H "Content-Type: application/json" \
-        -d '{"output_format":"file","dump_options":{"no_schema":false,"no_data":false,"tables":[]}}' 2>&1)
-      echo "  D1 export API response success: $(echo "$D1_TEST" | python3 -c "import sys,json; print(json.load(sys.stdin).get('success','?'))" 2>/dev/null || echo 'parse failed')" >> "$DIAG_FILE"
-      echo "  D1 signed_url present: $(echo "$D1_TEST" | python3 -c "import sys,json; r=json.load(sys.stdin).get('result',{}); print('yes' if r.get('signed_url') else 'no')" 2>/dev/null || echo 'parse failed')" >> "$DIAG_FILE"
-      SIGNED_URL_TEST=$(echo "$D1_TEST" | jq -r '.result.signed_url // empty' 2>/dev/null)
-      if [ -n "$SIGNED_URL_TEST" ]; then
-        echo "  D1 download test: $(curl -sf --max-time 30 "$SIGNED_URL_TEST" -o /dev/null -w 'HTTP %{http_code}, %{size_download} bytes' 2>/dev/null || echo 'FAILED')" >> "$DIAG_FILE"
-      fi
-      ;;
-    github-repo)
-      GH_TEST_DIR="/Volumes/RVAULT20/backups/alpacapps/github/alpacapps.git"
-      echo "  GH bare repo exists: $([ -d "$GH_TEST_DIR" ] && echo yes || echo no)" >> "$DIAG_FILE"
-      echo "  macOS ._ files: $(find "$GH_TEST_DIR" -name '._*' 2>/dev/null | wc -l | tr -d ' ')" >> "$DIAG_FILE"
-      GIT_TEST_OUT=$(git -C "$GH_TEST_DIR" remote update 2>&1)
-      GIT_TEST_RC=$?
-      echo "  git remote update exit code: $GIT_TEST_RC" >> "$DIAG_FILE"
-      echo "  git remote update output: $(echo "$GIT_TEST_OUT" | tail -3)" >> "$DIAG_FILE"
-      ;;
-    supabase-db)
-      echo "  pg_dump version: $(pg_dump --version 2>/dev/null || echo 'not found')" >> "$DIAG_FILE"
-      echo "  DB URL reachable: $(pg_isready -d "${SUPABASE_DB_URL:-}" 2>&1 | tail -1 || echo 'pg_isready not found')" >> "$DIAG_FILE"
-      ;;
-    cloudflare-r2)
-      echo "  aws s3 ls test: $(AWS_ACCESS_KEY_ID="${R2_ACCESS_KEY_ID:-}" AWS_SECRET_ACCESS_KEY="${R2_SECRET_ACCESS_KEY:-}" aws s3 ls "s3://${R2_BUCKET_NAME:-alpacapps}/" --endpoint-url "https://${R2_ACCOUNT_ID:-}.r2.cloudflarestorage.com" 2>&1 | head -2)" >> "$DIAG_FILE"
-      ;;
-    home-assistant)
-      echo "  HA reachable: $(curl -sf --max-time 5 -o /dev/null -w '%{http_code}' http://192.168.1.39:8123/api/ -H "Authorization: Bearer $(head -1 ~/.ha_llat 2>/dev/null)" 2>/dev/null || echo 'unreachable')" >> "$DIAG_FILE"
-      ;;
-  esac
-done
+# Weekly log last line
+wlog = os.environ.get("WEEKLY_LOG")
+if wlog and os.path.exists(wlog):
+    try:
+        with open(wlog, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            f.seek(max(0, size - 4000))
+            tail = f.read().decode("utf-8", "replace").strip().splitlines()
+        last = tail[-1] if tail else ""
+        if "ERROR:" in last:
+            problems.append(f"weekly backup last log line is an error: {last[-240:]}")
+    except Exception as e:
+        problems.append(f"could not read weekly log: {e}")
 
-echo "" >> "$DIAG_FILE"
-cat >> "$DIAG_FILE" << 'INSTRUCTIONS'
-## Your task:
-1. Read the errors and live diagnostic results above. Identify the root cause for each failed service.
-2. Fix the issue if possible:
-   - Edit scripts in ~/scripts/ to fix bugs, handle edge cases, or improve error handling.
-   - Fix system issues (missing tools, wrong paths, file permissions).
-   - Clean up corrupt files (e.g. macOS ._ resource forks in git repos on RVAULT20).
-3. After fixing, create new pending backup triggers for each fixed service:
-   curl -sf "https://aphrrfprbixmhissnjfn.supabase.co/rest/v1/backup_triggers" \
-     -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-     -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-     -H "Content-Type: application/json" \
-     -d '{"service":"SERVICE_NAME","requested_at":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","status":"pending"}'
-   Then wait 10 seconds and run ~/scripts/backup-trigger-poller.sh to execute them.
-4. Verify the backup succeeded by checking trigger status.
-5. If the backup still fails after your fix, explain what's wrong and what manual intervention is needed.
+for p in problems:
+    print(p)
+PY
+)
 
-IMPORTANT:
-- Do NOT modify ~/.env-alpacapps secrets.
-- Do NOT change cron entries (those are managed separately).
-- The backup script is at ~/scripts/backup-trigger-poller.sh — you can read and edit it.
-- Env vars from ~/.env-alpacapps are already loaded in the shell.
-INSTRUCTIONS
-
-# ── Send to Claude CLI ───────────────────────────────────────────────
-echo "$LOG_PREFIX Sending diagnosis to Claude CLI..."
-
-ATTEMPT=0
-while [ $ATTEMPT -lt $MAX_RETRIES ]; do
-  ATTEMPT=$((ATTEMPT + 1))
-  echo "$LOG_PREFIX Attempt $ATTEMPT/$MAX_RETRIES"
-
-  # Check if Claude CLI is available
-  if ! command -v claude >/dev/null 2>&1; then
-    echo "$LOG_PREFIX ERROR: claude CLI not found in PATH"
-    break
-  fi
-
-  # Run Claude with the diagnostic context
-  # Use --print flag for non-interactive output, timeout after 10 minutes
-  CLAUDE_OUTPUT=$(timeout 600 claude --print --dangerously-skip-permissions \
-    "$(cat "$DIAG_FILE")" 2>&1) || true
-
-  echo "$LOG_PREFIX Claude response (truncated):"
-  echo "$CLAUDE_OUTPUT" | tail -20
-
-  # Check if backups succeeded after Claude's fix
-  sleep 10  # Give triggers time to update
-
-  ALL_FIXED=true
-  for SVC in $NEEDS_FIX; do
-    CHECK_SUCCESS=$(curl -sf "$SB_URL/rest/v1/backup_triggers?service=eq.$SVC&status=eq.completed&completed_at=gte.$SINCE&limit=1" \
-      -H "apikey: $SB_KEY" \
-      -H "Authorization: Bearer $SB_KEY" 2>/dev/null)
-
-    if [ -z "$CHECK_SUCCESS" ] || [ "$CHECK_SUCCESS" = "[]" ]; then
-      echo "$LOG_PREFIX   $SVC — still failing after attempt $ATTEMPT"
-      ALL_FIXED=false
-    else
-      echo "$LOG_PREFIX   $SVC — FIXED!"
-    fi
-  done
-
-  if [ "$ALL_FIXED" = true ]; then
-    echo "$LOG_PREFIX All services fixed after $ATTEMPT attempt(s)!"
-    break
-  fi
-
-  if [ $ATTEMPT -lt $MAX_RETRIES ]; then
-    echo "$LOG_PREFIX Waiting ${RETRY_DELAY}s before retry..."
-    sleep $RETRY_DELAY
-
-    # Re-create pending triggers for still-failing services
-    for SVC in $NEEDS_FIX; do
-      CHECK_SUCCESS=$(curl -sf "$SB_URL/rest/v1/backup_triggers?service=eq.$SVC&status=eq.completed&completed_at=gte.$SINCE&limit=1" \
-        -H "apikey: $SB_KEY" \
-        -H "Authorization: Bearer $SB_KEY" 2>/dev/null)
-
-      if [ -z "$CHECK_SUCCESS" ] || [ "$CHECK_SUCCESS" = "[]" ]; then
-        curl -sf "$SB_URL/rest/v1/backup_triggers" \
-          -H "apikey: $SB_KEY" \
-          -H "Authorization: Bearer $SB_KEY" \
-          -H "Content-Type: application/json" \
-          -d "{\"service\":\"$SVC\",\"requested_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"status\":\"pending\"}" \
-          >/dev/null 2>&1
-        echo "$LOG_PREFIX   Re-triggered $SVC"
-      fi
-    done
-  fi
-done
-
-if [ "$ALL_FIXED" != true ]; then
-  echo "$LOG_PREFIX ALERT: Failed to fix backups after $MAX_RETRIES attempts"
-  echo "$LOG_PREFIX Services still failing: $NEEDS_FIX"
-  # Could add Slack/email alert here in the future
+if [ -z "$NEEDS_FIX" ]; then
+  echo "$LOG_PREFIX All watched backups are fresh — healthy"
+  rm -f "$STATE_FILE"
+  exit 0
 fi
 
-rm -f "$DIAG_FILE"
-echo "$LOG_PREFIX Done"
+echo "$LOG_PREFIX Unhealthy:"
+echo "$NEEDS_FIX" | sed "s/^/$LOG_PREFIX   /"
+
+# Persist first-unhealthy timestamp (2-day email clock starts here, not 147 days ago)
+python3 - "$STATE_FILE" << 'PY'
+import json, os, sys, datetime
+path = sys.argv[1]
+now = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+state = {}
+if os.path.exists(path):
+    try:
+        state = json.load(open(path))
+    except Exception:
+        state = {}
+if not state.get("unhealthy_since"):
+    state["unhealthy_since"] = now
+state["last_seen_at"] = now
+json.dump(state, open(path, "w"), indent=2)
+print(state["unhealthy_since"])
+PY
+UNHEALTHY_SINCE=$(python3 -c "import json; print(json.load(open('$STATE_FILE')).get('unhealthy_since',''))" 2>/dev/null || true)
+
+# ── Deterministic repairs ────────────────────────────────────────────
+echo "$LOG_PREFIX Applying deterministic repairs..."
+
+mkdir -p /Volumes/RVAULT20/backups/alpacapps/supabase \
+         /Volumes/RVAULT20/backups/alpacapps/r2 \
+         /Volumes/RVAULT20/backups/alpacapps/d1 \
+         /Volumes/RVAULT20/backups/alpacapps/github \
+         /Volumes/RVAULT20/backups/haos 2>/dev/null || true
+
+# Fail triggers stuck running >30 min so the poller can retry
+STALE_CUTOFF=$(date -u -v-30M +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '30 minutes ago' +%Y-%m-%dT%H:%M:%SZ)
+STALE=$(sb_get "backup_triggers?status=eq.running&requested_at=lt.$STALE_CUTOFF&select=id" 2>/dev/null || echo "[]")
+if [ -n "$STALE" ] && [ "$STALE" != "[]" ]; then
+  echo "$STALE" | python3 -c "import sys,json
+for t in json.load(sys.stdin):
+    print(t['id'])" | while read -r stale_id; do
+    curl -sf "$SB_URL/rest/v1/backup_triggers?id=eq.$stale_id" \
+      -X PATCH \
+      -H "apikey: $SB_KEY" \
+      -H "Authorization: Bearer $SB_KEY" \
+      -H "Content-Type: application/json" \
+      -d "{\"status\":\"failed\",\"completed_at\":\"$(iso_now)\",\"notes\":\"Auto-failed by watchdog: stuck running >30min\"}" \
+      >/dev/null 2>&1
+    echo "$LOG_PREFIX   Auto-failed stuck trigger $stale_id"
+  done
+fi
+
+# Re-queue stale services that don't already have a pending/running trigger
+NEEDS_FIX="$NEEDS_FIX" TRIGGERS_JSON="$TRIGGERS_JSON" python3 - << 'PY' > /tmp/backup-watchdog-requeue.txt
+import json, os, re
+problems = (os.environ.get("NEEDS_FIX") or "").splitlines()
+try:
+    triggers = json.loads(os.environ.get("TRIGGERS_JSON") or "[]")
+except Exception:
+    triggers = []
+active = {t.get("service") for t in triggers if t.get("status") in ("pending", "running")}
+wanted = []
+for p in problems:
+    m = re.match(r"^(supabase-db|cloudflare-r2|cloudflare-d1|github-repo|haos-vm-image|home-assistant)\b", p)
+    if m and m.group(1) not in active and m.group(1) not in wanted:
+        wanted.append(m.group(1))
+for s in wanted:
+    print(s)
+PY
+
+while read -r SVC; do
+  [ -z "$SVC" ] && continue
+  curl -sf "$SB_URL/rest/v1/backup_triggers" \
+    -H "apikey: $SB_KEY" \
+    -H "Authorization: Bearer $SB_KEY" \
+    -H "Content-Type: application/json" \
+    -d "{\"service\":\"$SVC\",\"requested_at\":\"$(iso_now)\",\"status\":\"pending\",\"notes\":\"watchdog re-queue\"}" \
+    >/dev/null 2>&1 && echo "$LOG_PREFIX   Re-queued $SVC" || echo "$LOG_PREFIX   WARN: failed to re-queue $SVC"
+done < /tmp/backup-watchdog-requeue.txt
+
+# Kick the poller unless it is already running (lock dir)
+if [ ! -d /tmp/backup-trigger-poller.lock ]; then
+  echo "$LOG_PREFIX Running backup-trigger-poller.sh"
+  "$HOME/scripts/backup-trigger-poller.sh" >> "$HOME/logs/backup-trigger-poller.log" 2>&1 || true
+else
+  echo "$LOG_PREFIX Poller already running — not starting a second copy"
+fi
+
+# ── Recheck after repair ─────────────────────────────────────────────
+sleep 5
+FILES_JSON=$(sb_get "backup_files?select=service,backup_date,filename,size_bytes&order=backup_date.desc&limit=200" 2>/dev/null || echo "[]")
+TRIGGERS_JSON=$(sb_get "backup_triggers?select=id,service,status,requested_at,completed_at,result,notes&order=requested_at.desc&limit=50" 2>/dev/null || echo "[]")
+STILL_UNHEALTHY=$(FILES_JSON="$FILES_JSON" TRIGGERS_JSON="$TRIGGERS_JSON" \
+  WEEKLY_STALE_DAYS="$WEEKLY_STALE_DAYS" DAILY_STALE_DAYS="$DAILY_STALE_DAYS" \
+  HEARTBEAT_FILE="$HEARTBEAT_FILE" POLLER_STALE_SECS="$POLLER_STALE_SECS" \
+  WEEKLY_LOG="$HOME/logs/alpacapps-backup.log" NOW="$(date +%s)" python3 - << 'PY'
+import json, os, sys, time
+from datetime import datetime, timezone
+now = int(os.environ["NOW"])
+weekly_days = int(os.environ["WEEKLY_STALE_DAYS"])
+daily_days = int(os.environ["DAILY_STALE_DAYS"])
+services = {"supabase-db": weekly_days, "cloudflare-r2": weekly_days, "cloudflare-d1": weekly_days, "github-repo": weekly_days, "haos-vm-image": daily_days}
+try: files = json.loads(os.environ.get("FILES_JSON") or "[]")
+except Exception: files = []
+latest = {}
+for row in files:
+    svc = row.get("service")
+    if svc in services and svc not in latest:
+        latest[svc] = row
+def age_days(iso):
+    if not iso: return None
+    try:
+        dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+        return (datetime.now(timezone.utc) - dt).total_seconds() / 86400.0
+    except Exception:
+        return None
+problems = []
+for svc, max_days in services.items():
+    row = latest.get(svc)
+    if not row:
+        problems.append(f"{svc}: still no backup_files row")
+        continue
+    days = age_days(row.get("backup_date"))
+    if days is not None and days > max_days:
+        problems.append(f"{svc}: still stale ({days:.1f}d)")
+for p in problems:
+    print(p)
+PY
+)
+
+if [ -z "$STILL_UNHEALTHY" ]; then
+  echo "$LOG_PREFIX Repairs succeeded — backups are fresh again"
+  rm -f "$STATE_FILE"
+  exit 0
+fi
+
+echo "$LOG_PREFIX Still unhealthy after deterministic repair:"
+echo "$STILL_UNHEALTHY" | sed "s/^/$LOG_PREFIX   /"
+
+# ── Optional Claude diagnosis (one attempt, 8 min cap) ───────────────
+# Skip while the poller is mid-run — a live R2 sync looks like "still stale".
+if [ -d /tmp/backup-trigger-poller.lock ]; then
+  echo "$LOG_PREFIX Poller still running — skipping Claude this hour"
+elif command -v claude >/dev/null 2>&1; then
+  echo "$LOG_PREFIX Collecting diagnostics for Claude CLI..."
+  cat > "$DIAG_FILE" << HEADER
+# Backup Watchdog — Failure Diagnosis Request
+
+You are on Alpuca. RVAULT20 is at /Volumes/RVAULT20 (also /Volumes/rvault20).
+Backup scripts: ~/scripts/backup-alpacapps-to-rvault.sh, backup-trigger-poller.sh, backup-watchdog.sh.
+Env: ~/.env-alpacapps (do NOT modify secrets). Do not change cron entries.
+
+## Problems
+$STILL_UNHEALTHY
+
+## Earlier problems this run
+$NEEDS_FIX
+
+HEADER
+  echo "## System state" >> "$DIAG_FILE"
+  echo "aws: $(command -v aws 2>/dev/null || echo missing)" >> "$DIAG_FILE"
+  echo "pg_dump: $(command -v pg_dump 2>/dev/null || echo missing)" >> "$DIAG_FILE"
+  echo "RVAULT mounted: $( [ -d /Volumes/rvault20 ] || [ -d /Volumes/RVAULT20 ] && echo yes || echo no )" >> "$DIAG_FILE"
+  echo "poller heartbeat: $(cat "$HEARTBEAT_FILE" 2>/dev/null || echo missing)" >> "$DIAG_FILE"
+  echo "weekly log tail:" >> "$DIAG_FILE"
+  tail -15 "$HOME/logs/alpacapps-backup.log" >> "$DIAG_FILE" 2>/dev/null
+  echo "" >> "$DIAG_FILE"
+  echo "poller log tail:" >> "$DIAG_FILE"
+  tail -30 "$HOME/logs/backup-trigger-poller.log" >> "$DIAG_FILE" 2>/dev/null
+  cat >> "$DIAG_FILE" << 'INSTRUCTIONS'
+
+## Task
+1. Identify the root cause for each stale service.
+2. Fix scripts in ~/scripts/ if needed (aws path, missing backup_files logging, swallowed errors).
+3. Re-queue pending backup_triggers and run ~/scripts/backup-trigger-poller.sh.
+4. Do not email anyone. Do not change ~/.env-alpacapps secrets or crontab.
+INSTRUCTIONS
+
+  echo "$LOG_PREFIX Invoking Claude CLI (8 min cap)..."
+  CLAUDE_OUTPUT=$(perl -e 'alarm shift; exec @ARGV' 480 claude --print --dangerously-skip-permissions "$(cat "$DIAG_FILE")" 2>&1) || true
+  echo "$LOG_PREFIX Claude (truncated):"
+  echo "$CLAUDE_OUTPUT" | tail -15
+  rm -f "$DIAG_FILE"
+fi
+
+# ── Email only after 2 days of failed repair ─────────────────────────
+python3 - "$STATE_FILE" "$UNHEALTHY_SECS" "$EMAIL_COOLDOWN_SECS" "$STILL_UNHEALTHY" << 'PY'
+import json, os, sys, datetime
+path, unhealthy_secs, cooldown, body = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), sys.argv[4]
+now = datetime.datetime.utcnow()
+state = {}
+if os.path.exists(path):
+    try:
+        state = json.load(open(path))
+    except Exception:
+        state = {}
+since = state.get("unhealthy_since")
+if not since:
+    print("no-email: no unhealthy_since")
+    sys.exit(0)
+try:
+    started = datetime.datetime.strptime(since.replace("Z",""), "%Y-%m-%dT%H:%M:%S")
+except Exception:
+    print("no-email: bad unhealthy_since")
+    sys.exit(0)
+age = (now - started).total_seconds()
+if age < unhealthy_secs:
+    print(f"no-email: only {int(age)}s unhealthy (need {unhealthy_secs}s)")
+    sys.exit(0)
+last = state.get("last_email_at")
+if last:
+    try:
+        last_dt = datetime.datetime.strptime(last.replace("Z",""), "%Y-%m-%dT%H:%M:%S")
+        if (now - last_dt).total_seconds() < cooldown:
+            print("no-email: cooldown")
+            sys.exit(0)
+    except Exception:
+        pass
+print("SEND")
+print(since)
+print(int(age // 86400))
+PY
+> /tmp/backup-watchdog-email-decision.txt
+
+DECISION=$(head -1 /tmp/backup-watchdog-email-decision.txt)
+if [ "$DECISION" = "SEND" ]; then
+  SINCE_STR=$(sed -n '2p' /tmp/backup-watchdog-email-decision.txt)
+  DAYS_STR=$(sed -n '3p' /tmp/backup-watchdog-email-decision.txt)
+  echo "$LOG_PREFIX Sending 2-day failure email to $ALERT_EMAIL"
+  RESEND_KEY=$(tr -d '\n' < "$HOME/.config/resend/key" 2>/dev/null || true)
+  if [ -z "$RESEND_KEY" ]; then
+    echo "$LOG_PREFIX ERROR: Resend key missing at ~/.config/resend/key — cannot email"
+  else
+    BODY=$(printf '%s\n\nUnhealthy since: %s (%s days of failed auto-repair).\n\nCurrent problems:\n%s\n\nWatchdog will keep trying hourly. This email repeats at most once per day until backups succeed.\n\nHost: Alpuca. Logs: ~/logs/backup-watchdog.log ~/logs/alpacapps-backup.log ~/logs/backup-trigger-poller.log\n' \
+      "AlpacApps backups are still failing after 2 days of automatic diagnosis and repair." \
+      "$SINCE_STR" "$DAYS_STR" "$STILL_UNHEALTHY")
+    RESP=$(jq -n \
+      --arg from "$ALERT_FROM" \
+      --arg to "$ALERT_EMAIL" \
+      --arg subject "AlpacApps backups still failing after 2 days" \
+      --arg text "$BODY" \
+      '{from:$from, to:[$to], subject:$subject, text:$text}' | \
+      curl -s -X POST 'https://api.resend.com/emails' \
+        -H "Authorization: Bearer $RESEND_KEY" \
+        -H 'Content-Type: application/json' \
+        -d @-)
+    echo "$LOG_PREFIX Resend response: $RESP"
+    python3 - "$STATE_FILE" << 'PY'
+import json, sys, datetime
+path = sys.argv[1]
+state = json.load(open(path))
+state["last_email_at"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+json.dump(state, open(path, "w"), indent=2)
+PY
+  fi
+else
+  echo "$LOG_PREFIX Email deferred: $(tr '\n' ' ' < /tmp/backup-watchdog-email-decision.txt)"
+fi
+
+python3 - "$STATE_FILE" "$STILL_UNHEALTHY" << 'PY'
+import json, sys, datetime
+path, problems = sys.argv[1], sys.argv[2]
+state = {}
+if True:
+    try:
+        state = json.load(open(path))
+    except Exception:
+        state = {}
+state["last_problems"] = problems.splitlines()
+state["last_attempt_at"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+json.dump(state, open(path, "w"), indent=2)
+PY
+
+echo "$LOG_PREFIX Done (still unhealthy; 2-day email clock started $UNHEALTHY_SINCE)"

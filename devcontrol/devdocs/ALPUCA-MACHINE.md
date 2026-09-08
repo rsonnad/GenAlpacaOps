@@ -147,6 +147,43 @@ ssh alpuca 'chmod +x /Users/alpuca/scripts/garmin-watch-deal-watch.sh'
 Manual test: `ssh alpuca '/Users/alpuca/scripts/garmin-watch-deal-watch.sh morning'`
 (takes 5–20 min; Grok is doing live web search).
 
+### AlpacApps RVAULT backups (weekly cron + 5-min poller + hourly watchdog)
+
+Last good weekly run before the 2026-09-08 repair was **2026-04-14**. From
+**2026-04-27 through 2026-09-07** every Monday 1:00 AM job exited immediately:
+
+```
+ERROR: aws CLI not found at /usr/local/bin/aws
+```
+
+Homebrew `aws` lives at `/opt/homebrew/bin/aws` (installed 2026-03-27). The
+weekly script hard-coded the Intel path and treated that as a fatal error for
+the whole job, so Postgres never dumped either. The watchdog only inspected
+`backup_triggers` failed in the last 24h — the weekly job never writes those
+rows — and logged `No failed triggers in last 24h — all healthy` every hour.
+
+**Fix (repo `scripts/`, deployed to `~/scripts/`):** find `aws` on PATH, skip
+R2 instead of aborting the dump, treat stale `backup_files` as unhealthy,
+re-queue + run the poller, email `rahulioson@gmail.com` only after **2 days**
+of unsuccessful auto-repair.
+
+| Item | Value |
+|---|---|
+| Weekly | `0 1 * * 1` `~/scripts/backup-alpacapps-to-rvault.sh` |
+| Poller | `*/5 * * * *` `~/scripts/backup-trigger-poller.sh` |
+| Watchdog | `30 * * * *` `~/scripts/backup-watchdog.sh` |
+| Dest | `/Volumes/rvault20/backups/alpacapps/` |
+| Env | `~/.env-alpacapps` |
+| Mail | Resend `~/.config/resend/key` → rahulioson@gmail.com |
+
+Re-deploy after changing the repo copies:
+
+```bash
+scp scripts/backup-alpacapps-to-rvault.sh scripts/backup-trigger-poller.sh scripts/backup-watchdog.sh \
+  alpuca:/Users/alpuca/scripts/
+ssh alpuca 'chmod +x /Users/alpuca/scripts/backup-*.sh'
+```
+
 ## Known Memory Hazard: `moondream-indexer`
 
 **Location:** `~/moondream-indexer/`

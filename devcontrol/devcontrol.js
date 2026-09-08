@@ -1524,10 +1524,10 @@ async function loadBackups() {
 
       ${serviceBlock('active', 'Supabase DB',
         'Full database dump of the AlpacApps Supabase project — all tables, data, schemas, and RLS policies',
-        `/Volumes/RVAULT20/backups/alpacapps/db/ &nbsp;·&nbsp; 12 rolling dumps &nbsp;·&nbsp; Cron on Alpuca
+        `/Volumes/RVAULT20/backups/alpacapps/supabase/ &nbsp;·&nbsp; 12 rolling dumps &nbsp;·&nbsp; Cron on Alpuca
          &nbsp;·&nbsp; ${link('https://supabase.com/dashboard/project/aphrrfprbixmhissnjfn','Supabase dashboard ↗')}`,
         'Every Monday at 1:00 AM CT', nextRvault,
-        instanceTable(rvaultCols('supabase-db'), rvaultRowsFor('supabase','db','supabase-db'), 'supabase'),
+        instanceTable(rvaultCols('supabase-db'), rvaultRowsFor('supabase','supabase','supabase-db'), 'supabase'),
         'supabase-db'
       )}
 

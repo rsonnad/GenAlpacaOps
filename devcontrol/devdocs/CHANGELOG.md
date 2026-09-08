@@ -4,7 +4,8 @@
 
 ## Recent Changes to Be Aware Of
 
-0. **Infra page hero banner redesign (v260310)** — Both `/infra/index.html` and `/docs/alpacappsinfra.html` use a full-width banner card hero (alpaca AI banner image spanning the card width, text below). **Do NOT revert to the old dark full-bleed hero** — it was lost once already and had to be restored. Both files have a `⚠️ HERO BANNER` HTML comment marking the section.
+0. **AlpacApps RVAULT backups self-heal; email after 2 days (v260908)** — Weekly backup died every Monday since 2026-04-27 (`aws` hardcoded at `/usr/local/bin/aws`). Watchdog now treats stale `backup_files` as unhealthy, repairs and re-queues, and emails `rahulioson@gmail.com` only after 2 days of failed repair. **Do not** restore the Intel aws path or the "no failed triggers in 24h = healthy" check.
+1. **Infra page hero banner redesign (v260310)** — Both `/infra/index.html` and `/docs/alpacappsinfra.html` use a full-width banner card hero (alpaca AI banner image spanning the card width, text below). **Do NOT revert to the old dark full-bleed hero** — it was lost once already and had to be restored. Both files have a `⚠️ HERO BANNER` HTML comment marking the section.
 1. **Consumer view now loads real availability** - Fetches assignments to show actual dates
 2. **Media system migration** - Using `media`/`media_spaces` tables instead of `photos`/`photo_spaces`
 3. **Space archiving** - `is_archived` flag for soft deletes

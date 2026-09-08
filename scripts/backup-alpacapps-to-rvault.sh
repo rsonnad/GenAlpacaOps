@@ -62,8 +62,16 @@ D1_DATABASE_ID="${D1_DATABASE_ID:-98d0e680-8abe-4ce3-a941-70cb391adbf8}"
 # GitHub
 GH_REPO="https://github.com/rsonnad/alpacapps.git"
 
-# Tools
-AWS=/usr/local/bin/aws
+# Tools — never hardcode /usr/local/bin/aws (Intel leftover). That path
+# has not existed on Alpuca since Homebrew awscli landed in /opt/homebrew/bin
+# (2026-03-27). Weekly cron then aborted every Monday before any dump ran.
+AWS=""
+for candidate in "$(command -v aws 2>/dev/null || true)" /opt/homebrew/bin/aws /usr/local/bin/aws; do
+  if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+    AWS="$candidate"
+    break
+  fi
+done
 
 # ── parse args ───────────────────────────────────────────────────────
 DRY_RUN=false
@@ -75,21 +83,21 @@ while [ $# -gt 0 ]; do
 done
 
 # ── validate ─────────────────────────────────────────────────────────
-missing=""
-[ -z "$SUPABASE_DB_URL" ] && missing="$missing SUPABASE_DB_URL"
-[ -z "$R2_ACCESS" ]       && missing="$missing R2_ACCESS_KEY_ID"
-[ -z "$R2_SECRET" ]       && missing="$missing R2_SECRET_ACCESS_KEY"
-[ -z "$R2_ACCOUNT" ]      && missing="$missing R2_ACCOUNT_ID"
-if [ -n "$missing" ]; then
-  echo "$LOG_PREFIX ERROR: Missing env vars:$missing" >&2
+# Missing tools/creds skip that service — they must not abort Postgres.
+if [ -z "$SUPABASE_DB_URL" ]; then
+  echo "$LOG_PREFIX ERROR: SUPABASE_DB_URL not set" >&2
   exit 1
 fi
-
-[ -x "$AWS" ] || { echo "$LOG_PREFIX ERROR: aws CLI not found at $AWS" >&2; exit 1; }
-
-if [ ! -d "/Volumes/RVAULT20" ]; then
+if [ ! -d "/Volumes/RVAULT20" ] && [ ! -d "/Volumes/rvault20" ]; then
   echo "$LOG_PREFIX ERROR: RVAULT20 not mounted" >&2
   exit 1
+fi
+if [ -z "$AWS" ] || [ ! -x "$AWS" ]; then
+  echo "$LOG_PREFIX WARNING: aws CLI not found — R2 sync will be skipped"
+  AWS=""
+fi
+if [ -z "$R2_ACCESS" ] || [ -z "$R2_SECRET" ] || [ -z "$R2_ACCOUNT" ]; then
+  echo "$LOG_PREFIX WARNING: R2 credentials incomplete — R2 sync will be skipped"
 fi
 
 # ── dry run ──────────────────────────────────────────────────────────
@@ -184,18 +192,31 @@ echo "$LOG_PREFIX [2/4] Cloudflare R2 sync ($R2_BUCKET)..."
 R2_DIR="$BACKUP_ROOT/r2/$R2_BUCKET"
 mkdir -p "$R2_DIR"
 
-if AWS_ACCESS_KEY_ID="$R2_ACCESS" \
+if [ -z "$AWS" ] || [ -z "$R2_ACCESS" ] || [ -z "$R2_SECRET" ] || [ -z "$R2_ACCOUNT" ]; then
+  echo "$LOG_PREFIX   Skipping R2 (aws or credentials missing)"
+  SVC_R2_STATUS="skipped"
+  SVC_R2_DETAIL="aws or credentials missing"
+  SVC_R2_DETAIL_JSON="\"skipped\""
+elif AWS_ACCESS_KEY_ID="$R2_ACCESS" \
    AWS_SECRET_ACCESS_KEY="$R2_SECRET" \
    $AWS s3 sync "s3://$R2_BUCKET/" "$R2_DIR/" \
      --endpoint-url "$R2_ENDPOINT" \
      --no-progress \
-     --size-only 2>/dev/null; then
+     --size-only; then
   R2_COUNT=$(find "$R2_DIR" -type f | wc -l | tr -d ' ')
   R2_SIZE=$(du -sh "$R2_DIR" 2>/dev/null | cut -f1)
   echo "$LOG_PREFIX   Done: $R2_COUNT files ($R2_SIZE)"
   SVC_R2_STATUS="success"
   SVC_R2_DETAIL="$R2_COUNT files ($R2_SIZE)"
   SVC_R2_DETAIL_JSON="{\"files\":$R2_COUNT,\"size\":\"$R2_SIZE\"}"
+  R2_SIZE_BYTES=$(du -sk "$R2_DIR" 2>/dev/null | awk '{print $1 * 1024}')
+  curl -sf "$SUPABASE_URL/rest/v1/backup_files" \
+    -H "apikey: $SUPABASE_KEY" \
+    -H "Authorization: Bearer $SUPABASE_KEY" \
+    -H "Content-Type: application/json" \
+    -H "Prefer: resolution=merge-duplicates" \
+    -d "{\"service\":\"cloudflare-r2\",\"backup_date\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"filename\":\"r2/ ($R2_COUNT files)\",\"filepath\":\"$R2_DIR\",\"size_bytes\":${R2_SIZE_BYTES:-0}}" \
+    >/dev/null 2>&1 || true
 else
   echo "$LOG_PREFIX   ERROR: R2 sync failed"
   SVC_R2_STATUS="error"
@@ -227,6 +248,14 @@ if [ -n "$CF_API_TOKEN" ]; then
         echo "$LOG_PREFIX   Done: $D1_FILE ($D1_SIZE)"
         SVC_D1_STATUS="success"
         SVC_D1_DETAIL="$D1_SIZE"
+        D1_SIZE_BYTES=$(stat -f%z "$D1_FILE" 2>/dev/null || echo 0)
+        curl -sf "$SUPABASE_URL/rest/v1/backup_files" \
+          -H "apikey: $SUPABASE_KEY" \
+          -H "Authorization: Bearer $SUPABASE_KEY" \
+          -H "Content-Type: application/json" \
+          -H "Prefer: resolution=merge-duplicates" \
+          -d "{\"service\":\"cloudflare-d1\",\"backup_date\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"filename\":\"$(basename "$D1_FILE")\",\"filepath\":\"$D1_FILE\",\"size_bytes\":$D1_SIZE_BYTES}" \
+          >/dev/null 2>&1 || true
       else
         echo "$LOG_PREFIX   ERROR: D1 download failed"
         SVC_D1_STATUS="error"
@@ -309,6 +338,14 @@ if command -v git >/dev/null 2>&1; then
       SVC_GITHUB_STATUS="success"
       SVC_GITHUB_DETAIL="$BRANCH_COUNT branches, $COMMIT_COUNT commits"
       SVC_GITHUB_DETAIL_JSON="{\"branches\":$BRANCH_COUNT,\"commits\":$COMMIT_COUNT}"
+      GH_SIZE_BYTES=$(du -sk "$GH_DIR" 2>/dev/null | awk '{print $1 * 1024}')
+      curl -sf "$SUPABASE_URL/rest/v1/backup_files" \
+        -H "apikey: $SUPABASE_KEY" \
+        -H "Authorization: Bearer $SUPABASE_KEY" \
+        -H "Content-Type: application/json" \
+        -H "Prefer: resolution=merge-duplicates" \
+        -d "{\"service\":\"github-repo\",\"backup_date\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"filename\":\"github/ ($COMMIT_COUNT commits)\",\"filepath\":\"$GH_DIR\",\"size_bytes\":${GH_SIZE_BYTES:-0}}" \
+        >/dev/null 2>&1 || true
     else
       echo "$LOG_PREFIX   ERROR: git remote update failed"
       SVC_GITHUB_STATUS="error"

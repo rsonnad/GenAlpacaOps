@@ -348,6 +348,8 @@ This hierarchy maps directly to the property's real-world roles. Permissions are
 
 ---
 
+---
+
 ## 12. Data & Privacy Decisions
 
 ### 12.1 No Personal Data in Consumer View
@@ -373,6 +375,15 @@ This hierarchy maps directly to the property's real-world roles. Permissions are
 - **Dynamic updates.** When a code changes, update one database field. No code push required.
 - **Scoped access.** PAI only returns access codes for spaces the requesting user is assigned to. This scoping is a database query, not application logic.
 - **Rotation.** Codes can be changed when a tenant moves out without any deployment.
+
+### 12.4 Backup Self-Healing, Email Only After Two Days
+
+**Decision:** AlpacApps backups on Alpuca auto-diagnose and retry when they go stale. Email `rahulioson@gmail.com` only after two days of unsuccessful repair, not on the first failure.
+
+**Why:**
+- Weekly cron failed silently every Monday from 2026-04-27 because the backup script hard-coded Intel Homebrew `aws` at `/usr/local/bin/aws` and exited before any dump. The watchdog only looked at failed `backup_triggers` from the last 24 hours, so it reported "all healthy" for months.
+- Page-on-first-failure would have emailed every Monday for a one-line path bug. The two-day gate lets the hourly watchdog fix the usual cases (stale triggers, missing dirs, poller skip) without inbox noise.
+- Once the two-day clock expires, email at most once per day until a fresh `backup_files` row exists.
 
 ---
 

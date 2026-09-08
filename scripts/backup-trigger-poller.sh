@@ -14,6 +14,12 @@ set -uo pipefail
 # Ensure PATH includes Homebrew (cron has minimal PATH)
 export PATH="/opt/homebrew/opt/libpq/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
+# macOS has no GNU timeout by default
+run_with_timeout() {
+  local secs="$1"; shift
+  perl -e 'alarm shift; exec @ARGV' "$secs" "$@"
+}
+
 LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')] [trigger-poller]"
 
 # Load env
@@ -35,6 +41,25 @@ if [ -z "$SUPABASE_KEY" ]; then
   echo "$LOG_PREFIX ERROR: SUPABASE_SERVICE_ROLE_KEY not set" >&2
   exit 1
 fi
+
+# Heartbeat so the watchdog can tell the poller cron is actually firing
+mkdir -p "$HOME/logs"
+date -u +"%Y-%m-%dT%H:%M:%SZ" > "$HOME/logs/backup-trigger-poller.heartbeat"
+
+# One poller at a time (macOS has no flock). Stale lock >2h is stolen.
+LOCK_DIR="/tmp/backup-trigger-poller.lock"
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+  LOCK_AGE=$(( $(date +%s) - $(stat -f%m "$LOCK_DIR" 2>/dev/null || echo 0) ))
+  if [ "$LOCK_AGE" -gt 7200 ]; then
+    echo "$LOG_PREFIX Stale poller lock (${LOCK_AGE}s) — stealing"
+    rm -rf "$LOCK_DIR"
+    mkdir "$LOCK_DIR" || exit 0
+  else
+    echo "$LOG_PREFIX Already running (lock age: ${LOCK_AGE}s) — skipping"
+    exit 0
+  fi
+fi
+trap 'rm -rf "$LOCK_DIR"' EXIT
 
 # R2 config
 R2_ACCESS="${R2_ACCESS_KEY_ID:-}"
@@ -179,18 +204,34 @@ for t in json.load(sys.stdin):
       R2_DIR="$BACKUP_ROOT/r2/$R2_BUCKET"
       mkdir -p "$R2_DIR"
 
-      if [ -z "$R2_ACCESS" ] || [ -z "$R2_SECRET" ]; then
+      if [ -z "$R2_ACCESS" ] || [ -z "$R2_SECRET" ] || [ -z "$R2_ACCOUNT" ]; then
         RESULT_STATUS="failed"
         RESULT_JSON="{\"error\":\"R2 credentials not set\"}"
-      elif AWS_ACCESS_KEY_ID="$R2_ACCESS" AWS_SECRET_ACCESS_KEY="$R2_SECRET" \
-           $AWS s3 sync "s3://$R2_BUCKET/" "$R2_DIR/" --endpoint-url "$R2_ENDPOINT" --no-progress --size-only 2>/dev/null; then
-        R2_COUNT=$(find "$R2_DIR" -type f | wc -l | tr -d ' ')
-        R2_SIZE=$(du -sh "$R2_DIR" 2>/dev/null | cut -f1)
-        echo "$LOG_PREFIX   Done: $R2_COUNT files ($R2_SIZE)"
-        RESULT_JSON="{\"files\":$R2_COUNT,\"size\":\"$R2_SIZE\"}"
-      else
+      elif [ -z "$AWS" ] || [ ! -x "$AWS" ]; then
         RESULT_STATUS="failed"
-        RESULT_JSON="{\"error\":\"sync failed\"}"
+        RESULT_JSON="{\"error\":\"aws CLI not found\"}"
+      else
+        R2_ERR=$(mktemp /tmp/r2-sync.XXXXXX)
+        if AWS_ACCESS_KEY_ID="$R2_ACCESS" AWS_SECRET_ACCESS_KEY="$R2_SECRET" \
+           run_with_timeout 1200 $AWS s3 sync "s3://$R2_BUCKET/" "$R2_DIR/" --endpoint-url "$R2_ENDPOINT" --no-progress --size-only 2>"$R2_ERR"; then
+          R2_COUNT=$(find "$R2_DIR" -type f ! -name '._*' | wc -l | tr -d ' ')
+          R2_SIZE=$(du -sh "$R2_DIR" 2>/dev/null | cut -f1)
+          echo "$LOG_PREFIX   Done: $R2_COUNT files ($R2_SIZE)"
+          RESULT_JSON="{\"files\":$R2_COUNT,\"size\":\"$R2_SIZE\"}"
+          R2_SIZE_BYTES=$(du -sk "$R2_DIR" 2>/dev/null | awk '{print $1 * 1024}')
+          curl -sf "$SUPABASE_URL/rest/v1/backup_files" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates" \
+            -d "{\"service\":\"cloudflare-r2\",\"backup_date\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"filename\":\"r2/ ($R2_COUNT files)\",\"filepath\":\"$R2_DIR\",\"size_bytes\":${R2_SIZE_BYTES:-0}}" \
+            >/dev/null 2>&1 || true
+        else
+          RESULT_STATUS="failed"
+          R2_MSG=$(tr '\n' ' ' < "$R2_ERR" | head -c 200)
+          RESULT_JSON="{\"error\":\"sync failed: ${R2_MSG}\"}"
+        fi
+        rm -f "$R2_ERR"
       fi
       ;;
 
@@ -303,8 +344,17 @@ for t in json.load(sys.stdin):
         mkdir -p "$(dirname "$GH_DIR")"
         if git clone --bare "$GH_REPO" "$GH_DIR" 2>/dev/null; then
           BRANCH_COUNT=$(git -C "$GH_DIR" branch -a 2>/dev/null | wc -l | tr -d ' ')
-          echo "$LOG_PREFIX   Cloned: $BRANCH_COUNT branches"
-          RESULT_JSON="{\"branches\":$BRANCH_COUNT,\"initial_clone\":true}"
+          COMMIT_COUNT=$(git -C "$GH_DIR" rev-list --all --count 2>/dev/null || echo "0")
+          echo "$LOG_PREFIX   Cloned: $BRANCH_COUNT branches, $COMMIT_COUNT commits"
+          RESULT_JSON="{\"branches\":$BRANCH_COUNT,\"commits\":$COMMIT_COUNT,\"initial_clone\":true}"
+          GH_SIZE_BYTES=$(du -sk "$GH_DIR" 2>/dev/null | awk '{print $1 * 1024}')
+          curl -sf "$SUPABASE_URL/rest/v1/backup_files" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates" \
+            -d "{\"service\":\"github-repo\",\"backup_date\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"filename\":\"github/ ($COMMIT_COUNT commits)\",\"filepath\":\"$GH_DIR\",\"size_bytes\":${GH_SIZE_BYTES:-0}}" \
+            >/dev/null 2>&1 || true
         else
           RESULT_STATUS="failed"
           RESULT_JSON="{\"error\":\"clone failed\"}"
@@ -338,25 +388,56 @@ async def create_backup():
     name = os.environ["BACKUP_NAME"]
     try:
         async with websockets.connect("ws://192.168.1.39:8123/api/websocket", close_timeout=300) as ws:
-            await ws.recv()  # auth_required
+            await ws.recv()
             await ws.send(json.dumps({"type": "auth", "access_token": token}))
             msg = json.loads(await ws.recv())
-            if msg["type"] != "auth_ok":
+            if msg.get("type") != "auth_ok":
                 print(f"AUTH_FAIL: {msg}")
                 return
-            await ws.send(json.dumps({
-                "id": 1, "type": "supervisor/api",
-                "endpoint": "/backups/new/full",
-                "method": "post",
-                "data": {"name": name}
-            }))
-            msg = json.loads(await asyncio.wait_for(ws.recv(), timeout=600))
+            req_id = 0
+            async def call(endpoint, method="get", data=None, timeout=600):
+                nonlocal req_id
+                req_id += 1
+                payload = {"id": req_id, "type": "supervisor/api", "endpoint": endpoint, "method": method}
+                if data is not None:
+                    payload["data"] = data
+                await ws.send(json.dumps(payload))
+                return json.loads(await asyncio.wait_for(ws.recv(), timeout=timeout))
+
+            msg = await call("/backups/new/full", "post", {"name": name})
+            err = json.dumps(msg)
             if msg.get("success"):
-                slug = msg["result"].get("data", {}).get("slug", "")
-                size = msg["result"].get("data", {}).get("size", "")
-                print(f"OK: {slug} ({size})")
+                data = (msg.get("result") or {}).get("data") or {}
+                print(f"OK: {data.get('slug','')} ({data.get('size','')})")
+                return
+            if "not enough free space" not in err:
+                print(f"FAIL: {err}")
+                return
+            listed = await call("/backups", "get")
+            result = listed.get("result") or {}
+            payload = result.get("data") if isinstance(result, dict) else {}
+            if not payload and isinstance(result, dict):
+                payload = result
+            items = payload.get("backups") or payload.get("snapshots") or []
+            items = sorted(items, key=lambda b: b.get("date") or "")
+            keep = 3
+            to_delete = items[:-keep] if len(items) > keep else []
+            removed = 0
+            for b in to_delete:
+                slug = b.get("slug")
+                if not slug:
+                    continue
+                await call(f"/backups/{slug}", "delete", timeout=120)
+                removed += 1
+            if removed == 0:
+                print(f"FAIL: disk full and no old backups to prune ({len(items)} kept)")
+                return
+            msg = await call("/backups/new/full", "post", {"name": name})
+            if msg.get("success"):
+                data = (msg.get("result") or {}).get("data") or {}
+                print(f"OK: {data.get('slug','')} ({data.get('size','')}) after pruning {removed} old backups")
             else:
-                print(f"FAIL: {json.dumps(msg)}")
+                print(f"FAIL: still failing after prune: {json.dumps(msg)}")
     except Exception as e:
         print(f"ERROR: {e}")
 
@@ -367,11 +448,11 @@ PYEOF
 
         if echo "$BACKUP_RESULT" | grep -q "^OK:"; then
           SLUG=$(echo "$BACKUP_RESULT" | sed 's/^OK: //' | cut -d' ' -f1)
-          RESULT_JSON="{\"slug\":\"$SLUG\",\"name\":\"$BACKUP_NAME\"}"
+          RESULT_JSON=$(S="$SLUG" N="$BACKUP_NAME" python3 -c "import json,os; print(json.dumps({'slug':os.environ['S'],'name':os.environ['N']}))")
         else
           RESULT_STATUS="failed"
           ERR_MSG=$(echo "$BACKUP_RESULT" | head -1)
-          RESULT_JSON="{\"error\":\"$ERR_MSG\"}"
+          RESULT_JSON=$(E="$ERR_MSG" python3 -c "import json,os; print(json.dumps({'error': os.environ.get('E','')[:800]}))")
         fi
       fi
       ;;
@@ -431,13 +512,27 @@ PYEOF
   SVC_END=$(date +%s)
   SVC_DURATION=$((SVC_END - SVC_START))
 
-  # Mark trigger as completed/failed
+  # JSON-safe PATCH (HA errors contain quotes and previously left status=running)
+  PATCH_BODY=$(RESULT_STATUS="$RESULT_STATUS" RESULT_JSON="$RESULT_JSON" python3 - << 'PY'
+import json, os, datetime
+raw = os.environ.get("RESULT_JSON") or "{}"
+try:
+    result = json.loads(raw)
+except Exception:
+    result = {"error": raw[:500]}
+print(json.dumps({
+    "status": os.environ.get("RESULT_STATUS") or "failed",
+    "completed_at": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "result": result,
+}))
+PY
+)
   curl -sf "$SUPABASE_URL/rest/v1/backup_triggers?id=eq.$TRIGGER_ID" \
     -X PATCH \
     -H "apikey: $SUPABASE_KEY" \
     -H "Authorization: Bearer $SUPABASE_KEY" \
     -H "Content-Type: application/json" \
-    -d "{\"status\":\"$RESULT_STATUS\",\"completed_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"result\":$RESULT_JSON}" \
+    -d "$PATCH_BODY" \
     >/dev/null 2>&1
 
   # Also log to backup_logs if successful
