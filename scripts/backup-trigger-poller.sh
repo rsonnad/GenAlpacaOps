@@ -410,6 +410,19 @@ async def create_backup():
                 data = (msg.get("result") or {}).get("data") or {}
                 print(f"OK: {data.get('slug','')} ({data.get('size','')})")
                 return
+            # Supervisor returns empty unknown_error while a backup is frozen/in-flight.
+            await asyncio.sleep(20)
+            listed = await call("/backups", "get")
+            result = listed.get("result") or {}
+            payload = result.get("data") if isinstance(result, dict) else {}
+            if not payload and isinstance(result, dict):
+                payload = result
+            items = payload.get("backups") or payload.get("snapshots") or []
+            recent = [b for b in items if (b.get("name") or "") == name]
+            if recent:
+                b = recent[-1]
+                print(f"OK: {b.get('slug','')} ({b.get('size','')})")
+                return
             if "not enough free space" not in err:
                 print(f"FAIL: {err}")
                 return
@@ -437,7 +450,18 @@ async def create_backup():
                 data = (msg.get("result") or {}).get("data") or {}
                 print(f"OK: {data.get('slug','')} ({data.get('size','')}) after pruning {removed} old backups")
             else:
-                print(f"FAIL: still failing after prune: {json.dumps(msg)}")
+                listed = await call("/backups", "get")
+                result = listed.get("result") or {}
+                payload = result.get("data") if isinstance(result, dict) else {}
+                if not payload and isinstance(result, dict):
+                    payload = result
+                items = payload.get("backups") or []
+                recent = [b for b in items if (b.get("name") or "") == name]
+                if recent:
+                    b = recent[-1]
+                    print(f"OK: {b.get('slug','')} ({b.get('size','')}) after prune (supervisor ack empty)")
+                else:
+                    print(f"FAIL: still failing after prune: {json.dumps(msg)}")
     except Exception as e:
         print(f"ERROR: {e}")
 
@@ -449,6 +473,15 @@ PYEOF
         if echo "$BACKUP_RESULT" | grep -q "^OK:"; then
           SLUG=$(echo "$BACKUP_RESULT" | sed 's/^OK: //' | cut -d' ' -f1)
           RESULT_JSON=$(S="$SLUG" N="$BACKUP_NAME" python3 -c "import json,os; print(json.dumps({'slug':os.environ['S'],'name':os.environ['N']}))")
+          HA_SIZE_MB=$(echo "$BACKUP_RESULT" | sed -n 's/.*(\([0-9.]*\)).*/\1/p' | head -1)
+          HA_SIZE_BYTES=$(python3 -c "print(int(float('${HA_SIZE_MB:-0}') * 1048576))" 2>/dev/null || echo 0)
+          curl -sf "$SUPABASE_URL/rest/v1/backup_files" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates" \
+            -d "{\"service\":\"home-assistant\",\"backup_date\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"filename\":\"$BACKUP_NAME\",\"filepath\":\"haos://$SLUG\",\"size_bytes\":$HA_SIZE_BYTES}" \
+            >/dev/null 2>&1 || true
         else
           RESULT_STATUS="failed"
           ERR_MSG=$(echo "$BACKUP_RESULT" | head -1)
@@ -489,6 +522,14 @@ PYEOF
           IMG_SIZE=$(du -h "$DEST" | cut -f1)
           echo "$LOG_PREFIX   Done: $DEST ($IMG_SIZE)"
           RESULT_JSON="{\"size\":\"$IMG_SIZE\",\"file\":\"$(basename "$DEST")\"}"
+          IMG_SIZE_BYTES=$(stat -f%z "$DEST" 2>/dev/null || echo 0)
+          curl -sf "$SUPABASE_URL/rest/v1/backup_files" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates" \
+            -d "{\"service\":\"haos-vm-image\",\"backup_date\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"filename\":\"$(basename "$DEST")\",\"filepath\":\"$DEST\",\"size_bytes\":$IMG_SIZE_BYTES}" \
+            >/dev/null 2>&1 || true
           # Prune old (keep 7)
           ls -1t "$HAOS_BACKUP_DIR"/haos-*.img 2>/dev/null | tail -n +8 | while read -r old; do
             DATE_PART="${old##*haos-}"

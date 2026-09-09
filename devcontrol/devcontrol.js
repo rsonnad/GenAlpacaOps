@@ -1400,6 +1400,11 @@ async function loadBackups() {
       const latest = svcFiles[0]; // already sorted by backup_date desc
       return { date: latest.backup_date, source: 'file', size: fmtBytes(latest.size_bytes) };
     }
+    if (svcKey === 'home-assistant' && haosBackups.length) {
+      const latest = haosBackups[0];
+      const mb = latest.size_mb;
+      return { date: latest.date, source: 'haos', size: mb != null ? fmtSize(mb) : undefined };
+    }
     // Check completed triggers
     const completedTrigger = recentTriggers.find(t => t.service === svcKey && t.status === 'completed');
     if (completedTrigger) {
@@ -1570,7 +1575,7 @@ async function loadBackups() {
 
       ${serviceBlock('active', 'HAOS VM Image',
         'Raw QEMU disk image of the entire Home Assistant OS virtual machine — bootable full system recovery',
-        `/Volumes/RVAULT20/backups/haos/ &nbsp;·&nbsp; 7-day retention &nbsp;·&nbsp; haos_generic-aarch64.img &nbsp;·&nbsp; Cron on Alpuca`,
+        `/Volumes/rvault20/BackupsRS/haos-vm/ &nbsp;·&nbsp; 7-day retention &nbsp;·&nbsp; haos_generic-aarch64-17.1.img &nbsp;·&nbsp; Cron on Alpuca`,
         'Daily at 3:17 AM CT', nextHaosVm,
         instanceTable(rvaultCols('haos-vm-image'), rvaultRowsFor('haos-vm','haos','haos-vm-image'), 'haos-vm'),
         'haos-vm-image'
