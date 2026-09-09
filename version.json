@@ -1,12 +1,12 @@
 {
-  "version": "v260908.01 5:00p",
-  "release": 1844,
-  "sha": "2d4bd49044",
-  "fullSha": "2d4bd490443243f088a816275920ed2733f04bbe",
+  "version": "v260908.02 10:20p",
+  "release": 1845,
+  "sha": "1b365df3b7",
+  "fullSha": "1b365df3b7e8ac827669db16a52a366622467049",
   "actor": "rsonnad",
   "source": "github-main-push",
   "model": "ci",
   "machine": "runnervmlun5p",
-  "pushedAt": "2026-09-08T22:00:44+00:00",
-  "commits": [{"sha":"2d4bd49044","message":"Fix stale AlpacApps backups: find aws on PATH and email only after 2 days of failed auto-repair.","author":"Otto"}]
+  "pushedAt": "2026-09-09T03:20:16+00:00",
+  "commits": [{"sha":"1b365df3b7","message":"Point HAOS VM backups at the 17.1 image and log snapshots after disk grow.","author":"Otto"}]
 }
